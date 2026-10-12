@@ -27,6 +27,23 @@ Escena: `Assets/Scenes/SampleScene.unity`.
 
 ## Juego interactivo: "Emergencia en la estación"
 
+### Modo directo: manejar el camión (activo por defecto)
+
+Al darle Play vas directo al camión, sin tareas previas. Sigue la flecha amarilla hasta el **círculo junto a la puerta del conductor**, quédate ahí un momento (o presiona **A**) y subes a la cabina. El portón se abre solo.
+
+| Acción | Control | Teclado (editor) |
+|---|---|---|
+| Avanzar / retroceder | Stick izquierdo arriba / abajo | `W`/`S` o flechas |
+| Girar | Stick izquierdo o derecho a los lados | `A`/`D` o flechas |
+| Sirena on/off | **A** | `H` |
+| Bajar del camión | **B** (o mantener el pellizco 2 s) | `Q` |
+
+Al soltar el stick, el camión frena solo. Choca con las paredes y con el portón cerrado (se detiene, suena y vibra). El HUD muestra la velocidad en km/h y el estado de la sirena y del portón. Para manejar se necesitan los controles: con manos solo se puede subir y bajar.
+
+Para volver a la **misión completa** (portón, chaleco, extintor, puntaje), desmarca `Modo Directo` en el objeto `JuegoBomberos` de la escena.
+
+### Misión completa (modo directo desactivado)
+
 Al darle Play aparece un panel de bienvenida con los controles. Presiona **A** (o pellizca) para empezar —o espera 15 s y empieza solo—. Suena la alarma y hay que completar las tareas **lo más rápido posible**:
 
 1. **Abrir el portón de la cochera**: toca el botón rojo con el dedo o con la punta del control.

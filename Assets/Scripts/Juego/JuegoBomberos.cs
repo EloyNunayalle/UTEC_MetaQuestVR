@@ -17,9 +17,13 @@ using UnityEngine.SceneManagement;
 public class JuegoBomberos : MonoBehaviour
 {
     public enum TipoAviso { Info, Exito, Error }
-    enum Fase { Intro, Mision, Completado }
+    enum Fase { Intro, Mision, Conduciendo, Completado }
 
     public static JuegoBomberos Instancia { get; private set; }
+
+    [Header("Modo")]
+    [Tooltip("Directo: sin tareas previas, vas al camion, subes y lo manejas. Desmarcar = mision completa (porton, chaleco, extintor).")]
+    public bool modoDirecto = true;
 
     [Header("Referencias (vacias = se buscan solas)")]
     public OVRCameraRig rig;
@@ -120,6 +124,7 @@ public class JuegoBomberos : MonoBehaviour
         _camion.motivoNoPuede = MotivoNoPuedeSubir;
         _camion.alSubir += AlSubirCamion;
         _camion.alBajar += AlBajarCamion;
+        _camion.alChocar += AlChocar;
 
         // ---- HUD y marcador ----
         _hud = new GameObject("HUD_Bomberos").AddComponent<HudBomberos>();
@@ -130,17 +135,21 @@ public class JuegoBomberos : MonoBehaviour
         // ---- Tareas ----
         if (porton != null)
         {
-            _tPorton = NuevaTarea("Abre el portón de la cochera",
-                "Toca el botón rojo junto al portón con el dedo o la punta del control.",
-                () => botonPorton != null ? botonPorton.transform.position + Vector3.up * 0.15f
-                                          : (Vector3?)porton.pivote.position);
             _estadoPortonPrev = porton.estado;
             var pivote = porton.pivote != null ? porton.pivote : porton.transform;
             _motorPorton = SonidosVR.CrearBucle(pivote, SonidosVR.Motor, 0.5f, 30f);
             _motorPorton.pitch = 1.7f;
         }
 
-        if (chaleco != null)
+        if (porton != null && !modoDirecto)
+        {
+            _tPorton = NuevaTarea("Abre el portón de la cochera",
+                "Toca el botón rojo junto al portón con el dedo o la punta del control.",
+                () => botonPorton != null ? botonPorton.transform.position + Vector3.up * 0.15f
+                                          : (Vector3?)porton.pivote.position);
+        }
+
+        if (chaleco != null && !modoDirecto)
         {
             _agChaleco = chaleco.gameObject.AddComponent<ObjetoAgarrable>();
             _agChaleco.esDestinoValido = EnElPecho;
@@ -157,7 +166,7 @@ public class JuegoBomberos : MonoBehaviour
                 () => _agChaleco.Completado ? (Vector3?)null : ArribaDe(chaleco));
         }
 
-        if (extintor != null)
+        if (extintor != null && !modoDirecto)
         {
             _agExtintor = extintor.gameObject.AddComponent<ObjetoAgarrable>();
             _agExtintor.radioAgarre = 0.18f;
@@ -175,7 +184,7 @@ public class JuegoBomberos : MonoBehaviour
                 () => _agExtintor.Agarrado ? TechoCamion() : ArribaDe(extintor));
         }
 
-        _tSubir = NuevaTarea("Sube al camión de bomberos",
+        _tSubir = NuevaTarea(modoDirecto ? "Sube al camión y manéjalo" : "Sube al camión de bomberos",
             "Párate en el círculo junto a la puerta del conductor (o presiona A).",
             () => _camion.PuntoZonaSubida + Vector3.up * 2.45f);
 
@@ -191,7 +200,8 @@ public class JuegoBomberos : MonoBehaviour
         _luzAlarma.enabled = false;
 
         _inicioIntro = Time.time;
-        MostrarIntro();
+        if (modoDirecto) IniciarMision();
+        else MostrarIntro();
     }
 
     Tarea NuevaTarea(string titulo, string pista, Func<Vector3?> punto)
@@ -239,11 +249,7 @@ public class JuegoBomberos : MonoBehaviour
         return t.position + Vector3.up * 0.5f;
     }
 
-    Vector3 TechoCamion()
-    {
-        var b = _camion.Limites;
-        return new Vector3(b.center.x, b.max.y + 0.3f, b.center.z);
-    }
+    Vector3 TechoCamion() => _camion.Techo;
 
     bool EnElPecho(Vector3 p)
     {
@@ -252,12 +258,7 @@ public class JuegoBomberos : MonoBehaviour
         return horizontal < 0.45f && d.y > -0.9f && d.y < 0.25f;
     }
 
-    bool CercaDelCamion(Vector3 p)
-    {
-        var b = _camion.Limites;
-        b.Expand(new Vector3(2.2f, 3f, 2.2f));
-        return b.Contains(p);
-    }
+    bool CercaDelCamion(Vector3 p) => _camion.ContienePunto(p, 1.1f);
 
     // ------------------------------------------------------------------
     // Flujo del juego
@@ -278,6 +279,14 @@ public class JuegoBomberos : MonoBehaviour
 
             case Fase.Mision:
                 ActualizarMision();
+                break;
+
+            case Fase.Conduciendo:
+                if (Time.time >= _proximoHud)
+                {
+                    _proximoHud = Time.time + 0.2f;
+                    MostrarConduccion();
+                }
                 break;
 
             case Fase.Completado:
@@ -307,6 +316,11 @@ public class JuegoBomberos : MonoBehaviour
         _inicioMision = Time.time;
         _ultimoProgreso = Time.time;
         _proximaCampana = Time.time + campanaCada;
+        if (modoDirecto)
+        {
+            Aviso("¡Sube al camión y manéjalo!\n<size=55%>Sigue la flecha amarilla</size>", TipoAviso.Info, 3.5f);
+            return;
+        }
         _luzAlarma.enabled = true;
         SonidosVR.Reproducir2D(SonidosVR.Alarma, 0.7f);
         EntradaVR.VibrarAmbas(0.8f, 0.5f, 0.3f);
@@ -324,7 +338,7 @@ public class JuegoBomberos : MonoBehaviour
 
         // Luz de alarma pulsante y campana periodica.
         _luzAlarma.intensity = 2.5f * Mathf.Pow(0.5f + 0.5f * Mathf.Sin(Time.time * 6f), 2f);
-        if (Time.time >= _proximaCampana)
+        if (!modoDirecto && Time.time >= _proximaCampana)
         {
             _proximaCampana = Time.time + campanaCada;
             SonidosVR.Reproducir2D(SonidosVR.Campana, 0.35f);
@@ -345,7 +359,8 @@ public class JuegoBomberos : MonoBehaviour
         if (Time.time >= _proximoHud)
         {
             _proximoHud = Time.time + 0.2f;
-            _hud.Mostrar("¡EMERGENCIA EN CURSO!", CuerpoMision(actual, punto), $"Tiempo {FormatoTiempo(t)}     Puntaje {_puntaje}");
+            if (modoDirecto) _hud.Mostrar("ESTACIÓN DE BOMBEROS VR", CuerpoMision(actual, punto), "");
+            else _hud.Mostrar("¡EMERGENCIA EN CURSO!", CuerpoMision(actual, punto), $"Tiempo {FormatoTiempo(t)}     Puntaje {_puntaje}");
         }
     }
 
@@ -411,6 +426,7 @@ public class JuegoBomberos : MonoBehaviour
     bool PuedeSubir()
     {
         if (_fase == Fase.Intro) return false;
+        if (modoDirecto) return true;
         foreach (var t in _tareas)
             if (t != _tSubir && !t.hecha) return false;
         return true;
@@ -427,6 +443,22 @@ public class JuegoBomberos : MonoBehaviour
 
     void AlSubirCamion()
     {
+        if (modoDirecto)
+        {
+            _fase = Fase.Conduciendo;
+            _marcador.Ocultar();
+            _luzAlarma.enabled = false;
+            _hud.alturaRelativa = -0.55f;
+            _proximoHud = 0f;
+            if (porton != null && !PortonAbierto())
+            {
+                porton.Abrir();
+                Aviso("¡A manejar!\n<size=55%>Abriendo el portón...</size>", TipoAviso.Exito, 3f);
+            }
+            else Aviso("¡A manejar!", TipoAviso.Exito, 2.5f);
+            SonidosVR.Reproducir2D(SonidosVR.Exito, 0.9f);
+            return;
+        }
         if (_fase == Fase.Completado) { MostrarResultado(); return; }
         if (_fase != Fase.Mision) return;
         _tiempoFinal = Time.time - _inicioMision;
@@ -447,6 +479,15 @@ public class JuegoBomberos : MonoBehaviour
     void AlBajarCamion()
     {
         _bloqueoReinicio = Time.time + 1f;
+        _hud.alturaRelativa = -0.32f;
+        if (modoDirecto)
+        {
+            _fase = Fase.Mision;
+            _ultimoProgreso = Time.time;
+            _proximoHud = 0f;
+            Aviso("Bajaste del camión\n<size=55%>Vuelve al círculo para manejar otra vez</size>", TipoAviso.Info, 2.5f);
+            return;
+        }
         if (_fase == Fase.Completado) MostrarResultado();
     }
 
@@ -460,6 +501,33 @@ public class JuegoBomberos : MonoBehaviour
             (sentado ? "La sirena está sonando: ¡en camino a la emergencia!\n\n- B (o mantén el pellizco 2 s): bajar del camión"
                      : "- A / pellizco: jugar de nuevo\n- Puedes volver a subir al camión cuando quieras"),
             sentado ? "Bajar: B" : "Jugar de nuevo: A");
+    }
+
+    float _ultimoAvisoChoque;
+
+    void AlChocar()
+    {
+        if (Time.time - _ultimoAvisoChoque < 2f) return;
+        _ultimoAvisoChoque = Time.time;
+        Aviso("¡Cuidado, chocaste!", TipoAviso.Error, 1.2f);
+    }
+
+    void MostrarConduccion()
+    {
+        bool hayPorton = porton != null;
+        string estadoPorton = !hayPorton ? "" :
+            porton.estado == PortonElevadizo.Estado.Abierto ? "abierto" :
+            porton.estado == PortonElevadizo.Estado.Abriendo ? "abriéndose..." :
+            porton.estado == PortonElevadizo.Estado.Cerrando ? "cerrándose" : "cerrado";
+        string marcha = _camion.Velocidad > 0.2f ? "Adelante" : _camion.Velocidad < -0.2f ? "Reversa" : "Detenido";
+        _hud.Mostrar("CONDUCIENDO",
+            $"Velocidad: <b><color=#FFD54A>{Mathf.RoundToInt(_camion.VelocidadKmh)} km/h</color></b>   ({marcha})\n" +
+            $"Sirena: {(_camion.SirenaEncendida ? "<color=#FF6B5A>ENCENDIDA</color>" : "apagada")}" +
+            (hayPorton ? $"     Portón: {estadoPorton}" : "") + "\n\n" +
+            "- Stick izquierdo arriba / abajo: avanzar / retroceder\n" +
+            "- Stick a los lados: girar\n" +
+            "- A: sirena     - B: bajar del camión",
+            "");
     }
 
     void Reiniciar()

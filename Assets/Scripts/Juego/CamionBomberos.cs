@@ -4,10 +4,12 @@ using TMPro;
 using UnityEngine;
 
 /// <summary>
-/// Camion de bomberos interactivo: zona de abordaje junto a la puerta del conductor,
-/// asiento en la cabina, balizas, sirena y motor.
-/// - Para subir: parate en el circulo amarillo y espera (se llena) o presiona A / pellizca.
-/// - Para bajar: presiona B (o Y), o manten el pellizco 2 segundos.
+/// Camion de bomberos interactivo y manejable.
+/// - Subir: parate en el circulo amarillo junto a la puerta del conductor (se llena) o presiona A / pellizca.
+/// - Manejar (controles): stick izquierdo arriba/abajo = avanzar/retroceder, a los lados = girar
+///   (tambien sirve el stick derecho para girar). Teclado: flechas o WASD.
+/// - A: prender/apagar la sirena mientras manejas.
+/// - Bajar: B (o Y), o mantener el pellizco 2 segundos.
 /// Si el modelo del camion no esta en el proyecto (asset de pago no incluido en git),
 /// se genera un camion simple de reemplazo para que el juego funcione igual.
 /// </summary>
@@ -27,35 +29,54 @@ public class CamionBomberos : MonoBehaviour
 
     [Header("Abordaje")]
     public float radioZona = 0.7f;
-    public float segundosParaSubir = 2f;
+    public float segundosParaSubir = 1.5f;
     public float segundosPellizcoParaBajar = 2f;
+
+    [Header("Manejo")]
+    public bool manejable = true;
+    [Tooltip("Velocidad maxima hacia adelante (m/s). 8 m/s ~ 29 km/h.")]
+    public float velocidadMaxima = 8f;
+    public float velocidadMaximaReversa = 3f;
+    public float aceleracion = 3.5f;
+    public float frenado = 7f;
+    [Tooltip("Grados por segundo de giro a buena velocidad.")]
+    public float giroMaximo = 40f;
+    [Tooltip("Zona muerta del joystick.")]
+    public float zonaMuerta = 0.15f;
 
     [Header("Camion de reemplazo (si falta el modelo)")]
     public Vector3 tamanoReemplazo = new Vector3(2.5f, 3.0f, 8.5f);
 
     public bool JugadorSentado { get; private set; }
+    public bool SirenaEncendida => _sirena != null && _sirena.isPlaying;
+    public float Velocidad => _velocidad;
+    public float VelocidadKmh => Mathf.Abs(_velocidad) * 3.6f;
     public Vector3 PuntoZonaSubida => _zona != null ? _zona.position : transform.position;
-    public Vector3 Frente => _fwd;
-    public Bounds Limites => _b;
+    public Vector3 Frente => transform.TransformDirection(_fwdLocal);
 
     public Func<bool> puedeSubir;
     public Func<string> motivoNoPuede;
     public event Action alSubir;
     public event Action alBajar;
+    public event Action alChocar;
 
     OVRCameraRig _rig;
-    Bounds _b;
-    Vector3 _fwd, _der, _centroBase;
+    // Geometria guardada en el espacio local del camion (para que siga valida al moverlo).
+    Vector3 _centroBaseLocal, _fwdLocal, _derLocal;
+    float _largoMedio, _anchoMedio, _alto;
+
     Transform _efectos, _zona, _relleno;
-    Renderer _anilloR, _rellenoR;
+    Renderer _anilloR;
     TextMeshPro _etiqueta;
-    Light[] _luces = new Light[2];
-    Renderer[] _balizas = new Renderer[2];
+    readonly Light[] _luces = new Light[2];
+    readonly Renderer[] _balizas = new Renderer[2];
     AudioSource _sirena, _motor;
     bool _lucesOn;
-    float _progreso, _enfriamiento, _pellizcoBajar, _proximoTic;
-    Vector3 _rigPosGuardada, _rigPosSentado;
-    Quaternion _rigRotGuardada, _rigRotSentado;
+    float _progreso, _enfriamiento, _pellizcoBajar, _proximoTic, _proximaVibracion, _ultimoChoque;
+    Vector3 _rigPosLocal;
+    Quaternion _rigRotLocal;
+    float _rigAlturaSobreZona;
+    float _velocidad;
     readonly List<GameObject> _locomocionApagada = new List<GameObject>();
     bool _listo;
     bool _pellizcoLiberado;
@@ -64,35 +85,73 @@ public class CamionBomberos : MonoBehaviour
     static readonly Color Verde = new Color(0.2f, 1f, 0.35f, 0.9f);
     static readonly Color Gris = new Color(0.6f, 0.6f, 0.6f, 0.5f);
 
+    // ------------------------------------------------------------------
+    // Geometria
+    // ------------------------------------------------------------------
+
+    Vector3 Fwd => transform.TransformDirection(_fwdLocal);
+    Vector3 Der => transform.TransformDirection(_derLocal);
+    Vector3 CentroBase => transform.TransformPoint(_centroBaseLocal);
+    float LadoConductor => conductorIzquierda ? -1f : 1f;
+
+    /// <summary>Punto en coordenadas del camion (x derecha, y arriba desde el piso, z frente desde el centro).</summary>
+    Vector3 Local(float x, float y, float z) => CentroBase + Der * x + Vector3.up * y + Fwd * z;
+
+    /// <summary>Caja (aproximada, alineada a los ejes del mundo) que ocupa el camion ahora.</summary>
+    public Bounds Limites
+    {
+        get
+        {
+            var b = new Bounds(Local(0f, _alto * 0.5f, 0f), Vector3.zero);
+            for (int sx = -1; sx <= 1; sx += 2)
+                for (int sz = -1; sz <= 1; sz += 2)
+                {
+                    b.Encapsulate(Local(sx * _anchoMedio, 0f, sz * _largoMedio));
+                    b.Encapsulate(Local(sx * _anchoMedio, _alto, sz * _largoMedio));
+                }
+            return b;
+        }
+    }
+
+    /// <summary>True si el punto esta dentro del camion (en sus propios ejes) con un margen.</summary>
+    public bool ContienePunto(Vector3 p, float margen)
+    {
+        Vector3 d = p - CentroBase;
+        return Mathf.Abs(Vector3.Dot(d, Der)) <= _anchoMedio + margen &&
+               Mathf.Abs(Vector3.Dot(d, Fwd)) <= _largoMedio + margen &&
+               d.y >= -0.5f && d.y <= _alto + margen;
+    }
+
+    public Vector3 Techo => Local(0f, _alto + 0.3f, 0f);
+
     /// <summary>Configura el camion. referenciaFrente: punto hacia donde mira el frente (salida de la bahia).</summary>
     public void Inicializar(OVRCameraRig rig, Vector3? referenciaFrente)
     {
         _rig = rig;
 
-        if (!VisualesVR.Limites(transform, out _b))
+        if (!VisualesVR.Limites(transform, out Bounds b) && !LimitesPorColliders(out b))
         {
-            if (!LimitesPorColliders(out _b))
-            {
-                Debug.LogWarning("[CamionBomberos] No se encontro el modelo del camion: se genera uno de reemplazo.");
-                CrearReemplazo(referenciaFrente);
-                VisualesVR.Limites(transform, out _b);
-            }
+            Debug.LogWarning("[CamionBomberos] No se encontro el modelo del camion: se genera uno de reemplazo.");
+            CrearReemplazo(referenciaFrente);
+            VisualesVR.Limites(transform, out b);
         }
 
         // Frente: eje horizontal mas largo de los limites, con el signo hacia la referencia.
-        Vector3 eje = _b.size.z >= _b.size.x ? Vector3.forward : Vector3.right;
-        if (referenciaFrente.HasValue)
-        {
-            Vector3 hacia = referenciaFrente.Value - _b.center;
-            if (Vector3.Dot(hacia, eje) < 0f) eje = -eje;
-        }
-        _fwd = invertirFrente ? -eje : eje;
-        _der = Vector3.Cross(Vector3.up, _fwd);
-        _centroBase = new Vector3(_b.center.x, _b.min.y, _b.center.z);
+        Vector3 eje = b.size.z >= b.size.x ? Vector3.forward : Vector3.right;
+        if (referenciaFrente.HasValue && Vector3.Dot(referenciaFrente.Value - b.center, eje) < 0f) eje = -eje;
+        if (invertirFrente) eje = -eje;
+        Vector3 der = Vector3.Cross(Vector3.up, eje);
+
+        _largoMedio = Mathf.Abs(Vector3.Dot(b.extents, eje));
+        _anchoMedio = Mathf.Abs(Vector3.Dot(b.extents, der));
+        _alto = b.size.y;
+        _fwdLocal = transform.InverseTransformDirection(eje);
+        _derLocal = transform.InverseTransformDirection(der);
+        _centroBaseLocal = transform.InverseTransformPoint(new Vector3(b.center.x, b.min.y, b.center.z));
 
         _efectos = new GameObject("Camion_Efectos").transform;
         _efectos.SetParent(transform, true);
-        _efectos.SetPositionAndRotation(_centroBase, Quaternion.LookRotation(_fwd, Vector3.up));
+        _efectos.SetPositionAndRotation(CentroBase, Quaternion.LookRotation(eje, Vector3.up));
 
         CrearZonaSubida();
         CrearBalizas();
@@ -100,27 +159,20 @@ public class CamionBomberos : MonoBehaviour
         _sirena = SonidosVR.CrearBucle(_efectos, SonidosVR.Sirena, 0.55f, 60f);
         _sirena.transform.position = PosBalizas();
         _motor = SonidosVR.CrearBucle(_efectos, SonidosVR.Motor, 0.6f, 25f);
-        _motor.transform.position = Local(0f, 1f, LargoMedio() - 1f);
+        _motor.transform.position = Local(0f, 1f, _largoMedio - 1f);
 
         _listo = true;
     }
 
-    float LargoMedio() => Vector3.Dot(_b.extents, new Vector3(Mathf.Abs(_fwd.x), 0f, Mathf.Abs(_fwd.z)));
-    float AnchoMedio() => Vector3.Dot(_b.extents, new Vector3(Mathf.Abs(_der.x), 0f, Mathf.Abs(_der.z)));
-    float LadoConductor() => conductorIzquierda ? -1f : 1f;
-
-    /// <summary>Punto en coordenadas del camion (x derecha, y arriba desde el piso, z frente desde el centro).</summary>
-    Vector3 Local(float x, float y, float z) => _centroBase + _der * x + Vector3.up * y + _fwd * z;
-
     Vector3 PosAsiento()
     {
-        float alto = Mathf.Clamp(_b.size.y * 0.72f, 1.9f, 2.7f);
-        return Local(LadoConductor() * AnchoMedio() * 0.45f + ajusteAsiento.x,
+        float alto = Mathf.Clamp(_alto * 0.72f, 1.9f, 2.7f);
+        return Local(LadoConductor * _anchoMedio * 0.45f + ajusteAsiento.x,
                      alto + ajusteAsiento.y,
-                     LargoMedio() - 1.1f + ajusteAsiento.z);
+                     _largoMedio - 1.1f + ajusteAsiento.z);
     }
 
-    Vector3 PosBalizas() => Local(ajusteBalizas.x, _b.size.y + 0.08f + ajusteBalizas.y, LargoMedio() - 0.9f + ajusteBalizas.z);
+    Vector3 PosBalizas() => Local(ajusteBalizas.x, _alto + 0.08f + ajusteBalizas.y, _largoMedio - 0.9f + ajusteBalizas.z);
 
     bool LimitesPorColliders(out Bounds b)
     {
@@ -142,10 +194,10 @@ public class CamionBomberos : MonoBehaviour
 
     void CrearZonaSubida()
     {
-        float y = _b.min.y;
-        Vector3 p = Local(LadoConductor() * (AnchoMedio() + 0.8f) + ajusteZonaSubida.x, 0f,
-                          LargoMedio() - 1.4f + ajusteZonaSubida.z);
+        Vector3 p = Local(LadoConductor * (_anchoMedio + 0.8f) + ajusteZonaSubida.x, 0f,
+                          _largoMedio - 1.4f + ajusteZonaSubida.z);
         // Ajusta la altura al piso real si hay collider debajo.
+        float y = p.y;
         if (Physics.Raycast(p + Vector3.up * 1.5f, Vector3.down, out var hit, 4f, ~0, QueryTriggerInteraction.Ignore)
             && !hit.collider.transform.IsChildOf(transform))
             y = hit.point.y;
@@ -161,7 +213,6 @@ public class CamionBomberos : MonoBehaviour
         _relleno = relleno.transform;
         _relleno.localPosition = Vector3.up * 0.005f;
         _relleno.localScale = Vector3.zero;
-        _rellenoR = relleno.GetComponent<Renderer>();
 
         _etiqueta = VisualesVR.Texto("Etiqueta", _zona, 0.09f, new Vector2(1.6f, 0.6f));
         _etiqueta.transform.localPosition = Vector3.up * 2.1f;
@@ -178,7 +229,7 @@ public class CamionBomberos : MonoBehaviour
             float lado = i == 0 ? -1f : 1f;
             Color col = i == 0 ? new Color(1f, 0.1f, 0.05f) : new Color(1f, 1f, 1f);
             var b = VisualesVR.Primitiva(PrimitiveType.Sphere, "Baliza_" + i, _efectos, VisualesVR.MaterialSinLuz(col * 0.35f));
-            b.transform.position = c + _der * (lado * Mathf.Max(0.4f, AnchoMedio() * 0.5f));
+            b.transform.position = c + Der * (lado * Mathf.Max(0.4f, _anchoMedio * 0.5f));
             b.transform.localScale = Vector3.one * 0.22f;
             _balizas[i] = b.GetComponent<Renderer>();
 
@@ -240,14 +291,18 @@ public class CamionBomberos : MonoBehaviour
     }
 
     // ------------------------------------------------------------------
-    // Logica
+    // Abordaje (a pie)
     // ------------------------------------------------------------------
 
     void Update()
     {
         if (!_listo) return;
         ActualizarLuces();
-        if (JugadorSentado) return;
+        if (JugadorSentado)
+        {
+            if (manejable) Manejar();
+            return;
+        }
 
         var cabeza = _rig != null ? _rig.centerEyeAnchor : null;
         if (cabeza == null) return;
@@ -271,16 +326,16 @@ public class CamionBomberos : MonoBehaviour
             _etiqueta.text = "CAMIÓN DE BOMBEROS\n<size=60%>" + (motivoNoPuede != null ? motivoNoPuede() : "Aún no puedes subir") + "</size>";
             _anilloR.sharedMaterial.color = Color.Lerp(Gris, Amarillo, 0.25f * pulso);
             if (dentro && _enfriamiento <= 0f && (_progreso > 0.35f || EntradaVR.ConfirmarDown()))
-            {
                 Rechazar();
-            }
             else if (dentro) _progreso += Time.deltaTime / segundosParaSubir;
             else _progreso = 0f;
             _relleno.localScale = Vector3.zero;
             return;
         }
 
-        _etiqueta.text = "SUBIR AL CAMIÓN\n<size=60%>Párate en el círculo o presiona A / pellizca</size>";
+        _etiqueta.text = manejable
+            ? "SUBIR Y MANEJAR\n<size=60%>Párate en el círculo o presiona A / pellizca</size>"
+            : "SUBIR AL CAMIÓN\n<size=60%>Párate en el círculo o presiona A / pellizca</size>";
         if (dentro && _enfriamiento <= 0f)
         {
             _progreso += Time.deltaTime / segundosParaSubir;
@@ -313,12 +368,127 @@ public class CamionBomberos : MonoBehaviour
             JuegoBomberos.Instancia.Aviso(motivoNoPuede != null ? motivoNoPuede() : "Aún no puedes subir", JuegoBomberos.TipoAviso.Error);
     }
 
+    // ------------------------------------------------------------------
+    // Manejo
+    // ------------------------------------------------------------------
+
+    void Manejar()
+    {
+        float dt = Time.deltaTime;
+        if (dt <= 0f) return;
+
+        // Entrada: stick izquierdo (adelante/atras + giro), stick derecho tambien gira; teclado flechas/WASD.
+        Vector2 izq = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick);
+        Vector2 der = OVRInput.Get(OVRInput.Axis2D.SecondaryThumbstick);
+        float acel = izq.y;
+        float giro = Mathf.Abs(der.x) > Mathf.Abs(izq.x) ? der.x : izq.x;
+        float tv = Input.GetAxisRaw("Vertical"), th = Input.GetAxisRaw("Horizontal");
+        if (Mathf.Abs(tv) > Mathf.Abs(acel)) acel = tv;
+        if (Mathf.Abs(th) > Mathf.Abs(giro)) giro = th;
+        acel = Mathf.Abs(acel) < zonaMuerta ? 0f : acel;
+        giro = Mathf.Abs(giro) < zonaMuerta ? 0f : giro;
+
+        // Velocidad: acelera hacia el objetivo; si sueltas el stick frena solo.
+        float objetivo = acel >= 0f ? acel * velocidadMaxima : acel * velocidadMaximaReversa;
+        bool frenando = acel == 0f || Mathf.Sign(objetivo) != Mathf.Sign(_velocidad) && Mathf.Abs(_velocidad) > 0.1f;
+        _velocidad = Mathf.MoveTowards(_velocidad, objetivo, (frenando ? frenado : aceleracion) * dt);
+
+        // Giro: solo cuando el camion se mueve (en reversa se invierte, como un auto real).
+        float factor = Mathf.Clamp(_velocidad / 3f, -1f, 1f);
+        float grados = giro * giroMaximo * factor * dt;
+        if (Mathf.Abs(grados) > 0.0001f)
+        {
+            Quaternion antes = transform.rotation;
+            transform.RotateAround(CentroBase, Vector3.up, grados);
+            if (HayChoqueAqui()) { transform.rotation = antes; Chocar(); }
+        }
+
+        // Avance con deteccion de choques.
+        float paso = _velocidad * dt;
+        if (Mathf.Abs(paso) > 0.0001f)
+        {
+            Vector3 dir = Fwd * Mathf.Sign(paso);
+            if (HayChoqueEnCamino(dir, Mathf.Abs(paso) + 0.1f)) Chocar();
+            else transform.position += Fwd * paso;
+        }
+
+        // Motor mas agudo con la velocidad y vibracion suave proporcional.
+        float rapidez = Mathf.Abs(_velocidad) / velocidadMaxima;
+        _motor.pitch = 0.8f + 0.9f * rapidez;
+        if (Time.time >= _proximaVibracion && rapidez > 0.05f)
+        {
+            _proximaVibracion = Time.time + 0.12f;
+            EntradaVR.VibrarAmbas(0.04f + 0.12f * rapidez, 0.1f, 0.2f);
+        }
+
+        // A: sirena on/off.
+        if (OVRInput.GetDown(OVRInput.Button.One) || OVRInput.GetDown(OVRInput.Button.Three) || Input.GetKeyDown(KeyCode.H))
+        {
+            if (_sirena.isPlaying) _sirena.Stop(); else _sirena.Play();
+            SonidosVR.Reproducir2D(SonidosVR.Clic, 0.6f);
+        }
+    }
+
+    void Chocar()
+    {
+        float golpe = Mathf.Abs(_velocidad);
+        _velocidad = 0f;
+        if (Time.time - _ultimoChoque < 0.6f) return;
+        _ultimoChoque = Time.time;
+        if (golpe > 0.5f)
+        {
+            SonidosVR.ReproducirEn(SonidosVR.Puerta, Local(0f, 1f, 0f), 1f);
+            EntradaVR.VibrarAmbas(Mathf.Clamp01(0.4f + golpe * 0.1f), 0.25f, 0.2f);
+        }
+        alChocar?.Invoke();
+    }
+
+    // Caja de choque: elevada del piso (para no chocar con el suelo ni con desniveles chicos).
+    const float AlturaLibre = 0.35f;
+
+    Vector3 CentroCaja => Local(0f, AlturaLibre + (_alto - AlturaLibre) * 0.5f, 0f);
+    Vector3 MitadCaja => new Vector3(_anchoMedio - 0.05f, Mathf.Max(0.2f, (_alto - AlturaLibre) * 0.5f - 0.1f), _largoMedio - 0.05f);
+    Quaternion RotCaja => Quaternion.LookRotation(Fwd, Vector3.up);
+
+    bool HayChoqueEnCamino(Vector3 dir, float distancia)
+    {
+        var hits = Physics.BoxCastAll(CentroCaja, MitadCaja, dir, RotCaja, distancia, ~0, QueryTriggerInteraction.Ignore);
+        foreach (var h in hits)
+        {
+            if (Ignorar(h.collider)) continue;
+            // distancia 0 = ya estaba superpuesto al empezar: se ignora para no quedar atascado.
+            if (h.distance <= 0f) continue;
+            return true;
+        }
+        return false;
+    }
+
+    bool HayChoqueAqui()
+    {
+        foreach (var c in Physics.OverlapBox(CentroCaja, MitadCaja * 0.97f, RotCaja, ~0, QueryTriggerInteraction.Ignore))
+            if (!Ignorar(c)) return true;
+        return false;
+    }
+
+    bool Ignorar(Collider c)
+    {
+        if (c == null) return true;
+        if (c.transform.IsChildOf(transform)) return true;
+        if (_rig != null && c.transform.IsChildOf(_rig.transform)) return true;
+        if (c.attachedRigidbody != null && !c.attachedRigidbody.isKinematic) return true; // objetos sueltos
+        return false;
+    }
+
+    // ------------------------------------------------------------------
+    // Subir / bajar
+    // ------------------------------------------------------------------
+
     void LateUpdate()
     {
         if (!_listo || !JugadorSentado || _rig == null) return;
 
-        // Mantiene al jugador en la cabina (la locomocion esta apagada).
-        _rig.transform.SetPositionAndRotation(_rigPosSentado, _rigRotSentado);
+        // Mantiene al jugador sentado en la cabina (sigue al camion cuando se mueve).
+        _rig.transform.SetPositionAndRotation(transform.TransformPoint(_rigPosLocal), transform.rotation * _rigRotLocal);
 
         // El pellizco usado para subir debe soltarse antes de contar para bajar.
         bool pellizco = EntradaVR.AlgunPellizco();
@@ -335,27 +505,28 @@ public class CamionBomberos : MonoBehaviour
         var rigT = _rig.transform;
         var cabeza = _rig.centerEyeAnchor;
 
-        _rigPosGuardada = rigT.position;
-        _rigRotGuardada = rigT.rotation;
+        _rigAlturaSobreZona = rigT.position.y - _zona.position.y;
 
         ApagarLocomocion();
 
         // Gira el rig para que la cabeza mire al frente del camion y la mueve al asiento.
-        float yawObjetivo = Quaternion.LookRotation(_fwd).eulerAngles.y;
+        float yawObjetivo = Quaternion.LookRotation(Fwd).eulerAngles.y;
         float delta = Mathf.DeltaAngle(cabeza.eulerAngles.y, yawObjetivo);
         rigT.rotation = Quaternion.Euler(0f, rigT.eulerAngles.y + delta, 0f);
         rigT.position += PosAsiento() - cabeza.position;
-        _rigPosSentado = rigT.position;
-        _rigRotSentado = rigT.rotation;
+        _rigPosLocal = transform.InverseTransformPoint(rigT.position);
+        _rigRotLocal = Quaternion.Inverse(transform.rotation) * rigT.rotation;
 
         JugadorSentado = true;
+        _velocidad = 0f;
         _progreso = 0f;
         _pellizcoBajar = 0f;
         _pellizcoLiberado = false;
         _zona.gameObject.SetActive(false);
 
         EncenderLuces(true);
-        _sirena.Play();
+        if (!manejable) _sirena.Play();
+        _motor.pitch = 0.8f;
         _motor.Play();
         SonidosVR.ReproducirEn(SonidosVR.Puerta, PosAsiento(), 1f);
         EntradaVR.VibrarAmbas(0.9f, 0.4f, 0.3f);
@@ -367,12 +538,24 @@ public class CamionBomberos : MonoBehaviour
     {
         if (!JugadorSentado) return;
         JugadorSentado = false;
-        _rig.transform.SetPositionAndRotation(_rigPosGuardada, _rigRotGuardada);
+        _velocidad = 0f;
+        _zona.gameObject.SetActive(true);
+
+        // Baja al jugador en la zona de subida (donde este ahora el camion), mirando igual que en la cabina.
+        var rigT = _rig.transform;
+        var cabeza = _rig.centerEyeAnchor;
+        Vector3 piso = _zona.position;
+        Vector3 desplaz = piso - cabeza.position;
+        desplaz.y = 0f;
+        Vector3 nuevaPos = rigT.position + desplaz;
+        nuevaPos.y = piso.y + _rigAlturaSobreZona;
+        rigT.position = nuevaPos;
+
         EncenderLocomocion();
+        TeletransportarLocomotor(new Vector3(piso.x, nuevaPos.y, piso.z), Quaternion.Euler(0f, cabeza.eulerAngles.y, 0f));
 
         _sirena.Stop();
         _motor.Stop();
-        _zona.gameObject.SetActive(true);
         _enfriamiento = 2f;
         SonidosVR.ReproducirEn(SonidosVR.Puerta, _zona.position + Vector3.up, 1f);
         EntradaVR.VibrarAmbas(0.5f, 0.15f);
@@ -399,6 +582,48 @@ public class CamionBomberos : MonoBehaviour
         foreach (var go in _locomocionApagada) if (go != null) go.SetActive(true);
         _locomocionApagada.Clear();
     }
+
+    /// <summary>
+    /// Avisa al locomotor del Interaction SDK que el jugador se movio (como un teletransporte),
+    /// para que no lo devuelva a donde estaba antes de subir. Se hace por reflexion para no
+    /// depender de la version exacta del SDK; si no se encuentra, no pasa nada.
+    /// </summary>
+    void TeletransportarLocomotor(Vector3 pies, Quaternion rotacion)
+    {
+        try
+        {
+            MonoBehaviour elegido = null;
+            foreach (var mb in FindObjectsOfType<MonoBehaviour>())
+            {
+                string n = mb.GetType().Name;
+                if (n == "FirstPersonLocomotor") { elegido = mb; break; }
+                if (n == "PlayerLocomotor" && elegido == null) elegido = mb;
+            }
+            if (elegido == null) return;
+
+            var metodo = elegido.GetType().GetMethod("HandleLocomotionEvent");
+            if (metodo == null) return;
+            var tipoEvento = metodo.GetParameters()[0].ParameterType;
+            var tTras = tipoEvento.GetNestedType("TranslationType");
+            var tRot = tipoEvento.GetNestedType("RotationType");
+            if (tTras == null || tRot == null) return;
+            var ctor = tipoEvento.GetConstructor(new[] { typeof(int), typeof(Pose), tTras, tRot });
+            if (ctor == null) return;
+            object evento = ctor.Invoke(new object[]
+            {
+                0, new Pose(pies, rotacion), Enum.Parse(tTras, "Absolute"), Enum.Parse(tRot, "Absolute")
+            });
+            metodo.Invoke(elegido, new[] { evento });
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[CamionBomberos] No se pudo avisar al locomotor: " + e.Message);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Luces
+    // ------------------------------------------------------------------
 
     public void EncenderLuces(bool on)
     {
@@ -434,9 +659,11 @@ public class CamionBomberos : MonoBehaviour
     {
         if (!_listo) return;
         Gizmos.color = Color.cyan;
-        Gizmos.DrawWireCube(_b.center, _b.size);
+        Gizmos.matrix = Matrix4x4.TRS(CentroCaja, RotCaja, Vector3.one);
+        Gizmos.DrawWireCube(Vector3.zero, MitadCaja * 2f);
+        Gizmos.matrix = Matrix4x4.identity;
         Gizmos.color = Color.green;
         Gizmos.DrawSphere(PosAsiento(), 0.12f);
-        Gizmos.DrawRay(_b.center, _fwd * 3f);
+        Gizmos.DrawRay(CentroBase + Vector3.up, Fwd * 3f);
     }
 }
