@@ -1,0 +1,15 @@
+"Office Chair" — Atribucion de licencia
+=========================================
+
+Modelo:   Office Chair
+Autor:    Red Fox / nokillnando
+Fuente:   https://sketchfab.com/3d-models/office-chair-b228a29fa84544c2be501c295653ffe7
+Perfil:   https://sketchfab.com/nokillnando
+Licencia: Creative Commons Attribution 4.0 (CC BY 4.0)
+          https://creativecommons.org/licenses/by/4.0/
+
+La licencia requiere acreditar al autor, enlazar la licencia e indicar
+los cambios realizados. El uso comercial esta permitido.
+
+Modificaciones realizadas a este modelo:
+- (ninguna: se usa tal cual)

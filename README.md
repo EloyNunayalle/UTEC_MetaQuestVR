@@ -34,6 +34,18 @@ Escena: `Assets/Scenes/SampleScene.unity`.
 
 > La licencia CC BY 4.0 requiere acreditar al autor, enlazar la licencia e indicar los cambios realizados (cumplido en esta sección). El uso comercial está permitido.
 
+### Modelo 3D: "Office Chair"
+- **Autor**: Red Fox / nokillnando (https://sketchfab.com/nokillnando)
+- **Fuente**: https://sketchfab.com/3d-models/office-chair-b228a29fa84544c2be501c295653ffe7
+- **Licencia**: Creative Commons Attribution 4.0 (**CC BY 4.0**) — https://creativecommons.org/licenses/by/4.0/
+- **Modificaciones**: ninguna (se usa tal cual).
+
+### Modelo 3D: "Office Desk 140x60"
+- **Autor**: AleixoAlonso (https://sketchfab.com/AleixoAlonso)
+- **Fuente**: https://sketchfab.com/3d-models/office-desk-140x60-9262f311271c4c4390341e526d3fe103
+- **Licencia**: Creative Commons Attribution 4.0 (**CC BY 4.0**) — https://creativecommons.org/licenses/by/4.0/
+- **Modificaciones**: ninguna (se usa tal cual).
+
 ### Modelos de terceros NO incluidos en este repositorio
 
 - **"Cartoon Stylized American Fire Truck"** — autor: ZippyLee (CGTrader)
