@@ -64,6 +64,12 @@ Escena: `Assets/Scenes/SampleScene.unity`.
 - **Licencia**: Creative Commons Attribution 4.0 (**CC BY 4.0**) — https://creativecommons.org/licenses/by/4.0/
 - **Modificaciones**: ninguna (se usa tal cual).
 
+### Modelo 3D: "Wall-mounted television on a bracket (Hotel and Resort Operations)"
+- **Contribuidor**: 3D Assets (@3dassets) (https://3dassets.dev/u/3dassets)
+- **Fuente**: https://3dassets.dev/assets/hotel-and-resort-operations-tv-wall-bracket-085491b3
+- **Licencia**: CC0 1.0 Universal (dominio público) — https://creativecommons.org/publicdomain/zero/1.0/ — **no exige atribución** (se acredita igualmente por trazabilidad).
+- **Modificaciones**: ninguna (se usa tal cual; colocada como pantalla colgada en alto frente al escritorio del rincón de oficina).
+
 ### Modelos de terceros NO incluidos en este repositorio
 
 - **"Cartoon Stylized American Fire Truck"** — autor: ZippyLee (CGTrader)

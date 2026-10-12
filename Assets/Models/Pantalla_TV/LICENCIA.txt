@@ -1,0 +1,7 @@
+Asset: "Wall-mounted television on a bracket (Hotel and Resort Operations)"
+Fuente: https://3dassets.dev/assets/hotel-and-resort-operations-tv-wall-bracket-085491b3
+Contribuidor: 3D Assets (@3dassets) - https://3dassets.dev/u/3dassets
+Licencia: CC0 1.0 Universal (Dominio Publico) - https://creativecommons.org/publicdomain/zero/1.0/
+  -> No requiere atribucion; se documenta igualmente por trazabilidad.
+Archivo: model.glb (1.1 x 0.64 x 0.159 m, 416 triangulos, sin texturas)
+Descargado: 12/10/2026
