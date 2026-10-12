@@ -41,6 +41,11 @@ Escena: `Assets/Scenes/SampleScene.unity`.
   - Licencia: **Royalty Free de CGTrader** — permite el uso del modelo dentro del proyecto (juego/simulación/VR), renders y capturas, pero **prohíbe la redistribución de los archivos**.
   - Por esa razón, el modelo **no se incluye** en este repositorio. Para usarlo, adquiérelo en el enlace (carpeta local esperada: `Assets/Models/CamionBomberos/`).
 
+- **"Lockers"** (pack de casilleros) — autor: TridentGame (itch.io)
+  - Fuente: https://tridentgame.itch.io/lockers
+  - Licencia: **no declarada** por el autor (asset gratuito en itch.io) — sin permiso explícito de redistribución.
+  - Por esa razón, el asset **no se incluye** en este repositorio (uso local, carpeta `Assets/Models/Casilleros/`). Si el autor otorga permiso, puede incluirse con atribución.
+
 ### Tecnologías y SDKs
 - **Meta XR SDK / Oculus Integration** — © Meta Platforms, bajo su licencia de SDK (Meta Platform Technologies SDK License).
 - **TextMesh Pro** — © Unity Technologies, bajo la Unity Companion License.

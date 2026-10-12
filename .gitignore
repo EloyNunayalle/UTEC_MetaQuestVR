@@ -122,3 +122,8 @@ InitTestScene*.unity*
 # Solo uso incorporado en el proyecto (no subir a repositorios).
 /Assets/Models/CamionBomberos/
 /Assets/Models/CamionBomberos.meta
+
+# "Lockers" - TridentGame (itch.io)
+# Sin licencia declarada: no redistribuir (uso local).
+/Assets/Models/Casilleros/
+/Assets/Models/Casilleros.meta
