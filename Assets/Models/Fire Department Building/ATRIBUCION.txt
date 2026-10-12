@@ -1,0 +1,20 @@
+"Fire Department Building" — Atribucion de licencia
+=====================================================
+
+Modelo:   Fire Department Building
+Autor:    jimbogies
+Fuente:   https://sketchfab.com/3d-models/fire-department-building-6f95f738a4ed4ad1853b4185629b403b
+Perfil:   https://sketchfab.com/jimbogies
+Licencia: Creative Commons Attribution 4.0 (CC BY 4.0)
+          https://creativecommons.org/licenses/by/4.0/
+
+La licencia requiere acreditar al autor, enlazar la licencia e indicar
+los cambios realizados. El uso comercial esta permitido.
+
+Modificaciones realizadas a este modelo:
+- Reescalado de las unidades originales (pulgadas) a metros reales (factor 0.0254)
+- Puertas separadas/duplicadas y animadas:
+  * Porton basculante con brazos hidraulicos (se abre con un boton de poke)
+  * Puerta chica automatica por proximidad
+- Colliders anadidos a las piezas
+- Piezas originales desactivadas (porton curvo) y reemplazadas
