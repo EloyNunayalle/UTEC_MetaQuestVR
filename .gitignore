@@ -115,15 +115,22 @@ InitTestScene*.unity*
 .Aura/
 
 # ============================================================
-# Modelos de terceros de PAGO - NO redistribuir (licencias)
+# Assets de terceros NO redistribuibles (licencias)
 # ============================================================
+# Se versionan SOLO los .meta (GUIDs) y la nota LICENCIA.txt, para que al
+# agregar los archivos descargados (mismos nombres) Unity los re-vincule
+# automaticamente en la escena. Los ARCHIVOS del asset NO van al repo.
+#
 # "Cartoon Stylized American Fire Truck" - ZippyLee (CGTrader)
 # Licencia Royalty Free: prohibida la redistribucion de los archivos.
-# Solo uso incorporado en el proyecto (no subir a repositorios).
-/Assets/Models/CamionBomberos/
-/Assets/Models/CamionBomberos.meta
-
+/Assets/Models/CamionBomberos/**
+!/Assets/Models/CamionBomberos/**/
+!/Assets/Models/CamionBomberos/**/*.meta
+!/Assets/Models/CamionBomberos/LICENCIA.txt
+#
 # "Lockers" - TridentGame (itch.io)
 # Sin licencia declarada: no redistribuir (uso local).
-/Assets/Models/Casilleros/
-/Assets/Models/Casilleros.meta
+/Assets/Models/Casilleros/**
+!/Assets/Models/Casilleros/**/
+!/Assets/Models/Casilleros/**/*.meta
+!/Assets/Models/Casilleros/LICENCIA.txt

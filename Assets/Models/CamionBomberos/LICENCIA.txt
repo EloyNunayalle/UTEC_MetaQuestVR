@@ -1,0 +1,18 @@
+"Cartoon Stylized American Fire Truck" — Nota de licencia
+==========================================================
+
+Modelo:   Cartoon Stylized American Fire Truck
+Autor:    ZippyLee
+Fuente:   https://www.cgtrader.com/3d-models/vehicle/truck/cartoon-stylized-american-fire-truck
+Licencia: Royalty Free (CGTrader)
+Compra:   (fecha: ____________  /  nro. de pedido: ____________)
+
+Terminos clave (CGTrader Royalty Free):
+- PERMITIDO: usar el modelo incorporado dentro del proyecto (juego, VR,
+  simulacion), capturas, renders y videos del proyecto. Uso comercial OK.
+- PROHIBIDO: redistribuir los archivos del modelo: subirlos a GitHub,
+  compartir el archivo o revenderlo. La licencia es solo para el comprador.
+
+NOTA: esta carpeta y este archivo estan EXCLUIDOS de git (.gitignore).
+No subir el contenido de esta carpeta a repositorios publicos ni privados
+compartidos con personas que no hayan comprado el modelo.

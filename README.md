@@ -46,6 +46,14 @@ Escena: `Assets/Scenes/SampleScene.unity`.
   - Licencia: **no declarada** por el autor (asset gratuito en itch.io) — sin permiso explícito de redistribución.
   - Por esa razón, el asset **no se incluye** en este repositorio (uso local, carpeta `Assets/Models/Casilleros/`). Si el autor otorga permiso, puede incluirse con atribución.
 
+#### Cómo agregar los assets locales (para que la escena se vea completa)
+
+1. Consigue cada asset desde su enlace (el camión se compra; los casilleros son gratuitos en itch.io).
+2. Extrae su contenido en la carpeta indicada — `Assets/Models/CamionBomberos/` o `Assets/Models/Casilleros/` — **respetando los nombres de archivo originales**.
+3. Abre Unity: los objetos se **re-vinculan automáticamente** en la escena (los archivos `.meta` versionados en este repositorio conservan los mismos identificadores/GUIDs).
+
+> Si los assets no están presentes, el proyecto **compila y ejecuta igual**; solo se muestran como referencias vacías ("Missing") en la escena.
+
 ### Tecnologías y SDKs
 - **Meta XR SDK / Oculus Integration** — © Meta Platforms, bajo su licencia de SDK (Meta Platform Technologies SDK License).
 - **TextMesh Pro** — © Unity Technologies, bajo la Unity Companion License.

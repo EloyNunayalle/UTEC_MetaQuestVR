@@ -1,0 +1,26 @@
+"Lockers" (pack de casilleros) — Nota de licencia
+==================================================
+
+Asset:    Lockers
+Autor:    TridentGame
+Fuente:   https://tridentgame.itch.io/lockers
+Licencia: SIN LICENCIA DECLARADA (itch.io, "Name your own price" = gratis)
+Descarga: (fecha: ____________)
+
+Estado de licencia (revisado el 12/10/2026):
+- La pagina del autor NO declara licencia (ni CC0, ni CC-BY, ni permisos de
+  redistribucion), y el paquete no incluye ningun archivo de licencia.
+- Sin licencia explicita, la obra queda bajo "todos los derechos reservados".
+
+Que significa para este proyecto:
+- USO LOCAL: el asset se usa dentro del proyecto (no se redistribuye).
+- NO subir esta carpeta a repositorios (GitHub u otros).
+- Esta carpeta esta EXCLUIDA de git (.gitignore).
+
+Si quieres incluirlo en el repositorio publico:
+- Pidele permiso al autor (comentario en la pagina de itch.io) y guarda su
+  respuesta; con eso puede incluirse, idealmente con atribucion.
+
+Contenido: Box.blend, Modelos/ (5 modelos en FBX+OBJ: M.C.C, M.O.C, M.W.O.C,
+metal box, Rack) y Texturas/ (PBR 2048: Albedo, AO, Height, Metall, Normal,
+Roughness por modelo).
