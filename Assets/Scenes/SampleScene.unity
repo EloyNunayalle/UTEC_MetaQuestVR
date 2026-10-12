@@ -8787,7 +8787,7 @@ MonoBehaviour:
   pivote: {fileID: 1541858654}
   anguloAbierto: 85
   duracion: 1.4
-  jugador: {fileID: 1888812491}
+  jugador: {fileID: 709928793}
   distanciaAbrir: 2.2
   distanciaCerrar: 3.2
   retrasoCierre: 1.2
@@ -10352,7 +10352,7 @@ MonoBehaviour:
   varaDer: {fileID: 1818152381}
   radioFunda: 0.05
   radioVara: 0.025
-  jugador: {fileID: 1888812491}
+  jugador: {fileID: 709928793}
   zonaBarridoCentro: {x: -5.1895, y: 2.35, z: -2.3}
   zonaBarridoTamano: {x: 4.4, y: 4.7, z: 4.8}
   estado: 0
