@@ -1,0 +1,17 @@
+"Life Vest / Life Jacket (low poly)" — Atribucion de licencia
+===============================================================
+
+Modelo:   Life Vest / Life Jacket (low poly)
+Autor:    Akimkhan
+Fuente:   https://sketchfab.com/3d-models/life-vest-life-jacket-low-poly-f1e8b0bb85dd4abe866e2c8de7a91e95
+Perfil:   https://sketchfab.com/akimkhan
+Licencia: Creative Commons Attribution 4.0 (CC BY 4.0)
+          https://creativecommons.org/licenses/by/4.0/
+Nota:     Version low-poly del modelo original de @DPMA
+          (https://sketchfab.com/3d-models/life-vest-life-jacket-8481ac383f5348529d366c99cf86ab8e)
+
+La licencia requiere acreditar al autor, enlazar la licencia e indicar
+los cambios realizados. El uso comercial esta permitido.
+
+Modificaciones realizadas a este modelo:
+- (ninguna: se usa tal cual)

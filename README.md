@@ -46,6 +46,24 @@ Escena: `Assets/Scenes/SampleScene.unity`.
 - **Licencia**: Creative Commons Attribution 4.0 (**CC BY 4.0**) — https://creativecommons.org/licenses/by/4.0/
 - **Modificaciones**: ninguna (se usa tal cual).
 
+### Modelo 3D: "Fire extinguisher low-poly"
+- **Autor**: fumestic (https://sketchfab.com/fumestic)
+- **Fuente**: https://sketchfab.com/3d-models/fire-extinguisher-low-poly-91457bbb11e5431e8985076ad5b13563
+- **Licencia**: Creative Commons Attribution 4.0 (**CC BY 4.0**) — https://creativecommons.org/licenses/by/4.0/
+- **Modificaciones**: ninguna (se usa tal cual).
+
+### Modelo 3D: "Life Vest / Life Jacket (low poly)"
+- **Autor**: Akimkhan (https://sketchfab.com/akimkhan) — versión low-poly del modelo original de @DPMA
+- **Fuente**: https://sketchfab.com/3d-models/life-vest-life-jacket-low-poly-f1e8b0bb85dd4abe866e2c8de7a91e95
+- **Licencia**: Creative Commons Attribution 4.0 (**CC BY 4.0**) — https://creativecommons.org/licenses/by/4.0/
+- **Modificaciones**: ninguna (se usa tal cual).
+
+### Modelo 3D: "Fire Hose Cabinet"
+- **Autor**: RED2000 (https://sketchfab.com/RED2000)
+- **Fuente**: https://sketchfab.com/3d-models/fire-hose-cabinet-befe18817b094900ad2290654f655cb8
+- **Licencia**: Creative Commons Attribution 4.0 (**CC BY 4.0**) — https://creativecommons.org/licenses/by/4.0/
+- **Modificaciones**: ninguna (se usa tal cual).
+
 ### Modelos de terceros NO incluidos en este repositorio
 
 - **"Cartoon Stylized American Fire Truck"** — autor: ZippyLee (CGTrader)
