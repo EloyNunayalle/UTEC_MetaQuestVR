@@ -1,6 +1,9 @@
 {
   "dependencies": {
+    "com.coplaydev.unity-mcp": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity",
     "com.meta.xr.sdk.all": "201.0.0",
+    "com.ramenvr.aura-unity": "https://github.com/ramenvr/AuraForUnityPlugin.git",
+    "com.unity.cloud.gltfast": "6.14.1",
     "com.unity.feature.development": "1.0.1",
     "com.unity.textmeshpro": "3.0.7",
     "com.unity.timeline": "1.7.7",
