@@ -34,6 +34,13 @@ Escena: `Assets/Scenes/SampleScene.unity`.
 
 > La licencia CC BY 4.0 requiere acreditar al autor, enlazar la licencia e indicar los cambios realizados (cumplido en esta sección). El uso comercial está permitido.
 
+### Modelos de terceros NO incluidos en este repositorio
+
+- **"Cartoon Stylized American Fire Truck"** — autor: ZippyLee (CGTrader)
+  - Fuente: https://www.cgtrader.com/3d-models/vehicle/truck/cartoon-stylized-american-fire-truck
+  - Licencia: **Royalty Free de CGTrader** — permite el uso del modelo dentro del proyecto (juego/simulación/VR), renders y capturas, pero **prohíbe la redistribución de los archivos**.
+  - Por esa razón, el modelo **no se incluye** en este repositorio. Para usarlo, adquiérelo en el enlace (carpeta local esperada: `Assets/Models/CamionBomberos/`).
+
 ### Tecnologías y SDKs
 - **Meta XR SDK / Oculus Integration** — © Meta Platforms, bajo su licencia de SDK (Meta Platform Technologies SDK License).
 - **TextMesh Pro** — © Unity Technologies, bajo la Unity Companion License.
