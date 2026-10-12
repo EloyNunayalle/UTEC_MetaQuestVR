@@ -24,6 +24,8 @@ public class JuegoBomberos : MonoBehaviour
     [Header("Modo")]
     [Tooltip("Directo: sin tareas previas, vas al camion, subes y lo manejas. Desmarcar = mision completa (porton, chaleco, extintor).")]
     public bool modoDirecto = true;
+    [Tooltip("Caminar libre con joystick atravesando paredes y objetos (sin bloqueos). Desmarcar = locomocion normal del SDK.")]
+    public bool caminarLibre = true;
 
     [Header("Referencias (vacias = se buscan solas)")]
     public OVRCameraRig rig;
@@ -103,6 +105,7 @@ public class JuegoBomberos : MonoBehaviour
             return;
         }
         _cabeza = rig.centerEyeAnchor;
+        if (caminarLibre) gameObject.AddComponent<LocomocionLibre>().Inicializar(rig);
 
         if (porton == null) porton = FindObjectOfType<PortonElevadizo>();
         if (botonPorton == null) botonPorton = FindObjectOfType<BotonPorton>();

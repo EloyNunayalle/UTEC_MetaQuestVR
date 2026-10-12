@@ -38,6 +38,8 @@ Al darle Play vas directo al camión, sin tareas previas. Sigue la flecha amaril
 | Sirena on/off | **A** | `H` |
 | Bajar del camión | **B** (o mantener el pellizco 2 s) | `Q` |
 
+**Caminar libre**: a pie, nada te bloquea. Atraviesas paredes, muebles y el camión, pero sigues la altura del piso. Stick izquierdo para caminar hacia donde miras (gatillo izquierdo para correr), stick derecho a los lados para girar 30°. En el editor: flechas para caminar, `,` y `.` para girar. Reemplaza la locomoción del SDK, así que no hay teletransporte. Para volver a la locomoción normal, desmarca `Caminar Libre` en `JuegoBomberos`.
+
 Al soltar el stick, el camión frena solo. Choca con las paredes y con el portón cerrado (se detiene, suena y vibra). El HUD muestra la velocidad en km/h y el estado de la sirena y del portón. Para manejar se necesitan los controles: con manos solo se puede subir y bajar.
 
 Para volver a la **misión completa** (portón, chaleco, extintor, puntaje), desmarca `Modo Directo` en el objeto `JuegoBomberos` de la escena.
