@@ -28,6 +28,9 @@ public class BotonPorton : MonoBehaviour
         {
             _ultimoDisparo = Time.time;
             porton.Alternar();
+            // Feedback: clic y vibracion al presionar.
+            SonidosVR.ReproducirEn(SonidosVR.Clic, transform.position, 1f);
+            EntradaVR.VibrarAmbas(0.5f, 0.08f, 0.8f);
         }
     }
 

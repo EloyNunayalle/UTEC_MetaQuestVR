@@ -7,6 +7,7 @@ La escena principal es una estación de bomberos interactiva con:
 - **Portón elevadizo (basculante)** con brazos hidráulicos, que se abre/cierra con un **botón de presión** (poke con la mano o la punta del controlador).
 - **Locomoción VR**: caminar con joystick + teletransporte (Interaction SDK / Building Blocks).
 - Interacciones con manos y controles (poke, ray, grab) sobre el rig de interacción moderno.
+- **Juego "Emergencia en la estación"**: misión con tareas, HUD, sonidos, vibración, puntaje y **subida al camión de bomberos** (ver abajo).
 
 ## Cómo probar
 
@@ -23,6 +24,33 @@ Escena: `Assets/Scenes/SampleScene.unity`.
 3. Dale **Play**. Los controles se usan **en la ventana del simulador** (no en la pestaña Game):
    - `WASD` para moverte, botón derecho del mouse para mirar.
    - `Inputs → Global Input Settings` para elegir manos o controles simulados.
+
+## Juego interactivo: "Emergencia en la estación"
+
+Al darle Play aparece un panel de bienvenida con los controles. Presiona **A** (o pellizca) para empezar —o espera 15 s y empieza solo—. Suena la alarma y hay que completar las tareas **lo más rápido posible**:
+
+1. **Abrir el portón de la cochera**: toca el botón rojo con el dedo o con la punta del control.
+2. **Ponerte el chaleco**: acerca la mano, agárralo con **GRIP/gatillo** (o pellizcando) y llévalo a tu pecho. Al soltarlo ahí, queda puesto.
+3. **Cargar el extintor al camión**: agárralo, llévalo hasta el camión y suéltalo junto a él.
+4. **Subir al camión de bomberos**: párate en el **círculo amarillo** junto a la puerta del conductor. El círculo se llena y subes a la cabina (o presiona **A** para subir al instante). Se encienden las balizas, la sirena y el motor.
+   - **Bajar**: **B/Y** o mantener el pellizco 2 s.
+   - Si intentas subir sin haber terminado tu equipo, el camión te avisa qué falta.
+
+Al subir se muestra el **tiempo, el puntaje** (100 por tarea + bono por rapidez) y la **calificación** (EXCELENTE / MUY BIEN / COMPLETADO). Después de bajar, **A** reinicia el juego.
+
+**Feedback al jugador**
+- **Visual**: un panel que sigue tu mirada sin pegarse a ella (objetivo actual, lista de tareas, tiempo y puntaje), avisos grandes en verde, amarillo o rojo, una flecha flotante con la distancia sobre el objetivo, una pista de dirección ("detrás de ti, a 12 m"), objetos que brillan al acercar la mano y se ponen verdes cuando están en su destino, una luz roja de alarma intermitente, las balizas del camión y un círculo de abordaje que se va llenando.
+- **Sonoro** (generado por código, sin archivos de audio): alarma, campana periódica, clic al tocar, sonido al agarrar, arpegio de éxito, zumbido de error, motor del portón, puerta neumática, sirena, motor del camión y fanfarria final.
+- **Háptico**: vibración de los controles al pasar la mano por un objeto, al agarrarlo, al llegar a su destino, al completar tareas, al presionar el botón, durante el abordaje y en los errores.
+- **Recordatorios**: si pasan 35 s sin avanzar, se vuelve a mostrar la pista de la tarea actual.
+
+**Teclado (editor/simulador)**: `Espacio`/`E`/`Enter` = A, `Q`/`Backspace` = B, `R` = reiniciar al final.
+
+**Implementación** (`Assets/Scripts/Juego/`): basta con el objeto `JuegoBomberos` de la escena. Al iniciar busca solo el rig, el portón, la puerta, el chaleco, el extintor y el camión (por tipo o por nombre) y arma el resto en tiempo de ejecución.
+- `JuegoBomberos.cs`: flujo, tareas, puntaje y feedback.
+- `CamionBomberos.cs`: abordaje, asiento, balizas, sirena y motor. Si el modelo de pago del camión no está en el proyecto, genera un **camión simple de reemplazo**. En el Inspector (en Play) puedes ajustar `ajusteAsiento`, `ajusteZonaSubida`, `invertirFrente` y `conductorIzquierda` si la cabina no cae justo en el modelo.
+- `ObjetoAgarrable.cs`: agarre por cercanía con controles o manos.
+- `HudBomberos.cs`, `MarcadorObjetivo.cs`, `SonidosVR.cs`, `EntradaVR.cs` y `VisualesVR.cs`: HUD, flecha guía, sonidos, entrada y háptica, y utilidades visuales.
 
 ## Créditos y licencias
 
