@@ -17,6 +17,7 @@ public class HudBomberos : MonoBehaviour
     Renderer _fondo;
     Material _matFondo;
     bool _siguiendo = true;
+    Vector3 _dirPanel;
 
     Transform _avisoRaiz;
     TextMeshPro _aviso;
@@ -118,29 +119,22 @@ public class HudBomberos : MonoBehaviour
     void ColocarPanel(float paso)
     {
         Vector3 f = FrenteHorizontal();
-        Vector3 objetivo = _cabeza.position + f * distancia + Vector3.up * alturaRelativa;
 
-        // Solo se reacomoda cuando el jugador gira lo suficiente (lazy follow) para no marear.
-        Vector3 actual = _panel.position - _cabeza.position;
-        actual.y = 0f;
-        float angulo = Vector3.Angle(actual, f);
-        float distErr = Mathf.Abs(actual.magnitude - distancia);
-        if (paso >= 1f || angulo > anguloParaSeguir || distErr > 0.5f) _siguiendo = true;
-
-        if (_siguiendo)
-        {
-            float k = paso >= 1f ? 1f : 1f - Mathf.Exp(-paso * 4f);
-            _panel.position = Vector3.Lerp(_panel.position, objetivo, k);
-            if (Vector3.Distance(_panel.position, objetivo) < 0.03f) _siguiendo = false;
-        }
+        // Solo la DIRECCION del panel es perezosa (se reacomoda al girar la cabeza);
+        // la distancia a la cabeza es siempre fija, asi el panel avanza contigo al caminar
+        // y nunca se te viene encima como una pared.
+        if (paso >= 1f || _dirPanel == Vector3.zero) { _dirPanel = f; _siguiendo = false; }
         else
         {
-            // Mantiene la altura relativa a la cabeza aunque no gire.
-            var p = _panel.position;
-            p.y = Mathf.Lerp(p.y, objetivo.y, 1f - Mathf.Exp(-paso * 4f));
-            _panel.position = p;
+            if (Vector3.Angle(_dirPanel, f) > anguloParaSeguir) _siguiendo = true;
+            if (_siguiendo)
+            {
+                _dirPanel = Vector3.Slerp(_dirPanel, f, 1f - Mathf.Exp(-paso * 4f)).normalized;
+                if (Vector3.Angle(_dirPanel, f) < 2f) _siguiendo = false;
+            }
         }
 
+        _panel.position = _cabeza.position + _dirPanel * distancia + Vector3.up * alturaRelativa;
         Vector3 mirar = _panel.position - _cabeza.position;
         if (mirar.sqrMagnitude > 0.0001f) _panel.rotation = Quaternion.LookRotation(mirar, Vector3.up);
     }

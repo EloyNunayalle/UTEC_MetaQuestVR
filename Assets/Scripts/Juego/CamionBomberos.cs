@@ -508,7 +508,6 @@ public class CamionBomberos : MonoBehaviour
         _rigAlturaSobreZona = rigT.position.y - _zona.position.y;
 
         ApagarLocomocion();
-        LocomocionLibre.Pausada = true;
 
         // Gira el rig para que la cabeza mire al frente del camion y la mueve al asiento.
         float yawObjetivo = Quaternion.LookRotation(Fwd).eulerAngles.y;
@@ -526,7 +525,7 @@ public class CamionBomberos : MonoBehaviour
         _zona.gameObject.SetActive(false);
 
         EncenderLuces(true);
-        if (!manejable) _sirena.Play();
+        _sirena.Play();
         _motor.pitch = 0.8f;
         _motor.Play();
         SonidosVR.ReproducirEn(SonidosVR.Puerta, PosAsiento(), 1f);
@@ -553,7 +552,6 @@ public class CamionBomberos : MonoBehaviour
         rigT.position = nuevaPos;
 
         EncenderLocomocion();
-        LocomocionLibre.Pausada = false;
         TeletransportarLocomotor(new Vector3(piso.x, nuevaPos.y, piso.z), Quaternion.Euler(0f, cabeza.eulerAngles.y, 0f));
 
         _sirena.Stop();

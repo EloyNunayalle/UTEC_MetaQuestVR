@@ -27,25 +27,6 @@ Escena: `Assets/Scenes/SampleScene.unity`.
 
 ## Juego interactivo: "Emergencia en la estación"
 
-### Modo directo: manejar el camión (activo por defecto)
-
-Al darle Play vas directo al camión, sin tareas previas. Sigue la flecha amarilla hasta el **círculo junto a la puerta del conductor**, quédate ahí un momento (o presiona **A**) y subes a la cabina. El portón se abre solo.
-
-| Acción | Control | Teclado (editor) |
-|---|---|---|
-| Avanzar / retroceder | Stick izquierdo arriba / abajo | `W`/`S` o flechas |
-| Girar | Stick izquierdo o derecho a los lados | `A`/`D` o flechas |
-| Sirena on/off | **A** | `H` |
-| Bajar del camión | **B** (o mantener el pellizco 2 s) | `Q` |
-
-**Caminar libre**: a pie, nada te bloquea. Atraviesas paredes, muebles y el camión, pero sigues la altura del piso. Stick izquierdo para caminar hacia donde miras (gatillo izquierdo para correr), stick derecho a los lados para girar 30°. En el editor: flechas para caminar, `,` y `.` para girar. Reemplaza la locomoción del SDK, así que no hay teletransporte. Para volver a la locomoción normal, desmarca `Caminar Libre` en `JuegoBomberos`.
-
-Al soltar el stick, el camión frena solo. Choca con las paredes y con el portón cerrado (se detiene, suena y vibra). El HUD muestra la velocidad en km/h y el estado de la sirena y del portón. Para manejar se necesitan los controles: con manos solo se puede subir y bajar.
-
-Para volver a la **misión completa** (portón, chaleco, extintor, puntaje), desmarca `Modo Directo` en el objeto `JuegoBomberos` de la escena.
-
-### Misión completa (modo directo desactivado)
-
 Al darle Play aparece un panel de bienvenida con los controles. Presiona **A** (o pellizca) para empezar —o espera 15 s y empieza solo—. Suena la alarma y hay que completar las tareas **lo más rápido posible**:
 
 1. **Abrir el portón de la cochera**: toca el botón rojo con el dedo o con la punta del control.
@@ -54,6 +35,17 @@ Al darle Play aparece un panel de bienvenida con los controles. Presiona **A** (
 4. **Subir al camión de bomberos**: párate en el **círculo amarillo** junto a la puerta del conductor. El círculo se llena y subes a la cabina (o presiona **A** para subir al instante). Se encienden las balizas, la sirena y el motor.
    - **Bajar**: **B/Y** o mantener el pellizco 2 s.
    - Si intentas subir sin haber terminado tu equipo, el camión te avisa qué falta.
+
+**Al final, manejas el camión**: al subir termina la misión y puedes conducir. El portón se abre si estaba cerrado.
+
+| Acción | Control | Teclado (editor) |
+|---|---|---|
+| Avanzar / retroceder | Stick izquierdo arriba / abajo | `W`/`S` o flechas |
+| Girar | Stick a los lados | `A`/`D` o flechas |
+| Sirena on/off | **A** | `H` |
+| Bajar | **B** | `Q` |
+
+El camión frena solo al soltar el stick y se detiene contra paredes u objetos (con sonido, vibración y aviso).
 
 Al subir se muestra el **tiempo, el puntaje** (100 por tarea + bono por rapidez) y la **calificación** (EXCELENTE / MUY BIEN / COMPLETADO). Después de bajar, **A** reinicia el juego.
 
