@@ -82,6 +82,35 @@ public class JuegoBomberos : MonoBehaviour
     void Awake()
     {
         Instancia = this;
+        AjustarCollidersGigantes();
+    }
+
+    /// <summary>
+    /// Algunos modelos importados (pack de casilleros, etc.) traen escala x100 y su BoxCollider
+    /// termina midiendo decenas de metros: una caja invisible que bloquea al jugador en media
+    /// estacion. Aqui se ajusta cada BoxCollider desproporcionado al tamano real de su modelo.
+    /// </summary>
+    static void AjustarCollidersGigantes()
+    {
+        foreach (var c in FindObjectsOfType<BoxCollider>())
+        {
+            if (c.isTrigger || !c.enabled) continue;
+            var renders = c.GetComponentsInChildren<Renderer>();
+            if (renders.Length == 0) continue;
+            Bounds rb = renders[0].bounds;
+            foreach (var r in renders) rb.Encapsulate(r.bounds);
+
+            Vector3 cs = c.bounds.size, ms = rb.size;
+            bool gigante = cs.x > ms.x * 3f + 0.5f || cs.y > ms.y * 3f + 0.5f || cs.z > ms.z * 3f + 0.5f;
+            if (!gigante) continue;
+
+            var t = c.transform;
+            Vector3 antes = cs;
+            c.center = t.InverseTransformPoint(rb.center);
+            Vector3 ls = t.InverseTransformVector(rb.size);
+            c.size = new Vector3(Mathf.Abs(ls.x), Mathf.Abs(ls.y), Mathf.Abs(ls.z));
+            Debug.Log($"[JuegoBomberos] Collider gigante corregido en {Ruta(t)}: {antes} -> {c.bounds.size}", c);
+        }
     }
 
     void OnDestroy()
