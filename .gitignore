@@ -134,3 +134,11 @@ InitTestScene*.unity*
 !/Assets/Models/Casilleros/**/
 !/Assets/Models/Casilleros/**/*.meta
 !/Assets/Models/Casilleros/LICENCIA.txt
+#
+# "Rugged Tablet 0.1" - dengxiart (Sketchfab)
+# Licencia "Free Standard" (Sketchfab): prohibida la redistribucion del archivo
+# (no puede ofrecerse como archivo independiente) y licencia Single-Seat.
+/Assets/Models/Tablet_Rugged/**
+!/Assets/Models/Tablet_Rugged/**/
+!/Assets/Models/Tablet_Rugged/**/*.meta
+!/Assets/Models/Tablet_Rugged/LICENCIA.txt

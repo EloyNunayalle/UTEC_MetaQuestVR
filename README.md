@@ -121,10 +121,15 @@ Al subir se muestra el **tiempo, el puntaje** (100 por tarea + bono por rapidez)
   - Licencia: **no declarada** por el autor (asset gratuito en itch.io) — sin permiso explícito de redistribución.
   - Por esa razón, el asset **no se incluye** en este repositorio (uso local, carpeta `Assets/Models/Casilleros/`). Si el autor otorga permiso, puede incluirse con atribución.
 
+- **"Rugged Tablet 0.1"** — autor: dengxiart (Sketchfab)
+  - Fuente: https://sketchfab.com/3d-models/rugged-tablet-01-7df208afa36a41d0a7592ae83cde8979
+  - Licencia: **"Free Standard" de Sketchfab** — permite el uso dentro del proyecto (incluso comercial), pero **prohíbe redistribuir el archivo del modelo** como archivo independiente y es **Single-Seat**.
+  - Por esa razón, el asset **no se incluye** en este repositorio (uso local, carpeta `Assets/Models/Tablet_Rugged/`).
+
 #### Cómo agregar los assets locales (para que la escena se vea completa)
 
-1. Consigue cada asset desde su enlace (el camión se compra; los casilleros son gratuitos en itch.io).
-2. Extrae su contenido en la carpeta indicada — `Assets/Models/CamionBomberos/` o `Assets/Models/Casilleros/` — **respetando los nombres de archivo originales**.
+1. Consigue cada asset desde su enlace (el camión se compra; los casilleros y la tablet son gratuitos: itch.io y Sketchfab).
+2. Coloca su contenido en la carpeta indicada — `Assets/Models/CamionBomberos/`, `Assets/Models/Casilleros/` o `Assets/Models/Tablet_Rugged/` (tablet: `rugged_tablet_0.1.glb`) — **respetando los nombres de archivo originales**.
 3. Abre Unity: los objetos se **re-vinculan automáticamente** en la escena (los archivos `.meta` versionados en este repositorio conservan los mismos identificadores/GUIDs).
 
 > Si los assets no están presentes, el proyecto **compila y ejecuta igual**; solo se muestran como referencias vacías ("Missing") en la escena.

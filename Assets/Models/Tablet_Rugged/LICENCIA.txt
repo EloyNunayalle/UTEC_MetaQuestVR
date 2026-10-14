@@ -1,0 +1,12 @@
+Asset: "Rugged Tablet 0.1"
+Autor: dengxiart - https://sketchfab.com/dengxiart
+Fuente: https://sketchfab.com/3d-models/rugged-tablet-01-7df208afa36a41d0a7592ae83cde8979
+Licencia: "Free Standard" de Sketchfab (https://sketchfab.com/licenses)
+  -> Permite usar el modelo dentro de este proyecto (trabajo derivado, uso comercial o no).
+  -> PROHIBIDA la redistribucion del archivo del modelo (no puede ofrecerse como archivo
+     independiente ni alojarse para descarga de terceros). Licencia Single-Seat.
+  -> Por eso los ARCHIVOS no se incluyen en este repositorio: solo este aviso y los .meta
+     (para el re-vinculado automatico por GUID).
+Archivo esperado: rugged_tablet_0.1.glb (descarga gratuita en el enlace; mismo nombre y
+carpeta -> Unity lo re-vincula automaticamente en la escena).
+Descargado: 14/10/2026
