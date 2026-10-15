@@ -62,6 +62,7 @@ Al subir se muestra el **tiempo, el puntaje** (100 por tarea + bono por rapidez)
 - `CamionBomberos.cs`: abordaje, asiento, balizas, sirena y motor. Si el modelo de pago del camión no está en el proyecto, genera un **camión simple de reemplazo**. En el Inspector (en Play) puedes ajustar `ajusteAsiento`, `ajusteZonaSubida`, `invertirFrente` y `conductorIzquierda` si la cabina no cae justo en el modelo.
 - `ObjetoAgarrable.cs`: agarre por cercanía con controles o manos.
 - `HudBomberos.cs`, `MarcadorObjetivo.cs`, `SonidosVR.cs`, `EntradaVR.cs` y `VisualesVR.cs`: HUD, flecha guía, sonidos, entrada y háptica, y utilidades visuales.
+- `PanelCamion.cs`: panel del camión (UI diegética según el mockup `camion.png` del informe): **medidor de velocidad** (número + barra), marcha y ruta, y chips de **luces/sirena** en el tablero; y la **pantalla GPS** de la tablet (mapa con la ruta, conexión y ETA). Se crea solo al dar Play; ajustes finos en el Inspector (`ajustePanel`, `ajusteGps`, `inclinacionPanel`).
 
 ## Créditos y licencias
 
