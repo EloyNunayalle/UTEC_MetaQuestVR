@@ -8,8 +8,8 @@ using UnityEngine;
 public class PalancaCambios : MonoBehaviour
 {
     public CamionBomberos camion;
-    [Tooltip("Angulos de las ranuras P, R, N, D (grados, + = hacia el frente).")]
-    public float[] angulosRanuras = new float[] { 24f, 8f, -8f, -24f };
+    [Tooltip("Angulos de las ranuras P, R, N, D (grados, negativos = hacia el conductor).")]
+    public float[] angulosRanuras = new float[] { -2f, -8f, -14f, -20f };
     [Tooltip("Distancia del pomo al pivote (m).")]
     public float radioPomo = 0.24f;
     [Tooltip("Marcha inicial (3 = D).")]

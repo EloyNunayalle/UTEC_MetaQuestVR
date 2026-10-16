@@ -474,11 +474,11 @@ public class InteriorCamion : MonoBehaviour
 
         // Mas larga que la palanca original (la supera un poco).
         var palo = Prim(PrimitiveType.Cylinder, "Palo", pivote, VisualesVR.MaterialOpaco(new Color(0.10f, 0.10f, 0.12f)));
-        palo.transform.localPosition = new Vector3(0f, 0.17f, 0f);
-        palo.transform.localScale = new Vector3(0.024f, 0.17f, 0.024f);
+        palo.transform.localPosition = new Vector3(0f, 0.25f, 0f);
+        palo.transform.localScale = new Vector3(0.024f, 0.25f, 0.024f);
 
         var pomo = Prim(PrimitiveType.Sphere, "Pomo", pivote, VisualesVR.MaterialOpaco(new Color(0.05f, 0.05f, 0.06f)));
-        pomo.transform.localPosition = new Vector3(0f, 0.36f, 0f);
+        pomo.transform.localPosition = new Vector3(0f, 0.52f, 0f);
         pomo.transform.localScale = new Vector3(0.058f, 0.052f, 0.058f);
 
         // Letras grabadas en el pomo (se ilumina la del modo actual).
@@ -487,7 +487,7 @@ public class InteriorCamion : MonoBehaviour
         for (int i = 0; i < 4; i++)
         {
             var t = Texto("Letra" + letras[i], pivote, 0.010f, new Vector2(0.02f, 0.016f));
-            t.transform.localPosition = new Vector3(xs[i], 0.36f, -0.027f);
+            t.transform.localPosition = new Vector3(xs[i], 0.52f, -0.027f);
             t.text = letras[i];
             t.color = i == 3 ? new Color(0.45f, 0.9f, 1f) : new Color(0.13f, 0.14f, 0.16f);
             _letras[i] = t;
@@ -495,7 +495,7 @@ public class InteriorCamion : MonoBehaviour
 
         var pal = pivote.gameObject.AddComponent<PalancaCambios>();
         pal.camion = _camion;
-        pal.radioPomo = 0.36f;
+        pal.radioPomo = 0.52f;
     }
 
     // ---------------- Luz de cabina ----------------
