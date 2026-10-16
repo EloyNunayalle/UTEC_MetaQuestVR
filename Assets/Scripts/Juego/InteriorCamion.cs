@@ -61,6 +61,7 @@ public class InteriorCamion : MonoBehaviour
     Transform _tablero, _cluster, _pantalla, _palancaPivote;
     Transform _agujaVel, _agujaRpm;
     TextMeshPro _velTxt, _marchaTxt, _lucesTxt, _sirenaTxt, _etaTxt;
+    TextMeshPro[] _letras = new TextMeshPro[4];
     Material _matChipLuces, _matChipSirena;
     FieldInfo _campoLuces;
     float _tiempoBusqueda;
@@ -135,6 +136,7 @@ public class InteriorCamion : MonoBehaviour
         _tablero = _cluster = _pantalla = _palancaPivote = null;
         _agujaVel = _agujaRpm = null;
         _velTxt = _marchaTxt = _lucesTxt = _sirenaTxt = _etaTxt = null;
+        for (int i = 0; i < _letras.Length; i++) _letras[i] = null;
         _matChipLuces = _matChipSirena = null;
         _raiz = null;
         _camion = null;
@@ -465,35 +467,35 @@ public class InteriorCamion : MonoBehaviour
         basePal.transform.localPosition = new Vector3(0f, -0.01f, 0f);
         basePal.transform.localScale = new Vector3(0.10f, 0.05f, 0.16f);
 
-        // Guia con letras P R N D (sobre el tablero, al lado de la palanca).
-        var guia = Prim(PrimitiveType.Quad, "Guia", _palancaPivote, VisualesVR.MaterialSinLuz(new Color(0.07f, 0.09f, 0.12f, 0.95f)));
-        guia.transform.localPosition = new Vector3(0.16f, 0.02f, -0.02f);
-        guia.transform.localScale = new Vector3(0.06f, 0.20f, 1f);
-        string[] letras = new string[] { "P", "R", "N", "D" };
-        for (int i = 0; i < 4; i++)
-        {
-            var t = Texto("Letra", _palancaPivote, 0.012f, new Vector2(0.03f, 0.02f));
-            t.transform.localPosition = new Vector3(0.16f, 0.085f - i * 0.055f, -0.025f);
-            t.text = letras[i];
-            t.color = i == 3 ? ColCyan : ColGris;
-        }
-
         // Palanca movil (pivote propio para que PalancaCambios la gire).
         var pivote = new GameObject("Pivote").transform;
         pivote.SetParent(_palancaPivote, false);
         pivote.localRotation = Quaternion.identity;
 
+        // Mas larga que la palanca original (la supera un poco).
         var palo = Prim(PrimitiveType.Cylinder, "Palo", pivote, VisualesVR.MaterialOpaco(new Color(0.10f, 0.10f, 0.12f)));
-        palo.transform.localPosition = new Vector3(0f, 0.15f, 0f);
-        palo.transform.localScale = new Vector3(0.024f, 0.15f, 0.024f);
+        palo.transform.localPosition = new Vector3(0f, 0.17f, 0f);
+        palo.transform.localScale = new Vector3(0.024f, 0.17f, 0.024f);
 
         var pomo = Prim(PrimitiveType.Sphere, "Pomo", pivote, VisualesVR.MaterialOpaco(new Color(0.05f, 0.05f, 0.06f)));
-        pomo.transform.localPosition = new Vector3(0f, 0.31f, 0f);
-        pomo.transform.localScale = new Vector3(0.055f, 0.05f, 0.055f);
+        pomo.transform.localPosition = new Vector3(0f, 0.36f, 0f);
+        pomo.transform.localScale = new Vector3(0.058f, 0.052f, 0.058f);
+
+        // Letras grabadas en el pomo (se ilumina la del modo actual).
+        string[] letras = new string[] { "P", "R", "N", "D" };
+        float[] xs = new float[] { -0.028f, -0.0095f, 0.0095f, 0.028f };
+        for (int i = 0; i < 4; i++)
+        {
+            var t = Texto("Letra" + letras[i], pivote, 0.010f, new Vector2(0.02f, 0.016f));
+            t.transform.localPosition = new Vector3(xs[i], 0.36f, -0.027f);
+            t.text = letras[i];
+            t.color = i == 3 ? new Color(0.45f, 0.9f, 1f) : new Color(0.13f, 0.14f, 0.16f);
+            _letras[i] = t;
+        }
 
         var pal = pivote.gameObject.AddComponent<PalancaCambios>();
         pal.camion = _camion;
-        pal.radioPomo = 0.31f;
+        pal.radioPomo = 0.36f;
     }
 
     // ---------------- Luz de cabina ----------------
@@ -548,6 +550,17 @@ public class InteriorCamion : MonoBehaviour
         if (_lucesTxt != null) _lucesTxt.color = luces ? new Color(0.10f, 0.10f, 0.12f) : ColGris;
         if (_matChipSirena != null) _matChipSirena.color = sirena ? ColAmbar : ColChipOff;
         if (_sirenaTxt != null) _sirenaTxt.color = sirena ? new Color(0.10f, 0.10f, 0.12f) : ColGris;
+
+        // Letras del pomo: se ilumina la del modo actual.
+        {
+            var palL = _palancaPivote != null ? _palancaPivote.GetComponentInChildren<PalancaCambios>() : null;
+            int mAct = palL != null ? palL.marcha : (_camion.Velocidad < -0.15f ? 1 : 3);
+            for (int i = 0; i < _letras.Length; i++)
+            {
+                if (_letras[i] == null) continue;
+                _letras[i].color = i == mAct ? new Color(0.45f, 0.9f, 1f) : new Color(0.13f, 0.14f, 0.16f);
+            }
+        }
 
         if (_etaTxt != null)
         {
