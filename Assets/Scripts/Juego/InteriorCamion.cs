@@ -16,27 +16,23 @@ using UnityEngine;
 public class InteriorCamion : MonoBehaviour
 {
     [Header("Volante")]
-    public Vector3 centroVolante = new Vector3(-5.90f, 1.855f, -6.40f);
-    public float radioVolante = 0.245f;
+    public Vector3 centroVolante = new Vector3(-5.902f, 1.893f, -6.387f);
+    public float radioVolante = 0.27f;
     public float grosorAro = 0.036f;
-    [Range(0f, 45f)] public float inclinacionVolante = 15f;
+    [Range(0f, 90f)] public float inclinacionVolante = 65f;
 
     [Header("Tablero (cara frontal)")]
     public Vector3 centroTablero = new Vector3(-5.40f, 1.70f, -6.46f);
     [Range(0f, 60f)] public float inclinacionTablero = 26f;
     public Vector2 tamanoTablero = new Vector2(1.95f, 0.62f);
 
-    [Header("Cluster (detras del volante)")]
-    public Vector3 centroCluster = new Vector3(-5.87f, 1.99f, -6.245f);
-    [Range(0f, 60f)] public float inclinacionCluster = 18f;
-
-    [Header("Pantalla GPS (centro)")]
-    public Vector3 centroPantalla = new Vector3(-4.78f, 1.80f, -6.60f);
-    [Range(0f, 60f)] public float inclinacionPantalla = 20f;
+    [Header("Cluster y pantalla (empotrados en la cara del tablero)")]
+    public Vector2 offsetCluster = new Vector2(-0.50f, 0.07f);
+    public Vector2 offsetPantalla = new Vector2(0.62f, 0.03f);
     public Vector2 tamanoPantalla = new Vector2(0.30f, 0.17f);
 
     [Header("Palanca P-R-N-D")]
-    public Vector3 centroPalanca = new Vector3(-4.95f, 1.48f, -6.58f);
+    public Vector3 centroPalanca = new Vector3(-4.99f, 1.51f, -6.41f);
     [Range(0f, 60f)] public float inclinacionPalanca = 22f;
 
     [Header("Extras")]
@@ -162,10 +158,15 @@ public class InteriorCamion : MonoBehaviour
 
         _campoLuces = typeof(CamionBomberos).GetField("_lucesOn", BindingFlags.NonPublic | BindingFlags.Instance);
 
+        // En el editor el preview no se guarda en la escena.
         if (!Application.isPlaying)
         {
-            foreach (var t in raiz.GetComponentsInChildren<Transform>(true))
-                if (t.name.StartsWith("Interior_")) t.gameObject.hideFlags = HideFlags.DontSave;
+            for (int i = 0; i < raiz.childCount; i++)
+            {
+                var t = raiz.GetChild(i);
+                if (!t.name.StartsWith("Interior_")) continue;
+                foreach (var d in t.GetComponentsInChildren<Transform>(true)) d.gameObject.hideFlags = HideFlags.DontSave;
+            }
         }
     }
 
@@ -287,13 +288,12 @@ public class InteriorCamion : MonoBehaviour
 
     void ConstruirCluster(Transform raiz)
     {
-        _cluster = NuevaRaiz(raiz, "Interior_Cluster", centroCluster, inclinacionCluster);
+        _cluster = new GameObject("Interior_Cluster").transform;
+        _cluster.SetParent(_tablero, false);
+        _cluster.localPosition = new Vector3(offsetCluster.x, offsetCluster.y, -0.004f);
 
-        var caja = Prim(PrimitiveType.Cube, "Caja", _cluster, VisualesVR.MaterialOpaco(new Color(0.07f, 0.08f, 0.10f)));
-        caja.transform.localPosition = new Vector3(0f, 0f, 0.035f);
-        caja.transform.localScale = new Vector3(0.56f, 0.25f, 0.075f);
-
-        Quad("Cara", _cluster, 0.54f, 0.23f, 0f, 0f, -0.004f, VisualesVR.MaterialSinLuz(ColFondo));
+        // Placa oscura del cluster, al ras de la cara del tablero (donde estaban los simbolos).
+        Quad("Cara", _cluster, 0.56f, 0.26f, 0f, 0f, -0.002f, VisualesVR.MaterialSinLuz(ColFondo));
 
         _agujaVel = Dial(new Vector2(-0.145f, 0.01f), ColBlanco, "Vel");
         _agujaRpm = Dial(new Vector2(0.145f, 0.01f), ColBlanco, "Rpm");
@@ -357,11 +357,13 @@ public class InteriorCamion : MonoBehaviour
 
     void ConstruirPantalla(Transform raiz)
     {
-        _pantalla = NuevaRaiz(raiz, "Interior_Pantalla", centroPantalla, inclinacionPantalla);
+        _pantalla = new GameObject("Interior_Pantalla").transform;
+        _pantalla.SetParent(_tablero, false);
+        _pantalla.localPosition = new Vector3(offsetPantalla.x, offsetPantalla.y, -0.004f);
 
         var marco = Prim(PrimitiveType.Cube, "Marco", _pantalla, VisualesVR.MaterialOpaco(new Color(0.05f, 0.06f, 0.08f)));
-        marco.transform.localPosition = new Vector3(0f, 0f, 0.012f);
-        marco.transform.localScale = new Vector3(tamanoPantalla.x + 0.05f, tamanoPantalla.y + 0.05f, 0.026f);
+        marco.transform.localPosition = new Vector3(0f, 0f, 0.010f);
+        marco.transform.localScale = new Vector3(tamanoPantalla.x + 0.05f, tamanoPantalla.y + 0.05f, 0.022f);
 
         Quad("Pantalla", _pantalla, tamanoPantalla.x, tamanoPantalla.y, 0f, 0f, -0.004f, VisualesVR.MaterialSinLuz(ColFondo));
 

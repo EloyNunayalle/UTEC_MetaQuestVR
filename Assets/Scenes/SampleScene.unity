@@ -334,19 +334,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 450fb0d78fcc21e4ea5cc6ee39755bc3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  centroVolante: {x: -5.9, y: 1.855, z: -6.4}
-  radioVolante: 0.245
+  centroVolante: {x: -5.902, y: 1.893, z: -6.387}
+  radioVolante: 0.27
   grosorAro: 0.036
-  inclinacionVolante: 15
+  inclinacionVolante: 65
   centroTablero: {x: -5.4, y: 1.7, z: -6.46}
   inclinacionTablero: 26
   tamanoTablero: {x: 1.95, y: 0.62}
-  centroCluster: {x: -5.87, y: 1.99, z: -6.245}
-  inclinacionCluster: 18
-  centroPantalla: {x: -4.78, y: 1.8, z: -6.6}
-  inclinacionPantalla: 20
+  offsetCluster: {x: -0.5, y: 0.07}
+  offsetPantalla: {x: 0.62, y: 0.03}
   tamanoPantalla: {x: 0.3, y: 0.17}
-  centroPalanca: {x: -4.95, y: 1.48, z: -6.58}
+  centroPalanca: {x: -4.99, y: 1.51, z: -6.41}
   inclinacionPalanca: 22
   luzCabina: 1
   nombreRuta: Almacen Central
