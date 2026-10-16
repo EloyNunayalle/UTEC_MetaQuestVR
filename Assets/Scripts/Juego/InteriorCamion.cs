@@ -17,8 +17,8 @@ public class InteriorCamion : MonoBehaviour
 {
     [Header("Volante")]
     public Vector3 centroVolante = new Vector3(-5.902f, 1.893f, -6.387f);
-    public float radioVolante = 0.305f;
-    public float grosorAro = 0.055f;
+    public float radioVolante = 0.275f;
+    public float grosorAro = 0.042f;
     [Range(0f, 90f)] public float inclinacionVolante = 65f;
 
     [Header("Tablero (cara frontal)")]
@@ -27,8 +27,8 @@ public class InteriorCamion : MonoBehaviour
     public Vector2 tamanoTablero = new Vector2(1.95f, 0.62f);
 
     [Header("Cluster y pantalla (empotrados en la cara del tablero)")]
-    public Vector2 offsetCluster = new Vector2(-0.50f, 0.07f);
-    public Vector2 offsetPantalla = new Vector2(0.62f, 0.03f);
+    public Vector2 offsetCluster = new Vector2(-0.25f, 0.07f);
+    public Vector2 offsetPantalla = new Vector2(0.45f, 0.05f);
     public Vector2 tamanoPantalla = new Vector2(0.30f, 0.17f);
 
     [Header("Palanca P-R-N-D")]
@@ -203,7 +203,7 @@ public class InteriorCamion : MonoBehaviour
         VisualesVR.ObjetoMalla("Aro", pivote, Toro(radioVolante, grosorAro, 40, 12), matGoma);
 
         // Cubreespacio oscuro detras del volante (tapa el volante viejo del modelo).
-        var shroud = VisualesVR.ObjetoMalla("Shroud", pivote, VisualesVR.Disco(0.26f), VisualesVR.MaterialOpaco(new Color(0.06f, 0.06f, 0.07f)));
+        var shroud = VisualesVR.ObjetoMalla("Shroud", pivote, VisualesVR.Disco(0.24f), VisualesVR.MaterialOpaco(new Color(0.06f, 0.06f, 0.07f)));
         shroud.transform.localPosition = new Vector3(0f, 0f, 0.02f);
         shroud.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
 
@@ -318,6 +318,18 @@ public class InteriorCamion : MonoBehaviour
         _marchaTxt.fontStyle = FontStyles.Bold;
         _marchaTxt.text = "D";
         _marchaTxt.color = ColCyan;
+
+        // Indicador de combustible (E-F), como en el Atego real.
+        Quad("CombFondo", _cluster, 0.085f, 0.010f, 0f, -0.098f, -0.006f, VisualesVR.MaterialSinLuz(new Color(0.12f, 0.15f, 0.20f, 0.9f)));
+        Quad("CombRelleno", _cluster, 0.060f, 0.010f, -0.012f, -0.098f, -0.007f, VisualesVR.MaterialSinLuz(ColAmbar));
+        var eTxt = Texto("E", _cluster, 0.007f, new Vector2(0.02f, 0.012f));
+        eTxt.transform.localPosition = new Vector3(-0.054f, -0.098f, -0.008f);
+        eTxt.text = "E";
+        eTxt.color = ColGris;
+        var fTxt = Texto("F", _cluster, 0.007f, new Vector2(0.02f, 0.012f));
+        fTxt.transform.localPosition = new Vector3(0.054f, -0.098f, -0.008f);
+        fTxt.text = "F";
+        fTxt.color = ColGris;
 
         // Indicadores de luces y sirena.
         _matChipLuces = VisualesVR.MaterialSinLuz(ColChipOff);
