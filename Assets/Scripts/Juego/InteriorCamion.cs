@@ -18,7 +18,7 @@ public class InteriorCamion : MonoBehaviour
     [Header("Volante")]
     public Vector3 centroVolante = new Vector3(-5.902f, 1.893f, -6.387f);
     public float radioVolante = 0.305f;
-    public float grosorAro = 0.08f;
+    public float grosorAro = 0.055f;
     [Range(0f, 90f)] public float inclinacionVolante = 65f;
 
     [Header("Tablero (cara frontal)")]
@@ -189,7 +189,12 @@ public class InteriorCamion : MonoBehaviour
 
     void ConstruirVolante(Transform raiz)
     {
-        var pivote = NuevaRaiz(raiz, "Interior_Volante", centroVolante, inclinacionVolante);
+        // Volante recostado como el original: la parte de arriba hacia el parabrisas.
+        var pivote = new GameObject("Interior_Volante").transform;
+        pivote.SetParent(raiz, false);
+        pivote.position = centroVolante;
+        float rad = inclinacionVolante * Mathf.Deg2Rad;
+        pivote.rotation = raiz.rotation * Quaternion.LookRotation(new Vector3(0f, Mathf.Sin(rad), -Mathf.Cos(rad)), Vector3.up);
         var matGoma = VisualesVR.MaterialOpaco(ColGoma);
         matGoma.SetFloat("_Glossiness", 0.35f);
         var matMetal = VisualesVR.MaterialOpaco(ColMetal);
@@ -206,11 +211,11 @@ public class InteriorCamion : MonoBehaviour
         float[] angulos = new float[] { 0f, 180f, 270f };
         foreach (float a in angulos)
         {
-            float rad = a * Mathf.Deg2Rad;
+            float radEsp = a * Mathf.Deg2Rad;
             var radio = Prim(PrimitiveType.Cube, "Radio", pivote, matMetal);
             float largo = radioVolante - 0.03f;
-            radio.transform.localPosition = new Vector3(Mathf.Cos(rad) * (radioVolante + 0.045f) * 0.5f,
-                                                        Mathf.Sin(rad) * (radioVolante + 0.045f) * 0.5f, 0f);
+            radio.transform.localPosition = new Vector3(Mathf.Cos(radEsp) * (radioVolante + 0.045f) * 0.5f,
+                                                        Mathf.Sin(radEsp) * (radioVolante + 0.045f) * 0.5f, 0f);
             radio.transform.localRotation = Quaternion.Euler(0f, 0f, a);
             radio.transform.localScale = new Vector3(largo, 0.034f, 0.024f);
         }

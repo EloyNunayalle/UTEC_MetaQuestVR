@@ -336,7 +336,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   centroVolante: {x: -5.902, y: 1.893, z: -6.387}
   radioVolante: 0.305
-  grosorAro: 0.08
+  grosorAro: 0.055
   inclinacionVolante: 65
   centroTablero: {x: -5.4, y: 1.7, z: -6.46}
   inclinacionTablero: 26
