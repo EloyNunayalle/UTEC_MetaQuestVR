@@ -124,6 +124,12 @@ Al subir se muestra el **tiempo, el puntaje** (100 por tarea + bono por rapidez)
 - **Licencia**: Creative Commons Attribution (**CC BY 4.0**) — https://creativecommons.org/licenses/by/4.0/
 - **Modificaciones**: se desactivó el plano de suelo que trae el modelo; en el proyecto se reescaló y rotó para montarla sobre la consola del camión; la palanca gira por código (agarre) y las letras (P-R-N-D-L) se iluminan según la marcha activa.
 
+### Modelo 3D: "Travel View - Portable Monitor"
+- **Autor**: Innerscene (https://www.innerscene.com/)
+- **Fuente**: https://www.innerscene.com/tools/library/3d-parts/travel-view-portable-monitor-85a9906d
+- **Licencia**: CC0 1.0 Universal (dominio público) — https://creativecommons.org/publicdomain/zero/1.0/ — **no exige atribución** (se acredita igualmente por trazabilidad).
+- **Modificaciones**: ninguna en la malla; en el proyecto se coloca sobre el tablero del camión (misma posición/rotación, corrida a la derecha) y muestra el GPS de la misión por código.
+
 ### Modelos de terceros NO incluidos en este repositorio
 
 - **"Cartoon Stylized American Fire Truck"** — autor: ZippyLee (CGTrader)

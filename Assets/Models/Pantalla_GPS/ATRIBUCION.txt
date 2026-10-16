@@ -1,0 +1,7 @@
+Modelo: "Travel View - Portable Monitor"
+Autor: Innerscene (https://www.innerscene.com/)
+Fuente: https://www.innerscene.com/tools/library/3d-parts/travel-view-portable-monitor-85a9906d
+Licencia: CC0 1.0 Universal (dominio publico) - https://creativecommons.org/publicdomain/zero/1.0/
+(no exige atribucion; se acredita por trazabilidad)
+Modificaciones: ninguna en la malla. En el proyecto se coloca sobre el tablero del camion
+(misma posicion/rotacion, corrida a la derecha) y muestra el GPS de la mision por codigo.
