@@ -4,11 +4,11 @@ using UnityEngine;
 /// Volante del camion agarrable: gira con la mano (GRIP o pellizco cerca del aro) o con
 /// el joystick como respaldo. Tiene tope (gradosMaximos) y se queda donde lo dejas.
 /// Le entrega el eje de giro (-1..1) al camion por CamionBomberos.ejeGiroManual.
-/// - Gira sobre el CENTRO visual del volante (no sobre el pivote del nodo, que puede
-///   estar descentrado en el modelo importado).
-/// - El angulo de la mano se mide en un marco FIJO (el marco base del volante): sin
-///   realimentacion, asi no parpadea al arrastrar lejos.
-/// - Las piezas en giranConElVolante giran junto con el volante (rotacion rigida).
+/// - Gira sobre el CENTRO visual del volante (no sobre el pivote del nodo).
+/// - Todo se calcula en LOCAL / con el marco base actual: sigue al camion cuando se mueve
+///   (nada se queda atras y el agarre funciona siempre).
+/// - El angulo de la mano se mide en un marco FIJO (sin realimentacion, no parpadea).
+/// - anguloInicial endereza el modelo; las piezas en giranConElVolante giran con el.
 /// </summary>
 public class VolanteInteractivo : MonoBehaviour
 {
@@ -36,11 +36,11 @@ public class VolanteInteractivo : MonoBehaviour
     float _proxBusca;
     Vector3 _posBase;
     Vector3 _centroLocal;
-    Vector3 _centroMundo;
-    Quaternion _baseMundoRot;
+    Vector3 _centroPadre;
     float _escalaMundo;
-    Vector3[] _piezasPos;
-    Quaternion[] _piezasRot;
+    Transform _padre;
+    Vector3[] _piezasLocalPos;
+    Quaternion[] _piezasLocalRot;
 
     Transform Mano(int i)
     {
@@ -55,12 +55,23 @@ public class VolanteInteractivo : MonoBehaviour
         return Mathf.Clamp(_angulo / gradosMaximos, -1f, 1f);
     }
 
+    // Marco base del volante EN EL MUNDO, calculado al vuelo (sigue al camion).
+    Quaternion BaseMundoRot()
+    {
+        return _padre != null ? _padre.rotation * _rotBase : transform.rotation;
+    }
+
+    Vector3 CentroMundo()
+    {
+        return _padre != null ? _padre.TransformPoint(_centroPadre) : transform.TransformPoint(_centroLocal);
+    }
+
     // Angulo de la mano medido en el marco FIJO del volante (marco base, no el que gira).
     float AnguloMano(Transform m)
     {
-        Vector3 rel = m.position - _centroMundo;
-        return Mathf.Atan2(Vector3.Dot(rel, _baseMundoRot * Vector3.up),
-                           Vector3.Dot(rel, _baseMundoRot * Vector3.right)) * Mathf.Rad2Deg;
+        Vector3 rel = m.position - CentroMundo();
+        Quaternion b = BaseMundoRot();
+        return Mathf.Atan2(Vector3.Dot(rel, b * Vector3.up), Vector3.Dot(rel, b * Vector3.right)) * Mathf.Rad2Deg;
     }
 
     void Update()
@@ -71,31 +82,32 @@ public class VolanteInteractivo : MonoBehaviour
         if (!_init)
         {
             _init = true;
+            _padre = transform.parent;
             _rotBase = transform.localRotation;
             _posBase = transform.localPosition;
-            _baseMundoRot = transform.rotation;
             _escalaMundo = Mathf.Max(0.0001f, transform.lossyScale.x);
 
-            // Centro visual del volante (para girar sobre su centro y no sobre el pivote).
+            // Centro visual del volante (en local y en el marco del padre; constantes).
             var rends = GetComponentsInChildren<Renderer>();
             if (rends.Length > 0)
             {
                 Bounds b = rends[0].bounds;
                 for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
                 _centroLocal = transform.InverseTransformPoint(b.center);
-                _centroMundo = b.center;
             }
+            Vector3 sc = transform.localScale;
+            _centroPadre = _posBase + _rotBase * Vector3.Scale(sc, _centroLocal);
 
             if (giranConElVolante != null && giranConElVolante.Length > 0)
             {
-                _piezasPos = new Vector3[giranConElVolante.Length];
-                _piezasRot = new Quaternion[giranConElVolante.Length];
+                _piezasLocalPos = new Vector3[giranConElVolante.Length];
+                _piezasLocalRot = new Quaternion[giranConElVolante.Length];
                 for (int i = 0; i < giranConElVolante.Length; i++)
                 {
                     var p = giranConElVolante[i];
                     if (p == null) continue;
-                    _piezasPos[i] = p.position;
-                    _piezasRot[i] = p.rotation;
+                    _piezasLocalPos[i] = p.localPosition;
+                    _piezasLocalRot[i] = p.localRotation;
                 }
             }
         }
@@ -136,14 +148,14 @@ public class VolanteInteractivo : MonoBehaviour
             if (Mathf.Abs(h) < zonaMuerta) h = 0f;
             if (h != 0f) _angulo = Mathf.Clamp(_angulo + h * velocidadStick * dt, -gradosMaximos, gradosMaximos);
 
-            // Agarre por proximidad al aro (medido desde el centro visual, en marco fijo).
+            // Agarre por proximidad al aro (desde el centro actual: funciona aunque el camion se mueva).
             for (int i = 0; i < 2; i++)
             {
                 var m = Mano(i);
                 if (m == null || !m.gameObject.activeInHierarchy) continue;
-                Vector3 rel = (m.position - _centroMundo) / _escalaMundo;
+                Vector3 rel = (m.position - CentroMundo()) / _escalaMundo;
                 float distAro = Mathf.Abs(rel.magnitude - radio);
-                if (distAro > 0.13f || Mathf.Abs(Vector3.Dot(rel, _baseMundoRot * Vector3.forward)) > 0.13f) continue;
+                if (distAro > 0.13f || Mathf.Abs(Vector3.Dot(rel, BaseMundoRot() * Vector3.forward)) > 0.13f) continue;
                 if (EntradaVR.AgarreDown(i == 0))
                 {
                     _mano = i;
@@ -161,20 +173,20 @@ public class VolanteInteractivo : MonoBehaviour
         // anguloInicial endereza el modelo (las piezas usan el mismo valor).
         float visual = (invertir ? -_angulo : _angulo) + anguloInicial;
         Quaternion q = _rotBase * Quaternion.AngleAxis(visual, Vector3.forward);
-        Vector3 sc = transform.localScale;
-        transform.localPosition = _posBase + _rotBase * Vector3.Scale(sc, _centroLocal) - q * Vector3.Scale(sc, _centroLocal);
+        Vector3 scv = transform.localScale;
+        transform.localPosition = _posBase + _rotBase * Vector3.Scale(scv, _centroLocal) - q * Vector3.Scale(scv, _centroLocal);
         transform.localRotation = q;
 
-        // Las piezas que van con el volante giran igual (rotacion rigida sobre el centro).
-        if (_piezasPos != null)
+        // Las piezas giran con el volante (en local: siguen al camion, no se quedan atras).
+        if (_piezasLocalPos != null)
         {
-            Quaternion qMundo = Quaternion.AngleAxis(visual, _baseMundoRot * Vector3.forward);
-            for (int i = 0; i < _piezasPos.Length; i++)
+            Quaternion qP = Quaternion.AngleAxis(visual, _rotBase * Vector3.forward);
+            for (int i = 0; i < _piezasLocalPos.Length; i++)
             {
                 var p = giranConElVolante[i];
                 if (p == null) continue;
-                p.rotation = qMundo * _piezasRot[i];
-                p.position = _centroMundo + qMundo * (_piezasPos[i] - _centroMundo);
+                p.localRotation = qP * _piezasLocalRot[i];
+                p.localPosition = _centroPadre + qP * (_piezasLocalPos[i] - _centroPadre);
             }
         }
 
