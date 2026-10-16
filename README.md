@@ -62,7 +62,9 @@ Al subir se muestra el **tiempo, el puntaje** (100 por tarea + bono por rapidez)
 - `CamionBomberos.cs`: abordaje, asiento, balizas, sirena y motor. Si el modelo de pago del camión no está en el proyecto, genera un **camión simple de reemplazo**. En el Inspector (en Play) puedes ajustar `ajusteAsiento`, `ajusteZonaSubida`, `invertirFrente` y `conductorIzquierda` si la cabina no cae justo en el modelo.
 - `ObjetoAgarrable.cs`: agarre por cercanía con controles o manos.
 - `HudBomberos.cs`, `MarcadorObjetivo.cs`, `SonidosVR.cs`, `EntradaVR.cs` y `VisualesVR.cs`: HUD, flecha guía, sonidos, entrada y háptica, y utilidades visuales.
-- `PanelCamion.cs`: panel del camión (UI diegética según el mockup `camion.png` del informe): **medidor de velocidad** (número + barra), marcha y ruta, y chips de **luces/sirena** en el tablero; y la **pantalla GPS** de la tablet (mapa con la ruta, conexión y ETA). Se crea solo al dar Play; ajustes finos en el Inspector (`ajustePanel`, `ajusteGps`, `inclinacionPanel`).
+- `InteriorCamion.cs`: interior realista del camión (UI diegética según el informe): **volante redondo** generado por código (toro) que reemplaza al low-poly, **tablero empotrado** con cluster de agujas (velocímetro + tacómetro), km/h digital e indicadores de marcha/luces/sirena, **pantalla GPS empotrada** (mapa, ruta, conexión y ETA) y **palanca P-R-N-D**. Se crea solo al dar Play (y preview en el editor); ajustes finos en el Inspector.
+- `VolanteInteractivo.cs`: volante agarrable (GRIP/pellizco cerca del aro) con tope ±120° y joystick de respaldo; entrega el eje de giro al camión (`ejeGiroManual`).
+- `PalancaCambios.cs`: palanca P-R-N-D agarrable que se asienta en la ranura más cercana; publica la marcha al camión (`marchaManual`).
 
 ## Créditos y licencias
 

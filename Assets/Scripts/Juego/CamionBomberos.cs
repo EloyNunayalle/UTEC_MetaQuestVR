@@ -56,6 +56,10 @@ public class CamionBomberos : MonoBehaviour
 
     public Func<bool> puedeSubir;
     public Func<string> motivoNoPuede;
+    /// <summary>Si esta seteado, el giro lo manda el volante fisico (-1..1) en vez del stick.</summary>
+    public Func<float> ejeGiroManual;
+    /// <summary>Si esta seteado, la marcha (0=P, 1=R, 2=N, 3=D) limita el movimiento.</summary>
+    public Func<int> marchaManual;
     public event Action alSubir;
     public event Action alBajar;
     public event Action alChocar;
@@ -387,6 +391,16 @@ public class CamionBomberos : MonoBehaviour
         if (Mathf.Abs(th) > Mathf.Abs(giro)) giro = th;
         acel = Mathf.Abs(acel) < zonaMuerta ? 0f : acel;
         giro = Mathf.Abs(giro) < zonaMuerta ? 0f : giro;
+
+        // Volante y palanca fisicos (si estan instalados).
+        if (ejeGiroManual != null) giro = Mathf.Clamp(ejeGiroManual(), -1f, 1f);
+        if (marchaManual != null)
+        {
+            int m = marchaManual();
+            if (m == 3) acel = Mathf.Max(0f, acel);
+            else if (m == 1) acel = Mathf.Min(0f, acel);
+            else acel = 0f;
+        }
 
         // Velocidad: acelera hacia el objetivo; si sueltas el stick frena solo.
         float objetivo = acel >= 0f ? acel * velocidadMaxima : acel * velocidadMaximaReversa;
