@@ -23,7 +23,8 @@ public class CamionBomberos : MonoBehaviour
     public bool conductorIzquierda = true;
 
     [Header("Ajustes finos (ejes del camion: X derecha, Y arriba, Z frente)")]
-    public Vector3 ajusteAsiento = Vector3.zero;
+    [Tooltip("El asiento arranca 0.28 m hacia atras para que la vista no quede pegada al timon; ajustable en Play.")]
+    public Vector3 ajusteAsiento = new Vector3(0f, 0f, -0.28f);
     public Vector3 ajusteZonaSubida = Vector3.zero;
     public Vector3 ajusteBalizas = Vector3.zero;
 
