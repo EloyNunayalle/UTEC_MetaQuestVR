@@ -22,7 +22,7 @@ public class InteriorCamion : MonoBehaviour
     [Range(0f, 90f)] public float inclinacionVolante = 65f;
 
     [Header("Tablero (cara frontal)")]
-    public Vector3 centroTablero = new Vector3(-5.40f, 1.70f, -6.46f);
+    public Vector3 centroTablero = new Vector3(-5.40f, 1.70f, -6.40f);
     [Range(0f, 60f)] public float inclinacionTablero = 26f;
     public Vector2 tamanoTablero = new Vector2(1.95f, 0.62f);
 
@@ -263,7 +263,14 @@ public class InteriorCamion : MonoBehaviour
 
     void ConstruirTablero(Transform raiz)
     {
-        _tablero = NuevaRaiz(raiz, "Interior_Tablero", centroTablero, inclinacionTablero);
+        // Panel inclinado como el tablero original: la parte de arriba hacia el parabrisas.
+        _tablero = new GameObject("Interior_Tablero").transform;
+        _tablero.SetParent(raiz, false);
+        _tablero.position = centroTablero;
+        float radT = inclinacionTablero * Mathf.Deg2Rad;
+        _tablero.rotation = raiz.rotation * Quaternion.LookRotation(
+            new Vector3(0f, -Mathf.Sin(radT), Mathf.Cos(radT)),
+            new Vector3(0f, Mathf.Cos(radT), Mathf.Sin(radT)));
 
         var fondo = Quad("Fondo", _tablero, tamanoTablero.x, tamanoTablero.y, 0f, 0f, 0f, VisualesVR.MaterialSinLuz(ColFondo));
         fondo.GetComponent<Renderer>().sharedMaterial.SetFloat("_Glossiness", 0f);

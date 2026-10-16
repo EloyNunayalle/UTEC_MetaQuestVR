@@ -338,7 +338,7 @@ MonoBehaviour:
   radioVolante: 0.275
   grosorAro: 0.042
   inclinacionVolante: 65
-  centroTablero: {x: -5.4, y: 1.7, z: -6.46}
+  centroTablero: {x: -5.4, y: 1.7, z: -6.4}
   inclinacionTablero: 26
   tamanoTablero: {x: 1.95, y: 0.62}
   offsetCluster: {x: -0.25, y: 0.07}
