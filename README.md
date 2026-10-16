@@ -62,9 +62,9 @@ Al subir se muestra el **tiempo, el puntaje** (100 por tarea + bono por rapidez)
 - `CamionBomberos.cs`: abordaje, asiento, balizas, sirena y motor. Si el modelo de pago del camión no está en el proyecto, genera un **camión simple de reemplazo**. En el Inspector (en Play) puedes ajustar `ajusteAsiento`, `ajusteZonaSubida`, `invertirFrente` y `conductorIzquierda` si la cabina no cae justo en el modelo.
 - `ObjetoAgarrable.cs`: agarre por cercanía con controles o manos.
 - `HudBomberos.cs`, `MarcadorObjetivo.cs`, `SonidosVR.cs`, `EntradaVR.cs` y `VisualesVR.cs`: HUD, flecha guía, sonidos, entrada y háptica, y utilidades visuales.
-- `InteriorCamion.cs`: interior realista del camión (UI diegética según el informe): **volante redondo** generado por código (toro) que reemplaza al low-poly, **tablero empotrado** con cluster de agujas (velocímetro + tacómetro), km/h digital e indicadores de marcha/luces/sirena, **pantalla GPS empotrada** (mapa, ruta, conexión y ETA) y **palanca P-R-N-D**. Se crea solo al dar Play (y preview en el editor); ajustes finos en el Inspector.
-- `VolanteInteractivo.cs`: volante agarrable (GRIP/pellizco cerca del aro) con tope ±120° y joystick de respaldo; entrega el eje de giro al camión (`ejeGiroManual`).
-- `PalancaCambios.cs`: palanca P-R-N-D agarrable que se asienta en la ranura más cercana; publica la marcha al camión (`marchaManual`).
+- `InteriorCamion.cs`: interior del camión. Con el panel importado activo (`usarPanelMercedes`) usa el **panel Mercedes-Benz** real (tablero/agujas/volante del modelo) y solo construye por código la **luz de cabina** y — si no está la palanca importada — la **palanca procedural**; sin el panel, genera el interior completo por código (volante, tablero, cluster, pantalla GPS). Se crea solo al dar Play (y preview en el editor); ajustes finos en el Inspector.
+- `VolanteInteractivo.cs`: volante agarrable (GRIP/pellizco cerca del aro) con tope ±120° y joystick de respaldo; gira sobre el centro visual (estable, sin parpadeos) y las piezas que van con el volante giran con él; entrega el eje de giro al camión (`ejeGiroManual`).
+- `PalancaCambios.cs`: palanca de cambios agarrable (modelo importado o procedural) que se asienta en la ranura más cercana; soporta ranuras extra (p. ej. L → D), **ilumina la letra activa** y publica la marcha al camión (`marchaManual`).
 
 ## Créditos y licencias
 
@@ -117,6 +117,12 @@ Al subir se muestra el **tiempo, el puntaje** (100 por tarea + bono por rapidez)
 - **Fuente**: https://sketchfab.com/3d-models/painel-mercedes-benz-eo500u-ecitaro-89042f693f2c4da6a7d2ad37b63cdeea
 - **Licencia**: Creative Commons Attribution (**CC BY 4.0**) — https://creativecommons.org/licenses/by/4.0/
 - **Modificaciones**: ninguna en la malla (versión GLB 1K); en el proyecto se animan las agujas y el volante por código y la pantalla central muestra el GPS.
+
+### Modelo 3D: "Gear Selector/Gear shifter/Gear Switch (CVT)"
+- **Autor**: fikridjojo (https://sketchfab.com/DtestING)
+- **Fuente**: https://sketchfab.com/3d-models/gear-selectorgear-shiftergear-switch-cvt-5c078ceab6984dcc882d66db3011ec5e
+- **Licencia**: Creative Commons Attribution (**CC BY 4.0**) — https://creativecommons.org/licenses/by/4.0/
+- **Modificaciones**: se desactivó el plano de suelo que trae el modelo; en el proyecto se reescaló y rotó para montarla sobre la consola del camión; la palanca gira por código (agarre) y las letras (P-R-N-D-L) se iluminan según la marcha activa.
 
 ### Modelos de terceros NO incluidos en este repositorio
 

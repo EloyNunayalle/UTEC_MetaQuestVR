@@ -1,0 +1,7 @@
+Modelo: "Gear Selector/Gear shifter/Gear Switch (CVT)"
+Autor: fikridjojo (https://sketchfab.com/DtestING)
+Fuente: https://sketchfab.com/3d-models/gear-selectorgear-shiftergear-switch-cvt-5c078ceab6984dcc882d66db3011ec5e
+Licencia: Creative Commons Attribution (CC BY 4.0) - https://creativecommons.org/licenses/by/4.0/
+Modificaciones: se desactivo el plano de suelo que trae el modelo. En el proyecto se reescalo y roto
+para montarla sobre la consola del camion; la palanca gira por codigo (agarre con la mano) y las
+letras (P-R-N-D-L) se iluminan segun la marcha activa.

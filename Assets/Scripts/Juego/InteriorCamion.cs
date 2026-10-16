@@ -163,7 +163,8 @@ public class InteriorCamion : MonoBehaviour
             ConstruirCluster(raiz);
             ConstruirPantalla(raiz);
         }
-        ConstruirPalanca(raiz);
+        // Si la palanca nueva (modelo importado) esta en la escena, no se construye la procedural.
+        if (GameObject.Find("Palanca_Cambios") == null) ConstruirPalanca(raiz);
         if (luzCabina) ConstruirLuz(raiz);
 
         _campoLuces = typeof(CamionBomberos).GetField("_lucesOn", BindingFlags.NonPublic | BindingFlags.Instance);

@@ -394,18 +394,23 @@ public class CamionBomberos : MonoBehaviour
 
         // Volante y palanca fisicos (si estan instalados).
         if (ejeGiroManual != null) giro = Mathf.Clamp(ejeGiroManual(), -1f, 1f);
+        bool marchaBaja = false;
         if (marchaManual != null)
         {
             int m = marchaManual();
             if (m == 3) acel = Mathf.Max(0f, acel);
             else if (m == 1) acel = Mathf.Min(0f, acel);
+            else if (m == 4) { acel = Mathf.Max(0f, acel); marchaBaja = true; }
             else acel = 0f;
         }
 
         // Velocidad: acelera hacia el objetivo; si sueltas el stick frena solo.
-        float objetivo = acel >= 0f ? acel * velocidadMaxima : acel * velocidadMaximaReversa;
+        // En L (baja) la velocidad maxima es menor y el freno de motor es mas fuerte.
+        float velMax = marchaBaja ? velocidadMaxima * 0.45f : velocidadMaxima;
+        float objetivo = acel >= 0f ? acel * velMax : acel * velocidadMaximaReversa;
         bool frenando = acel == 0f || Mathf.Sign(objetivo) != Mathf.Sign(_velocidad) && Mathf.Abs(_velocidad) > 0.1f;
-        _velocidad = Mathf.MoveTowards(_velocidad, objetivo, (frenando ? frenado : aceleracion) * dt);
+        float frenadoActual = marchaBaja ? frenado * 1.6f : frenado;
+        _velocidad = Mathf.MoveTowards(_velocidad, objetivo, (frenando ? frenadoActual : aceleracion) * dt);
 
         // Giro: solo cuando el camion se mueve (en reversa se invierte, como un auto real).
         float factor = Mathf.Clamp(_velocidad / 3f, -1f, 1f);
