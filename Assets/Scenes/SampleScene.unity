@@ -10280,6 +10280,34 @@ PrefabInstance:
       propertyPath: m_Name
       value: Camion_Bomberos
       objectReference: {fileID: 0}
+    - target: {fileID: -5752319544946016482, guid: 3fe3a91c77d54b54e96c6d1099ce2cdf, type: 3}
+      propertyPath: m_Mesh
+      value: 
+      objectReference: {fileID: 4300000, guid: e0f03cd21cdbffa4a966e9443e0026ed, type: 2}
+    - target: {fileID: 1100547586380349583, guid: 3fe3a91c77d54b54e96c6d1099ce2cdf, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.03
+      objectReference: {fileID: 0}
+    - target: {fileID: 1100547586380349583, guid: 3fe3a91c77d54b54e96c6d1099ce2cdf, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1.03
+      objectReference: {fileID: 0}
+    - target: {fileID: 1100547586380349583, guid: 3fe3a91c77d54b54e96c6d1099ce2cdf, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1.03
+      objectReference: {fileID: 0}
+    - target: {fileID: 1100547586380349583, guid: 3fe3a91c77d54b54e96c6d1099ce2cdf, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0.020459175
+      objectReference: {fileID: 0}
+    - target: {fileID: 1100547586380349583, guid: 3fe3a91c77d54b54e96c6d1099ce2cdf, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.5059686
+      objectReference: {fileID: 0}
+    - target: {fileID: 1100547586380349583, guid: 3fe3a91c77d54b54e96c6d1099ce2cdf, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 3.6193376
+      objectReference: {fileID: 0}
     - target: {fileID: 3955150333886538870, guid: 3fe3a91c77d54b54e96c6d1099ce2cdf, type: 3}
       propertyPath: m_LocalPosition.x
       value: -5.19
@@ -10320,6 +10348,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6204287109706768042, guid: 3fe3a91c77d54b54e96c6d1099ce2cdf, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: -6210636163752016185, guid: 3fe3a91c77d54b54e96c6d1099ce2cdf, type: 3}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
