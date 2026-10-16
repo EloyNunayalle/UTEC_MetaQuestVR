@@ -37,6 +37,8 @@ public class InteriorCamion : MonoBehaviour
 
     [Header("Extras")]
     public bool luzCabina = true;
+    [Tooltip("Usar el panel+volante Mercedes del modelo (desactiva los procedurales).")]
+    public bool usarPanelMercedes = true;
     public string nombreRuta = "Almacen Central";
     public Vector3 puntoDestino = new Vector3(-5.19f, 0f, -1f);
     public float velocidadMinimaEta = 3f;
@@ -66,6 +68,7 @@ public class InteriorCamion : MonoBehaviour
     FieldInfo _campoLuces;
     float _tiempoBusqueda;
     bool _reconstruir;
+    bool _construido;
     int _ultimaVel = -1;
     string _ultimaEta = "";
 
@@ -134,6 +137,7 @@ public class InteriorCamion : MonoBehaviour
             }
         }
         _tablero = _cluster = _pantalla = _palancaPivote = null;
+        _construido = false;
         _agujaVel = _agujaRpm = null;
         _velTxt = _marchaTxt = _lucesTxt = _sirenaTxt = _etaTxt = null;
         for (int i = 0; i < _letras.Length; i++) _letras[i] = null;
@@ -148,13 +152,17 @@ public class InteriorCamion : MonoBehaviour
 
     void Construir()
     {
-        if (_tablero != null || _raiz == null) return;
+        if (_construido || _raiz == null) return;
+        _construido = true;
         var raiz = _raiz;
 
-        ConstruirVolante(raiz);
-        ConstruirTablero(raiz);
-        ConstruirCluster(raiz);
-        ConstruirPantalla(raiz);
+        if (!usarPanelMercedes)
+        {
+            ConstruirVolante(raiz);
+            ConstruirTablero(raiz);
+            ConstruirCluster(raiz);
+            ConstruirPantalla(raiz);
+        }
         ConstruirPalanca(raiz);
         if (luzCabina) ConstruirLuz(raiz);
 

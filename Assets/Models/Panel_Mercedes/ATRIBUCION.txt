@@ -1,0 +1,8 @@
+Modelo: "Painel Mercedes-Benz eO500U / eCitaro"
+Autor: Carlos Reis (https://sketchfab.com/carlosreis)
+Fuente: https://sketchfab.com/3d-models/painel-mercedes-benz-eo500u-ecitaro-89042f693f2c4da6a7d2ad37b63cdeea
+Licencia: Creative Commons Attribution (CC BY 4.0) - https://creativecommons.org/licenses/by/4.0/
+Creditos adicionales: las agujas ("ponteiros") fueron modeladas por Edson Antonio (segun la descripcion del autor).
+Modificaciones: ninguna en la malla. En el proyecto se animan las agujas (velocimetro/tacometro) y el volante por codigo,
+y la pantalla central muestra el GPS de la mision.
+Nota: se usa la version GLB con texturas 1K (optimizada; la version 4K no se usa).

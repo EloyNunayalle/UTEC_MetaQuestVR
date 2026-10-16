@@ -112,6 +112,12 @@ Al subir se muestra el **tiempo, el puntaje** (100 por tarea + bono por rapidez)
 - **Licencia**: CC0 1.0 Universal (dominio público) — https://creativecommons.org/publicdomain/zero/1.0/ — **no exige atribución** (se acredita igualmente por trazabilidad).
 - **Modificaciones**: ninguna (se usa tal cual; colocada como pantalla colgada en alto frente al escritorio del rincón de oficina).
 
+### Modelo 3D: "Painel Mercedes-Benz eO500U / eCitaro"
+- **Autor**: Carlos Reis (https://sketchfab.com/carlosreis) — agujas ("ponteiros") modeladas por Edson Antônio
+- **Fuente**: https://sketchfab.com/3d-models/painel-mercedes-benz-eo500u-ecitaro-89042f693f2c4da6a7d2ad37b63cdeea
+- **Licencia**: Creative Commons Attribution (**CC BY 4.0**) — https://creativecommons.org/licenses/by/4.0/
+- **Modificaciones**: ninguna en la malla (versión GLB 1K); en el proyecto se animan las agujas y el volante por código y la pantalla central muestra el GPS.
+
 ### Modelos de terceros NO incluidos en este repositorio
 
 - **"Cartoon Stylized American Fire Truck"** — autor: ZippyLee (CGTrader)
