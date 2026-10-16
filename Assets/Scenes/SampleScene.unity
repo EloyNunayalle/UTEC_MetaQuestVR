@@ -335,8 +335,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   centroVolante: {x: -5.902, y: 1.893, z: -6.387}
-  radioVolante: 0.27
-  grosorAro: 0.036
+  radioVolante: 0.305
+  grosorAro: 0.08
   inclinacionVolante: 65
   centroTablero: {x: -5.4, y: 1.7, z: -6.46}
   inclinacionTablero: 26
@@ -344,8 +344,8 @@ MonoBehaviour:
   offsetCluster: {x: -0.5, y: 0.07}
   offsetPantalla: {x: 0.62, y: 0.03}
   tamanoPantalla: {x: 0.3, y: 0.17}
-  centroPalanca: {x: -4.99, y: 1.51, z: -6.41}
-  inclinacionPalanca: 22
+  centroPalanca: {x: -5.48, y: 1.1, z: -6.39}
+  inclinacionPalanca: 0
   luzCabina: 1
   nombreRuta: Almacen Central
   puntoDestino: {x: -5.19, y: 0, z: -1}

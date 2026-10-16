@@ -17,8 +17,8 @@ public class InteriorCamion : MonoBehaviour
 {
     [Header("Volante")]
     public Vector3 centroVolante = new Vector3(-5.902f, 1.893f, -6.387f);
-    public float radioVolante = 0.27f;
-    public float grosorAro = 0.036f;
+    public float radioVolante = 0.305f;
+    public float grosorAro = 0.08f;
     [Range(0f, 90f)] public float inclinacionVolante = 65f;
 
     [Header("Tablero (cara frontal)")]
@@ -32,8 +32,8 @@ public class InteriorCamion : MonoBehaviour
     public Vector2 tamanoPantalla = new Vector2(0.30f, 0.17f);
 
     [Header("Palanca P-R-N-D")]
-    public Vector3 centroPalanca = new Vector3(-4.99f, 1.51f, -6.41f);
-    [Range(0f, 60f)] public float inclinacionPalanca = 22f;
+    public Vector3 centroPalanca = new Vector3(-5.48f, 1.10f, -6.39f);
+    [Range(0f, 60f)] public float inclinacionPalanca = 0f;
 
     [Header("Extras")]
     public bool luzCabina = true;
@@ -198,7 +198,7 @@ public class InteriorCamion : MonoBehaviour
         VisualesVR.ObjetoMalla("Aro", pivote, Toro(radioVolante, grosorAro, 40, 12), matGoma);
 
         // Cubreespacio oscuro detras del volante (tapa el volante viejo del modelo).
-        var shroud = VisualesVR.ObjetoMalla("Shroud", pivote, VisualesVR.Disco(0.245f), VisualesVR.MaterialOpaco(new Color(0.06f, 0.06f, 0.07f)));
+        var shroud = VisualesVR.ObjetoMalla("Shroud", pivote, VisualesVR.Disco(0.26f), VisualesVR.MaterialOpaco(new Color(0.06f, 0.06f, 0.07f)));
         shroud.transform.localPosition = new Vector3(0f, 0f, 0.02f);
         shroud.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
 
@@ -212,13 +212,13 @@ public class InteriorCamion : MonoBehaviour
             radio.transform.localPosition = new Vector3(Mathf.Cos(rad) * (radioVolante + 0.045f) * 0.5f,
                                                         Mathf.Sin(rad) * (radioVolante + 0.045f) * 0.5f, 0f);
             radio.transform.localRotation = Quaternion.Euler(0f, 0f, a);
-            radio.transform.localScale = new Vector3(largo, 0.026f, 0.018f);
+            radio.transform.localScale = new Vector3(largo, 0.034f, 0.024f);
         }
 
         // Centro (hub).
         var hub = Prim(PrimitiveType.Cylinder, "Hub", pivote, matMetal);
         hub.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-        hub.transform.localScale = new Vector3(0.10f, 0.016f, 0.10f);
+        hub.transform.localScale = new Vector3(0.14f, 0.02f, 0.14f);
 
         var vol = pivote.gameObject.AddComponent<VolanteInteractivo>();
         vol.camion = _camion;
@@ -290,10 +290,10 @@ public class InteriorCamion : MonoBehaviour
     {
         _cluster = new GameObject("Interior_Cluster").transform;
         _cluster.SetParent(_tablero, false);
-        _cluster.localPosition = new Vector3(offsetCluster.x, offsetCluster.y, -0.004f);
+        _cluster.localPosition = new Vector3(offsetCluster.x, offsetCluster.y, -0.16f);
 
         // Placa oscura del cluster, al ras de la cara del tablero (donde estaban los simbolos).
-        Quad("Cara", _cluster, 0.56f, 0.26f, 0f, 0f, -0.002f, VisualesVR.MaterialSinLuz(ColFondo));
+        Quad("Cara", _cluster, 0.85f, 0.26f, 0f, 0f, -0.002f, VisualesVR.MaterialSinLuz(ColFondo));
 
         _agujaVel = Dial(new Vector2(-0.145f, 0.01f), ColBlanco, "Vel");
         _agujaRpm = Dial(new Vector2(0.145f, 0.01f), ColBlanco, "Rpm");
@@ -359,7 +359,7 @@ public class InteriorCamion : MonoBehaviour
     {
         _pantalla = new GameObject("Interior_Pantalla").transform;
         _pantalla.SetParent(_tablero, false);
-        _pantalla.localPosition = new Vector3(offsetPantalla.x, offsetPantalla.y, -0.004f);
+        _pantalla.localPosition = new Vector3(offsetPantalla.x, offsetPantalla.y, -0.09f);
 
         var marco = Prim(PrimitiveType.Cube, "Marco", _pantalla, VisualesVR.MaterialOpaco(new Color(0.05f, 0.06f, 0.08f)));
         marco.transform.localPosition = new Vector3(0f, 0f, 0.010f);
@@ -460,16 +460,16 @@ public class InteriorCamion : MonoBehaviour
         pivote.localRotation = Quaternion.identity;
 
         var palo = Prim(PrimitiveType.Cylinder, "Palo", pivote, VisualesVR.MaterialOpaco(new Color(0.10f, 0.10f, 0.12f)));
-        palo.transform.localPosition = new Vector3(0f, 0.13f, 0f);
-        palo.transform.localScale = new Vector3(0.022f, 0.13f, 0.022f);
+        palo.transform.localPosition = new Vector3(0f, 0.15f, 0f);
+        palo.transform.localScale = new Vector3(0.024f, 0.15f, 0.024f);
 
         var pomo = Prim(PrimitiveType.Sphere, "Pomo", pivote, VisualesVR.MaterialOpaco(new Color(0.05f, 0.05f, 0.06f)));
-        pomo.transform.localPosition = new Vector3(0f, 0.24f, 0f);
+        pomo.transform.localPosition = new Vector3(0f, 0.31f, 0f);
         pomo.transform.localScale = new Vector3(0.055f, 0.05f, 0.055f);
 
         var pal = pivote.gameObject.AddComponent<PalancaCambios>();
         pal.camion = _camion;
-        pal.radioPomo = 0.24f;
+        pal.radioPomo = 0.31f;
     }
 
     // ---------------- Luz de cabina ----------------
