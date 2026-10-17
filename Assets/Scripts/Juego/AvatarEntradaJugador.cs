@@ -14,7 +14,19 @@ public class AvatarEntradaJugador : OvrAvatarInputManager
     protected override void OnTrackingInitialized()
     {
         if (rig == null) rig = FindObjectOfType<OVRCameraRig>();
-        _inputTrackingProvider = new OvrAvatarInputTrackingDelegatedProvider(new AvatarTrackingDelegate(rig));
+#if UNITY_EDITOR
+        // Sin dispositivo XR activo (editor puro) se usan poses simuladas, igual
+        // que el sample oficial. Con el simulador XR o la Quest se usan las
+        // poses reales del rig.
+        if (!OvrAvatarUtility.IsHeadsetActive())
+        {
+            _inputTrackingProvider = new OvrAvatarInputTrackingDelegatedProvider(new AvatarPosesSimuladas());
+        }
+        else
+#endif
+        {
+            _inputTrackingProvider = new OvrAvatarInputTrackingDelegatedProvider(new AvatarTrackingDelegate(rig));
+        }
         _inputControlProvider = new OvrAvatarInputControlDelegatedProvider(new AvatarControlDelegate());
     }
 }

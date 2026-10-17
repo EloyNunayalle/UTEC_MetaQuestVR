@@ -114,6 +114,15 @@ public class AvatarJugador : OvrAvatarEntity
             OvrAvatarLog.LogError("[AvatarJugador] OvrAvatarManager no disponible.");
             yield break;
         }
+        // Esperar a que el manager termine de inicializar (incluye la precarga de
+        // los zips de presets). Sin esto la carga puede quedar sin texturas.
+        float esperaMgr = 0f;
+        while (!OvrAvatarManager.initialized && esperaMgr < 10f)
+        {
+            esperaMgr += Time.deltaTime;
+            yield return null;
+        }
+        yield return new WaitForSecondsRealtime(0.5f);
         const bool esZip = true;
         string postfix = "_"
             + OvrAvatarManager.Instance.GetPlatformGLBPostfix(_creationInfo.renderFilters.quality, esZip)
