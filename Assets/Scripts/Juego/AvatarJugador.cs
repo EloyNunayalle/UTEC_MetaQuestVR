@@ -9,8 +9,8 @@ using UnityEngine;
 /// </summary>
 public class AvatarJugador : OvrAvatarEntity
 {
-    [Tooltip("Cargar el avatar de la cuenta Meta (CDN). Si falla, usa el preset local.")]
-    public bool cargarDeCuenta = true;
+    [Tooltip("Cargar el avatar de la cuenta Meta (CDN). Requiere registrar el App ID en Meta > Platform. Si falla, usa el preset local.")]
+    public bool cargarDeCuenta = false;
 
     [Tooltip("Segundos maximos de espera para descargar el avatar de la cuenta.")]
     public float esperaMaxima = 20f;
@@ -30,13 +30,20 @@ public class AvatarJugador : OvrAvatarEntity
         }
     }
 
-    void LateUpdate()
+    void Update()
     {
         if (_rig == null) _rig = FindObjectOfType<OVRCameraRig>();
         if (_rig == null) return;
-        // El avatar se queda en la posicion del jugador (el tracking llega en local).
-        transform.position = _rig.transform.position;
-        transform.rotation = Quaternion.Euler(0f, _rig.transform.eulerAngles.y, 0f);
+        // El avatar se emparenta al TrackingSpace del rig: asi sigue al jugador (y al
+        // camion) automaticamente, sin copiar posicion por frame. El OvrAvatarManager
+        // muestrea la transform del entity en su propio Update (orden -1) y con el
+        // parentesco siempre ve la posicion ya actualizada del mismo frame.
+        if (transform.parent != _rig.trackingSpace)
+        {
+            transform.SetParent(_rig.trackingSpace, false);
+            transform.localPosition = Vector3.zero;
+            transform.localRotation = Quaternion.identity;
+        }
         // Los modelos de control visibles se re-crean al iniciar: se re-ocultan.
         if (Time.time >= _proxOcultar)
         {
@@ -78,12 +85,25 @@ public class AvatarJugador : OvrAvatarEntity
 
         ulong id = 0;
         bool listo = false;
-        Oculus.Platform.Users.GetLoggedInUser().OnComplete(msg =>
+        try
         {
-            if (!msg.IsError) id = msg.Data.ID;
-            listo = true;
-        });
-        while (!listo) yield return null;
+            Oculus.Platform.Users.GetLoggedInUser().OnComplete(msg =>
+            {
+                if (!msg.IsError) id = msg.Data.ID;
+                listo = true;
+            });
+        }
+        catch (System.Exception e)
+        {
+            OvrAvatarLog.LogWarning("[AvatarJugador] Usuario no disponible (" + e.Message + "); uso preset local.");
+        }
+        // Con timeout: si el callback de la plataforma nunca llega, se usa el preset local.
+        float tUsuario = 0f;
+        while (!listo && tUsuario < 5f)
+        {
+            tUsuario += Time.deltaTime;
+            yield return null;
+        }
 
         if (id == 0)
         {

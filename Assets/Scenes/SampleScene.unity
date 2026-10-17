@@ -12527,7 +12527,7 @@ MonoBehaviour:
     features: 382
     renderFilters:
       lodFlags: 31
-      manifestationFlags: 2
+      manifestationFlags: 31
       viewFlags: 3
       subMeshInclusionFlags: -1
       quality: 1
@@ -12535,8 +12535,8 @@ MonoBehaviour:
       reserved: 0000000000000000000000000000000000000000000000000000000000000000
       subMeshVertexPreference: 0
   _validateCache: 1
-  _activeView: 1
-  _activeManifestation: 2
+  _activeView: 2
+  _activeManifestation: 1
   _activeSubMeshes: -1
   _activeSubMeshesIncludeUntyped: 1
   _inputManager: {fileID: 939225276}
@@ -12580,7 +12580,7 @@ MonoBehaviour:
   _hidden: 0
   useRenderLods: 1
   _isLocal: 1
-  cargarDeCuenta: 1
+  cargarDeCuenta: 0
   esperaMaxima: 20
 --- !u!4 &1655380797
 Transform:

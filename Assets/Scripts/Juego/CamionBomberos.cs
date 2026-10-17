@@ -13,7 +13,7 @@ using UnityEngine;
 /// Si el modelo del camion no esta en el proyecto (asset de pago no incluido en git),
 /// se genera un camion simple de reemplazo para que el juego funcione igual.
 /// </summary>
-[DefaultExecutionOrder(10000)]
+[DefaultExecutionOrder(-900)] // Temprano: el rig debe moverse antes de que el SDK de avatares (orden -1) muestree la pose.
 public class CamionBomberos : MonoBehaviour
 {
     [Header("Orientacion")]
@@ -306,6 +306,22 @@ public class CamionBomberos : MonoBehaviour
         if (JugadorSentado)
         {
             if (manejable) Manejar();
+
+            // Mantiene al jugador sentado en la cabina (sigue al camion cuando se mueve).
+            // En Update (temprano, orden -900) para que el SDK de avatares muestree el rig
+            // ya movido en el mismo frame; si no, el avatar del jugador va 1 frame atras.
+            if (_rig != null)
+            {
+                _rig.transform.SetPositionAndRotation(transform.TransformPoint(_rigPosLocal), transform.rotation * _rigRotLocal);
+
+                // El pellizco usado para subir debe soltarse antes de contar para bajar.
+                bool pellizco = EntradaVR.AlgunPellizco();
+                if (!pellizco) _pellizcoLiberado = true;
+                if (pellizco && _pellizcoLiberado) _pellizcoBajar += Time.deltaTime;
+                else _pellizcoBajar = 0f;
+
+                if (EntradaVR.CancelarDown() || _pellizcoBajar >= segundosPellizcoParaBajar) Bajar();
+            }
             return;
         }
 
@@ -503,21 +519,10 @@ public class CamionBomberos : MonoBehaviour
     // Subir / bajar
     // ------------------------------------------------------------------
 
-    void LateUpdate()
-    {
-        if (!_listo || !JugadorSentado || _rig == null) return;
-
-        // Mantiene al jugador sentado en la cabina (sigue al camion cuando se mueve).
-        _rig.transform.SetPositionAndRotation(transform.TransformPoint(_rigPosLocal), transform.rotation * _rigRotLocal);
-
-        // El pellizco usado para subir debe soltarse antes de contar para bajar.
-        bool pellizco = EntradaVR.AlgunPellizco();
-        if (!pellizco) _pellizcoLiberado = true;
-        if (pellizco && _pellizcoLiberado) _pellizcoBajar += Time.deltaTime;
-        else _pellizcoBajar = 0f;
-
-        if (EntradaVR.CancelarDown() || _pellizcoBajar >= segundosPellizcoParaBajar) Bajar();
-    }
+    // (El seguimiento del rig se movio a Update, orden -900, para que el SDK de avatares
+    // muestree la posicion ya actualizada en el mismo frame. Antes estaba aqui en
+    // LateUpdate con orden +10000, lo que causaba que el avatar del jugador fuera
+    // 1 frame atras (se veia "a saltos") mientras el camion se movia.)
 
     public void Subir()
     {
