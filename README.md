@@ -159,7 +159,12 @@ Al subir se muestra el **tiempo, el puntaje** (100 por tarea + bono por rapidez)
 2. Instala **"Meta Avatars SDK"** (40.0.1, gratis) y **"Meta Avatars SDK Sample Assets"** (dependencia).
 3. En el SDK: pestaña **Samples** → **"Sample Scenes"** → **Import**.
 4. Cuando aparezca el diálogo de presets: **"Include All"** (los presets se generan localmente y NO van al repositorio).
-5. Los assets generados (`Assets/Oculus/Avatar2*`, `Assets/StreamingAssets/Oculus|BehaviorAssets`, `Assets/Samples/`) están excluidos del repositorio por tamaño y licencia del SDK.
+5. Ejecuta el menú **"Juego Bomberos → Preparar avatares (copiar presets)"** (copia los zips Light a StreamingAssets; ~165 MB, tampoco van al repositorio).
+6. Los assets generados (`Assets/Oculus/Avatar2*`, `Assets/StreamingAssets/*`, `Assets/Samples/`) están excluidos del repositorio por tamaño y licencia del SDK.
+
+**Notas del avatar:**
+- El avatar usa el **avatar de la cuenta Meta** (CDN) si hay app-id configurado (`Meta → Platform → Edit Settings`); si no, cae al **preset local** (funciona igual: brazos/manos con poses de dedos por controladores).
+- El rig del jugador es el Building Block de la cámara (`[BuildingBlock] Camera Rig`); los scripts propios (`AvatarJugador`, `AvatarEntradaJugador`, `AvatarTrackingDelegate`, `AvatarControlDelegate`) viven en `Assets/Scripts/Juego/` y no dependen de `Assets/Samples`.
 
 > Si los assets no están presentes, el proyecto **compila y ejecuta igual**; solo se muestran como referencias vacías ("Missing") en la escena.
 

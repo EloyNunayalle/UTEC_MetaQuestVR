@@ -166,3 +166,9 @@ InitTestScene*.unity*
 /Assets/StreamingAssets/Oculus.meta
 /Assets/StreamingAssets/BehaviorAssets/
 /Assets/StreamingAssets/BehaviorAssets.meta
+# Zips de avatares preset (Light, ~82 MB c/u). No van al repo; se copian con el
+# menu "Juego Bomberos > Preparar avatares (copiar presets)".
+/Assets/StreamingAssets/PresetAvatars_Rift_Light.zip
+/Assets/StreamingAssets/PresetAvatars_Rift_Light.zip.meta
+/Assets/StreamingAssets/PresetAvatars_Quest_Light.zip
+/Assets/StreamingAssets/PresetAvatars_Quest_Light.zip.meta
