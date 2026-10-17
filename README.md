@@ -153,6 +153,14 @@ Al subir se muestra el **tiempo, el puntaje** (100 por tarea + bono por rapidez)
 2. Coloca su contenido en la carpeta indicada — `Assets/Models/CamionBomberos/`, `Assets/Models/Casilleros/` o `Assets/Models/Tablet_Rugged/` (tablet: `rugged_tablet_0.1.glb`) — **respetando los nombres de archivo originales**.
 3. Abre Unity: los objetos se **re-vinculan automáticamente** en la escena (los archivos `.meta` versionados en este repositorio conservan los mismos identificadores/GUIDs).
 
+#### Cómo instalar el Meta Avatars SDK (para el avatar del jugador)
+
+1. Unity: **Window → Package Manager → My Assets** (con tu cuenta Unity).
+2. Instala **"Meta Avatars SDK"** (40.0.1, gratis) y **"Meta Avatars SDK Sample Assets"** (dependencia).
+3. En el SDK: pestaña **Samples** → **"Sample Scenes"** → **Import**.
+4. Cuando aparezca el diálogo de presets: **"Include All"** (los presets se generan localmente y NO van al repositorio).
+5. Los assets generados (`Assets/Oculus/Avatar2*`, `Assets/StreamingAssets/Oculus|BehaviorAssets`, `Assets/Samples/`) están excluidos del repositorio por tamaño y licencia del SDK.
+
 > Si los assets no están presentes, el proyecto **compila y ejecuta igual**; solo se muestran como referencias vacías ("Missing") en la escena.
 
 ### Tecnologías y SDKs

@@ -142,3 +142,27 @@ InitTestScene*.unity*
 !/Assets/Models/Tablet_Rugged/**/
 !/Assets/Models/Tablet_Rugged/**/*.meta
 !/Assets/Models/Tablet_Rugged/LICENCIA.txt
+
+# ============================================================
+# Meta Avatars SDK - Sample Scenes (288 MB, solo referencia/desarrollo)
+# ============================================================
+# El SDK (com.meta.xr.sdk.avatars) vive en la cache del Package Manager
+# (Library/, ya ignorada) y se resuelve con Packages/manifest.json.
+# Las Sample Scenes se importan a Assets/Samples/: son solo de referencia;
+# cada companero las re-importa gratis desde la Asset Store:
+# Window > Package Manager > My Assets > Meta Avatars SDK > Samples > Import.
+/Assets/Samples/
+/Assets/Samples.meta
+#
+# Assets generados por el SDK al instalarlo (CoreAssets, presets y behavior
+# assets). No se redistribuyen (licencia del SDK de Meta) y se regeneran con
+# la instalacion (Asset Store + "Include All" de presets). El preset de
+# SampleAssets pesa ~938 MB.
+/Assets/Oculus/Avatar2/
+/Assets/Oculus/Avatar2.meta
+/Assets/Oculus/Avatar2_SampleAssets/
+/Assets/Oculus/Avatar2_SampleAssets.meta
+/Assets/StreamingAssets/Oculus/
+/Assets/StreamingAssets/Oculus.meta
+/Assets/StreamingAssets/BehaviorAssets/
+/Assets/StreamingAssets/BehaviorAssets.meta
