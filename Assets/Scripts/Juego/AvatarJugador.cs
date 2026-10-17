@@ -15,6 +15,36 @@ public class AvatarJugador : OvrAvatarEntity
     [Tooltip("Segundos maximos de espera para descargar el avatar de la cuenta.")]
     public float esperaMaxima = 20f;
 
+    OVRCameraRig _rig;
+    float _proxOcultar;
+
+    void OcultarControles()
+    {
+        if (_rig == null) _rig = FindObjectOfType<OVRCameraRig>();
+        if (_rig == null) return;
+        foreach (var t in _rig.gameObject.GetComponentsInChildren<Transform>(true))
+        {
+            if (!t.name.ToLower().Contains("controlleranchor")) continue;
+            foreach (var r in t.GetComponentsInChildren<Renderer>(true))
+                if (r.gameObject != t.gameObject) r.gameObject.SetActive(false);
+        }
+    }
+
+    void LateUpdate()
+    {
+        if (_rig == null) _rig = FindObjectOfType<OVRCameraRig>();
+        if (_rig == null) return;
+        // El avatar se queda en la posicion del jugador (el tracking llega en local).
+        transform.position = _rig.transform.position;
+        transform.rotation = Quaternion.Euler(0f, _rig.transform.eulerAngles.y, 0f);
+        // Los modelos de control visibles se re-crean al iniciar: se re-ocultan.
+        if (Time.time >= _proxOcultar)
+        {
+            _proxOcultar = Time.time + 1f;
+            OcultarControles();
+        }
+    }
+
     protected IEnumerator Start()
     {
         yield return null;

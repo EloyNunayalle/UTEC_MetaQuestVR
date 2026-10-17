@@ -12596,7 +12596,7 @@ MonoBehaviour:
   _activeManifestation: 2
   _activeSubMeshes: -1
   _activeSubMeshesIncludeUntyped: 1
-  _inputManager: {fileID: 0}
+  _inputManager: {fileID: 939225276}
   _facePoseBehavior: {fileID: 0}
   _eyePoseBehavior: {fileID: 0}
   _lipSync: {fileID: 0}
