@@ -1,0 +1,21 @@
+Ultimate Stylized Nature Pack — Quaternius (May 2022)
+=====================================================
+
+Autor: Quaternius
+Fuente: https://quaternius.com/packs/ultimatestylizednature.html
+Espejo: https://poly.pizza/bundle/Ultimate-Stylized-Nature-Pack-zyIyYd9yGr
+
+Licencia: CC0 1.0 Universal (Public Domain Dedication)
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Se importó el pack COMPLETO:
+- 63 modelos FBX (árboles, arbustos, flores, plantas, pasto, pétalos y rocas).
+- 21 texturas (originales de 2048 px reducidas a 1024 px para Quest;
+  las hojas/flores conservan su canal alfa).
+
+Uso en el proyecto:
+- Prefabs con materiales asignados en Assets/Models/StylizedNature/Prefabs/.
+- Materiales Standard (corteza con normal map; hojas con alpha cutout a doble cara).
+- Nota: los prefabs conservan la escala 100 y la rotación X=270° de la conversión FBX.
+
+Sin modificaciones en las mallas. Texturas redimensionadas y materiales creados para Unity.

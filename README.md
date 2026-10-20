@@ -138,6 +138,15 @@ Al subir se muestra el **tiempo, el puntaje** (100 por tarea + bono por rapidez)
 - **Versión completa (opcional)**: el kit completo (300+ modelos, ~234 MB) se descarga gratis desde el enlace (versión Standard, CC0). El repositorio incluye solo las piezas utilizadas para no inflarlo; si necesitas más variedad, descarga el kit y copia los FBX/texturas que falten en la misma carpeta.
 - **Modificaciones**: ninguna en las mallas; se importan a Unity y se usan para construir la ciudad (escala en metros del kit).
 
+### Kit de naturaleza: "Ultimate Stylized Nature Pack"
+- **Autor**: Quaternius (https://quaternius.com)
+- **Fuente**: https://quaternius.com/packs/ultimatestylizednature.html
+- **Espejo**: https://poly.pizza/bundle/Ultimate-Stylized-Nature-Pack-zyIyYd9yGr
+- **Licencia**: **CC0 1.0 Universal** (dominio público) — https://creativecommons.org/publicdomain/zero/1.0/ — **no exige atribución** (se acredita igualmente por trazabilidad).
+- **Contenido incluido en el repositorio**: **pack completo** (63 modelos FBX y 21 texturas) en `Assets/Models/StylizedNature/` + `LICENCIA.txt` (~20 MB con texturas a 1024 px).
+- **Modificaciones**: texturas de corteza reducidas de 2048 a 1024 px para Quest; se crearon materiales Standard (corteza con normal map; hojas con alpha cutout a doble cara) y prefabs con los materiales asignados.
+- **Nota de uso**: los prefabs conservan su transformación original del FBX; al colocarlos se respeta esa orientación y se aplica el giro deseado sobre ella.
+
 ### Modelos de terceros NO incluidos en este repositorio
 
 - **"Cartoon Stylized American Fire Truck"** — autor: ZippyLee (CGTrader)
