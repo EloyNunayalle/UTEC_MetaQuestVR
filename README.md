@@ -12,7 +12,7 @@ La escena principal es una estación de bomberos interactiva con:
 ## Cómo probar
 
 **Requisitos**: Unity 2022.3.x con el Meta XR SDK (se instala solo al abrir el proyecto vía UPM).
-Escena: `Assets/Scenes/SampleScene.unity`.
+Escena principal: `Assets/Scenes/Ciudad_Tile_00_Estacion.unity` (tile de la ciudad que contiene la estación). Las demás partes de la ciudad se llamarán `Ciudad_Tile_01_...`, `Ciudad_Tile_02_...`, etc.
 
 **Opción A — Con visor (Quest Link):**
 1. Conecta el Meta Quest por Quest Link.

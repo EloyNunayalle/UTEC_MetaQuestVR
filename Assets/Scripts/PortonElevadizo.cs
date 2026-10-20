@@ -30,11 +30,25 @@ public class PortonElevadizo : MonoBehaviour
 
     Quaternion _rotCerrado;
     float _t;
+    float _proximaBusquedaJugador;
 
     void Awake()
     {
         if (pivote == null) pivote = transform;
         _rotCerrado = pivote.localRotation;
+    }
+
+    /// <summary>
+    /// El jugador vive en la escena persistente (división de escenas), así que la
+    /// referencia serializada puede quedar vacía: se busca el rig automáticamente.
+    /// </summary>
+    void BuscarJugador()
+    {
+        if (Time.unscaledTime < _proximaBusquedaJugador) return;
+        _proximaBusquedaJugador = Time.unscaledTime + 0.5f;
+
+        var rig = FindObjectOfType<OVRCameraRig>();
+        if (rig != null) jugador = rig.centerEyeAnchor != null ? rig.centerEyeAnchor : rig.transform;
     }
 
     public void Alternar()
@@ -104,6 +118,7 @@ public class PortonElevadizo : MonoBehaviour
 
     bool HayJugadorEnZona()
     {
+        if (jugador == null) BuscarJugador();
         if (jugador == null) return false;
         Bounds zona = new Bounds(zonaBarridoCentro, zonaBarridoTamano);
         CharacterController cc = jugador.GetComponent<CharacterController>();

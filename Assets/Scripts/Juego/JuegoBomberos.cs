@@ -50,6 +50,15 @@ public class JuegoBomberos : MonoBehaviour
 
     public bool PermiteInteractuar => _fase != Fase.Intro;
 
+    /// <summary>
+    /// El interior de la estación (decoración, chaleco, extintor, marcas de piso)
+    /// puede descargarse cuando la misión no está en curso o cuando el equipamiento
+    /// (chaleco y extintor) ya se completó: el manager deja de evaluar esas tareas.
+    /// </summary>
+    public bool PermiteDescargarEstacionInterior =>
+        _fase != Fase.Mision ||
+        ((_tChaleco == null || _tChaleco.hecha) && (_tExtintor == null || _tExtintor.hecha));
+
     class Tarea
     {
         public string titulo, pista;
@@ -74,6 +83,8 @@ public class JuegoBomberos : MonoBehaviour
     int _puntaje, _bono;
     string _calificacion = "";
     bool _avisoAgarreChaleco, _avisoAgarreExtintor;
+    bool _equipamientoListo;
+    float _proximoBusquedaEquipamiento;
 
     static readonly Color ColInfo = new Color(1f, 0.85f, 0.25f);
     static readonly Color ColExito = new Color(0.35f, 1f, 0.45f);
@@ -170,40 +181,19 @@ public class JuegoBomberos : MonoBehaviour
             _motorPorton.pitch = 1.7f;
         }
 
-        if (chaleco != null)
-        {
-            _agChaleco = chaleco.gameObject.AddComponent<ObjetoAgarrable>();
-            _agChaleco.esDestinoValido = EnElPecho;
-            _agChaleco.alAgarrar = () =>
-            {
-                if (_avisoAgarreChaleco) return;
-                _avisoAgarreChaleco = true;
-                Aviso("Llévalo a tu pecho y suéltalo", TipoAviso.Info, 2f);
-            };
-            _agChaleco.alEntrarDestino = () => Aviso("¡Suéltalo para ponértelo!", TipoAviso.Info, 1.2f);
-            _agChaleco.alSoltarEnDestino = () => CompletarTarea(_tChaleco, "¡Chaleco puesto!");
-            _tChaleco = NuevaTarea("Ponte el chaleco",
-                "Acerca la mano, agárralo con GRIP (o pellizca) y llévalo a tu pecho.",
-                () => _agChaleco.Completado ? (Vector3?)null : ArribaDe(chaleco));
-        }
+        // ---- Equipamiento (vive en Estacion_Interior, cargada por proximidad) ----
+        // Las tareas se crean SIEMPRE (con guardas) y los objetos se enganchan en
+        // cuanto aparecen: el interior puede cargarse un frame después del Start.
+        _tChaleco = NuevaTarea("Ponte el chaleco",
+            "Acerca la mano, agárralo con GRIP (o pellizca) y llévalo a tu pecho.",
+            () => _agChaleco == null || _agChaleco.Completado ? (Vector3?)null : ArribaDe(chaleco));
 
-        if (extintor != null)
-        {
-            _agExtintor = extintor.gameObject.AddComponent<ObjetoAgarrable>();
-            _agExtintor.radioAgarre = 0.18f;
-            _agExtintor.esDestinoValido = CercaDelCamion;
-            _agExtintor.alAgarrar = () =>
-            {
-                if (_avisoAgarreExtintor) return;
-                _avisoAgarreExtintor = true;
-                Aviso("Llévalo hasta el camión y suéltalo", TipoAviso.Info, 2f);
-            };
-            _agExtintor.alEntrarDestino = () => Aviso("¡Suéltalo para cargarlo!", TipoAviso.Info, 1.2f);
-            _agExtintor.alSoltarEnDestino = () => CompletarTarea(_tExtintor, "¡Extintor cargado en el camión!");
-            _tExtintor = NuevaTarea("Carga el extintor al camión",
-                "Agárralo, llévalo junto al camión y suéltalo.",
-                () => _agExtintor.Agarrado ? TechoCamion() : ArribaDe(extintor));
-        }
+        _tExtintor = NuevaTarea("Carga el extintor al camión",
+            "Agárralo, llévalo junto al camión y suéltalo.",
+            () => _agExtintor == null ? (Vector3?)null
+                                      : (_agExtintor.Agarrado ? TechoCamion() : ArribaDe(extintor)));
+
+        PrepararEquipamiento();
 
         _tSubir = NuevaTarea("Sube al camión de bomberos",
             "Párate en el círculo junto a la puerta del conductor (o presiona A).",
@@ -293,9 +283,73 @@ public class JuegoBomberos : MonoBehaviour
     // Flujo del juego
     // ------------------------------------------------------------------
 
+    /// <summary>
+    /// Busca el chaleco y el extintor (viven en Estacion_Interior, que se carga por
+    /// proximidad) y les añade la interacción en cuanto están disponibles. Se vuelve
+    /// a llamar desde Update hasta encontrar ambos (por eso las guardas).
+    /// </summary>
+    void PrepararEquipamiento()
+    {
+        if (chaleco == null) chaleco = Buscar(nombreChaleco);
+        if (extintor == null) extintor = Buscar(nombreExtintor);
+
+        if (chaleco != null && _agChaleco == null)
+        {
+            _agChaleco = chaleco.gameObject.AddComponent<ObjetoAgarrable>();
+            _agChaleco.esDestinoValido = EnElPecho;
+            _agChaleco.alAgarrar = () =>
+            {
+                if (_avisoAgarreChaleco) return;
+                _avisoAgarreChaleco = true;
+                Aviso("Llévalo a tu pecho y suéltalo", TipoAviso.Info, 2f);
+            };
+            _agChaleco.alEntrarDestino = () => Aviso("¡Suéltalo para ponértelo!", TipoAviso.Info, 1.2f);
+            _agChaleco.alSoltarEnDestino = () => CompletarTarea(_tChaleco, "¡Chaleco puesto!");
+        }
+
+        if (extintor != null && _agExtintor == null)
+        {
+            _agExtintor = extintor.gameObject.AddComponent<ObjetoAgarrable>();
+            _agExtintor.radioAgarre = 0.18f;
+            _agExtintor.esDestinoValido = CercaDelCamion;
+            _agExtintor.alAgarrar = () =>
+            {
+                if (_avisoAgarreExtintor) return;
+                _avisoAgarreExtintor = true;
+                Aviso("Llévalo hasta el camión y suéltalo", TipoAviso.Info, 2f);
+            };
+            _agExtintor.alEntrarDestino = () => Aviso("¡Suéltalo para cargarlo!", TipoAviso.Info, 1.2f);
+            _agExtintor.alSoltarEnDestino = () => CompletarTarea(_tExtintor, "¡Extintor cargado en el camión!");
+        }
+
+        _equipamientoListo = chaleco != null && extintor != null;
+    }
+
+    /// <summary>
+    /// Llamado por GestorEscenas cuando Estacion_Interior termina de recargarse:
+    /// vuelve a enganchar chaleco/extintor si sus tareas siguen pendientes
+    /// (las referencias antiguas quedaron destruidas al descargar la escena).
+    /// </summary>
+    public void RevisarEquipamiento()
+    {
+        chaleco = null;
+        extintor = null;
+        _agChaleco = null;
+        _agExtintor = null;
+        _equipamientoListo = false;
+        PrepararEquipamiento();
+    }
+
     void Update()
     {
         if (_cabeza == null) return;
+
+        if (!_equipamientoListo && Time.time >= _proximoBusquedaEquipamiento)
+        {
+            _proximoBusquedaEquipamiento = Time.time + 0.5f;
+            PrepararEquipamiento();
+        }
+
         VigilarPuertas();
         DetectarBloqueo();
 

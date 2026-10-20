@@ -6,8 +6,14 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/SampleScene.unity
+    path: Assets/Scenes/Persistente.unity
+    guid: c2a413fe74150834e92595cd46467cad
+  - enabled: 1
+    path: Assets/Scenes/Ciudad_Tile_00_Estacion.unity
     guid: 9fc0d4010bbf28b4594072e72b8655ab
+  - enabled: 1
+    path: Assets/Scenes/Estacion_Interior.unity
+    guid: 4add4196471ba4f46b5b05df79fe01dc
   m_configObjects:
     Unity.XR.Oculus.Settings: {fileID: 11400000, guid: e4aca587911dcf9409aa3247eff19cb1, type: 2}
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 0447aa06d56ae3d4ca9e664722b269c4, type: 2}

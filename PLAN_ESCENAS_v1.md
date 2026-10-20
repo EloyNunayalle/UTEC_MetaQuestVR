@@ -1,10 +1,46 @@
 # Plan de división de escenas — Ciudad + Estación (v1)
 
-> **Estado**: 📋 PENDIENTE — NO implementado aún (solo diseño, para recordar luego)
-> **Fecha**: 18 de octubre de 2026
+> **Estado**: 🟡 **FASE 1 PARCIAL** — `Persistente` implementada y probada (19/10/2026)
+> **Fecha**: 18 de octubre de 2026 · actualizado 19/10/2026
 > **Proyecto**: UTEC_MetaQuestVR (Unity 2022.3 · Meta Quest · Simulador XR)
 > **Objetivo**: una ciudad manejable con la estación de bomberos como hub y casas
 > explorables para las misiones, manteniendo 72 FPS estables en Quest.
+
+---
+
+## 0. Estado de implementación (19/10/2026)
+
+| Ítem | Estado |
+|---|---|
+| `Persistente.unity` (rig + avatar + `JuegoBomberos` + HUD + camión + luz de cabina) | ✅ **HECHA** y probada en Play |
+| Separación del jugador/managers/camión de la escena del mundo | ✅ **HECHA** (el tile de la ciudad ya no los contiene) |
+| Carga aditiva automática (`Assets/Scripts/Juego/GestorEscenas.cs`) | ✅ **HECHA** (editor + build + reinicio) |
+| `Estacion_Interior.unity` (decoración + marcas de piso + chaleco/extintor) | ✅ **CONTENIDO SEPARADO** — se carga/descarga por proximidad (45 m / 60 m) |
+| Build Settings | ✅ `[Persistente (0), Ciudad_Tile_00_Estacion (1), Estacion_Interior (2)]` |
+| Prueba en editor | ✅ 1 avatar, 1 manager, 1 rig, camión; 4 tareas; descarga/recarga y reinicio OK |
+| Malla del edificio partida (exterior/interior) | ⏳ **PENDIENTE** — el edificio es una sola malla Collada; requiere cirugía en Blender |
+| `Ciudad` | ⏳ **PENDIENTE** — no iniciada (decisión del usuario) |
+| Casas de misión | ⏳ **PENDIENTE** (Fase 3) |
+
+**Cómo se prueba en el editor**: abrir **solo** `Assets/Scenes/Ciudad_Tile_00_Estacion.unity` y dar Play;
+`GestorEscenas` agrega la `Persistente` y, si el jugador está cerca, la `Estacion_Interior`.
+⚠️ No abrir la `Persistente` también en el editor, porque el Play multi-escena la cargaría dos veces.
+
+**Cómo funciona en build**: `Persistente` es el índice 0 → `GestorEscenas` agrega la
+`Ciudad_Tile_00_Estacion` (el mundo) encima. El jugador y el camión nunca se recargan al cambiar de mundo.
+
+**Interior por proximidad**: `GestorEscenas` lo carga a ≤45 m del centro de la estación y lo
+descarga a >60 m (histéresis), solo si `JuegoBomberos` lo permite (misión sin equipamiento
+pendiente). Al recargar, `JuegoBomberos.RevisarEquipamiento()` re-engancha chaleco/extintor.
+`GestorEscenas` sobrevive a las recargas (DontDestroyOnLoad): si `Reiniciar` recarga el mundo
+en Single, repone la `Persistente` y el interior antes de los `Start` del siguiente frame.
+
+**Luz de cabina**: `TEMP_Luz_Cabina` quedó **emparentada al camión** para que viaje con él.
+
+**Corrección por la división**: `PuertaAutomatica` y `PortonElevadizo` tenían asignado el
+`CenterEyeAnchor` del rig (que ahora vive en `Persistente`), por lo que la referencia quedó
+vacía y la puerta dejó de abrir/cerrar. Ambos scripts ahora **buscan el rig automáticamente**
+si la referencia está vacía (probado: abre a <2.2 m, cierra a >3.2 m).
 
 ---
 
@@ -42,7 +78,7 @@ cruza la puerta y no nota la separación (es solo técnica).
 - **Exterior de la estación**: fachada "FIRE DEPARTMENT", puertas rojas, patio
 - **Exteriores de las casas de misión** (fachada + puerta)
 - Luces **bakeadas**
-- *(Si la ciudad crece → dividir en `Ciudad_Tile_00`, `_01`… por cuadrícula)*
+- *(Tiles: el hub es `Ciudad_Tile_00_Estacion`; los demás siguen `Ciudad_Tile_01_...`, `Ciudad_Tile_02_...` por cuadrícula)*
 
 ### 3️⃣ `Estacion_Interior` — lo de adentro de la estación
 - Garaje, paredes interiores, decoración
@@ -116,7 +152,7 @@ Sigue de largo:
 
 | Fase | Qué se hace |
 |---|---|
-| **Fase 1** | Crear `Persistente` (mover rig + avatar + HUD + managers + camión) + separar `Estacion_Interior` (garaje) + `Ciudad` (fachada de la estación + calle). *La más trabajosa, se hace una vez.* |
+| **Fase 1** | 🟡 **Casi completa (19/10/2026)**: `Persistente` ✅ + `Estacion_Interior` (contenido: decoración, marcas, equipamiento) ✅ con carga/descarga por proximidad. Falta partir la malla del edificio en Blender (exterior/interior) y `Ciudad` (aún no iniciada). |
 | **Fase 2** | Crecer la ciudad: calles, edificios de fondo, tiles + **Addressables** |
 | **Fase 3** | Casas de misión: exterior en la Ciudad + interior aparte + triggers en puertas + integración con `JuegoBomberos` |
 
@@ -129,7 +165,7 @@ Sigue de largo:
 
 ## 9. Notas para la implementación
 
-- Cuidado al separar `SampleScene`: hoy todo está junto (estación + camión +
+- Cuidado al separar la escena del mundo: hoy el tile `Ciudad_Tile_00_Estacion` contiene la estación completa (edificio + patio + cerco). Los demás tiles seguirán la convención `Ciudad_Tile_01_...`, `Ciudad_Tile_02_...`.
   avatar + HUD). Revisar las referencias cruzadas actuales (rig ↔ camión, HUD,
   zona de subida) antes de mover nada.
 - El camión **no** puede vivir en una escena que se descargue (por eso va en
