@@ -130,6 +130,14 @@ Al subir se muestra el **tiempo, el puntaje** (100 por tarea + bono por rapidez)
 - **Licencia**: CC0 1.0 Universal (dominio público) — https://creativecommons.org/publicdomain/zero/1.0/ — **no exige atribución** (se acredita igualmente por trazabilidad).
 - **Modificaciones**: ninguna en la malla; en el proyecto se coloca sobre el tablero del camión (misma posición/rotación, corrida a la derecha) y muestra el GPS de la misión por código.
 
+### Kit de ciudad: "Downtown City MegaKit" (Standard)
+- **Autor**: Quaternius (https://quaternius.com)
+- **Fuente**: https://quaternius.com/packs/downtowncitymegakit.html
+- **Licencia**: **CC0 1.0 Universal** (dominio público) — https://creativecommons.org/publicdomain/zero/1.0/ — **no exige atribución** (se acredita igualmente por trazabilidad).
+- **Contenido incluido en el repositorio**: los modelos FBX y texturas usados para la ciudad (calles, veredas, decals viales, edificios y muros) en `Assets/Models/DowntownCity/`.
+- **Versión completa (opcional)**: el kit completo (300+ modelos, ~234 MB) se descarga gratis desde el enlace (versión Standard, CC0). El repositorio incluye solo las piezas utilizadas para no inflarlo; si necesitas más variedad, descarga el kit y copia los FBX/texturas que falten en la misma carpeta.
+- **Modificaciones**: ninguna en las mallas; se importan a Unity y se usan para construir la ciudad (escala en metros del kit).
+
 ### Modelos de terceros NO incluidos en este repositorio
 
 - **"Cartoon Stylized American Fire Truck"** — autor: ZippyLee (CGTrader)
