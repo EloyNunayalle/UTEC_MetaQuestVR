@@ -144,3 +144,82 @@ Todas las intersecciones usan las piezas del kit (`Street_Asphalt_6x6` / `9x9`, 
 - [ ] ¿Las posiciones M1/E, M2/C, M3/K se quedan?
 - [ ] ¿El tamaño 320 × 260 m se queda o crece?
 - [ ] ¿El portón del cerco se hace deslizante/interactivo al construir la ciudad? (ahora queda estático)
+
+---
+
+## 11. Cuadrícula de tiles y streaming (DEFINIDO — 20/10/2026)
+
+Decisiones confirmadas para la implementación:
+
+| Parámetro | Valor |
+|---|---|
+| Cantidad | **4 × 4 = 16 tiles** |
+| Tamaño | **80 × 65 m** |
+| Origen tile 00 (SO) | **world x = −52.35 · z = −38.35** |
+| Fórmula tile (i, j) | `x_min = −52.35 + 80·i` · `z_min = −38.35 + 65·j` |
+| Índices | `i` = oeste→este (0–3) · `j` = sur→norte (0–3) |
+| Nombres | `Ciudad_Tile_00_Estacion`, `Ciudad_Tile_01_…`, … `Ciudad_Tile_15_…` |
+
+Límites del mundo: **x −52.35 .. 267.65** (320 m) · **z −38.35 .. 221.65** (260 m).
+
+| Fila \ Columna | i=0 | i=1 | i=2 | i=3 |
+|---|---|---|---|---|
+| **j=0** | x −52.35..27.65 · z −38.35..26.65 (Tile 00) | 27.65..107.65 | 107.65..187.65 | 187.65..267.65 |
+| **j=1** | z 26.65..91.65 (Tile 04) | Tile 05 | Tile 06 | Tile 07 |
+| **j=2** | z 91.65..156.65 (Tile 08) | Tile 09 | Tile 10 | Tile 11 |
+| **j=3** | z 156.65..221.65 (Tile 12) | Tile 13 | Tile 14 | Tile 15 |
+
+### Criterio de borde
+- Los **3 edificios del norte de la Calle Sur siguen asignados al Tile 00** (son la fachada de la calle) aunque su geometría sobresalga ~14 m del límite nominal (z=26.65).
+- El **Tile 04** empieza su contenido **detrás de esa fila** (z ≈ 41) y **no debe duplicarlos**.
+- Motivo: recortarlos obligaría a cortar los edificios en plena fachada o a separarlos 15 m de la calle.
+
+### Reglas de streaming
+| Regla | Valor |
+|---|---|
+| Tiles simultáneos | **máximo 3** (actual + siguiente en la dirección de avance + anterior como gracia) |
+| Precarga | el tile **en la dirección de movimiento** del camión/jugador, ~**25 m antes** del borde |
+| Descarga | ~**100 m** del centro del tile |
+| Carga | `LoadSceneAsync` aditiva, **1 carga por frame**, activación al terminar |
+| Estado inicial | Tile 00 (hub) cargado |
+| `Estacion_Interior` | se mantiene con su carga por proximidad (45/60 m) |
+
+`GestorEscenas` debe pasar de un nombre fijo a una **tabla de tiles** (id, escena, bounds, vecinos, prioridad). Prueba en Editor: teletransportar el rig por los bordes y verificar carga/descarga sin huecos.
+
+---
+
+## 12. Techo de recursos medido (20/10/2026)
+
+Medición en **Editor** (sin build; los draw calls del build pueden variar):
+
+| Escena | Triángulos | Renderers | Materiales |
+|---|---|---|---|
+| `Ciudad_Tile_00_Estacion` | **321.792** | 327 | 82 |
+| `Persistente` (Editor) | 502.592 | 320 | 47 |
+| `Persistente` (**en Play**) | **99.463** | 49 | — |
+| `Estacion_Interior` | **27.238** | 35 | 21 |
+
+- El `Persistente` en Editor incluye **manos/controles del Camera Rig** (428.952 tris); al iniciar Play se ocultan y baja a **99.463** (camión = 73.640).
+- **Draw calls medidos en Play (Editor): 720** · batches 616 · setPass 417.
+
+### Escenarios con 3 tiles
+
+| Escenario | Triángulos | Quest 2 (<750K) | Quest 3 (<1.5M) |
+|---|---|---|---|
+| 1 tile + Persistente + Interior | **~448K** | ✅ | ✅ |
+| 2 tiles + Persistente + Interior | **~770K** | ⚠️ al límite | ✅ |
+| 3 tiles + Persistente + Interior | **~1.09M** | ❌ | ✅ (~27% de margen) |
+| 3 tiles + Persistente + Interior + casa de misión (~30K) | **~1.12M** | ❌ | ✅ (~25% de margen) |
+
+### Veredicto
+- **Triángulos**: 3 tiles es **viable en Quest 3**; en **Quest 2** solo 1 tile (2 tiles queda al límite y con interiores de misión se pasa).
+- **Draw calls**: 720 para 1 tile + Persistente + Interior **supera el presupuesto** (<200 en Quest 3, <100 en Quest 2). **Es el cuello de botella real, más que los triángulos.**
+- **RAM**: el contenido (kit + vegetación ~21 MB) entra; falta medir en dispositivo con ASTC.
+- Los valores del Editor **no equivalen a un build**: confirmar con build Android + profiler.
+
+### Prioridades derivadas
+1. **Reducir draw calls** (consolidar materiales / atlas) — más crítico que los triángulos.
+2. **LODs de edificios y árboles**.
+3. **ASTC** + import settings Android.
+4. **Streaming de tiles** (3 en Quest 3; 1–2 en Quest 2, configurable).
+5. **Bake de luz + occlusion** por tile.

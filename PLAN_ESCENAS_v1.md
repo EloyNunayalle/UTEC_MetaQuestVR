@@ -176,3 +176,14 @@ Sigue de largo:
 ---
 
 *Documento de planificación — no implica cambios en el proyecto todavía.*
+
+---
+
+## 10. Cuadrícula de tiles (definida 20/10/2026)
+
+La ciudad se divide en **4 × 4 = 16 tiles de 80 × 65 m**. Origen del Tile 00:
+`x = −52.35, z = −38.35`; fórmula `x_min = −52.35 + 80·i`, `z_min = −38.35 + 65·j`.
+
+- **Streaming**: máximo **3 tiles** cargados (actual + siguiente en la dirección de avance + anterior como gracia), precarga ~25 m antes del borde, descarga ~100 m del centro del tile.
+- **Borde**: los 3 edificios del norte de la Calle Sur pertenecen al Tile 00; el Tile 04 empieza detrás de ellos.
+- Detalle completo y techo de recursos medido en `PLAN_CIUDAD.md` §11 y §12.
