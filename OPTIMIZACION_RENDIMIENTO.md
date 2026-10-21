@@ -178,7 +178,7 @@ Se probaron dos variantes de `Mesh.CombineMeshes` sobre los objetos estáticos (
 
 # Plan de LODs, streaming y edificios nuevos — Quest 2 / Quest 3
 
-> **Estado**: 🟡 CASI FINAL — escena principal 2mat con 6 edificios; prefabs finales A1/A2 para actuales y originales (incluido Large); limpieza de escenas, scripts y assets viejos hecha (21/10/2026). Pendiente: LOD1, bake y validación en dispositivo.
+> **Estado**: 🟢 FINAL TÉCNICO — escena principal 2mat con 6 edificios, prefabs A1/A2 actuales y originales (incluido Large), LOD1 decimado y corrección de caras/fake (21/10/2026). Pendiente: bake y validación en dispositivo.
 > **Fecha**: 20/10/2026 (actualizado 21/10/2026)
 > **Proyecto**: UTEC_MetaQuestVR (Unity 2022.3 · Meta Quest · Built-in RP)
 
@@ -325,7 +325,7 @@ Se probaron dos variantes de `Mesh.CombineMeshes` sobre los objetos estáticos (
 
 ### 2.6 Prefabs finales A1/A2 (21/10/2026)
 
-**Escena principal:** `Ciudad_Tile_00_Estacion` usa **A2 2mat** con 6 edificios, 26 árboles y **LOD0 + caja**. El Large no está colocado en este tile.
+**Escena principal:** `Ciudad_Tile_00_Estacion` usa **A2 2mat** con 6 edificios, 26 árboles y **LOD0 + LOD1 decimado + caja**. Los 6 edificios son instancias de los prefabs A2; el Large no está colocado en este tile.
 
 **Estructura final de prefabs** (`Assets/Prefabs/Ciudad/Edificios/`):
 
@@ -337,10 +337,12 @@ Se probaron dos variantes de `Mesh.CombineMeshes` sobre los objetos estáticos (
 | `A1/Original/` | 5 (incluye Large) | 1: `M_Atlas_A1_Final` | Opaco | Oculto |
 
 - **A2 actual:** atlas 2mat con ladrillo, detalle, fake y trims alternos; el vidrio queda separado y transparente.
-- **A1 actual:** atlas propio `T_Atlas_A1_Actual.png` (2048×4096) que incluye la región 2mat + un bloque de vidrio opaco; **1 material**. Las ventanas ya no muestran el fake.
-- **Cajas LOD1:** las UV se hornearon a un color de ladrillo del atlas; no se usan `MaterialPropertyBlock` porque no se serializan al guardar el prefab. A1/A2 actuales y originales usan la misma textura de su atlas.
-- **LODs:** LOD0 + caja + culled; sin LOD1 decimado en esta versión.
-- **Large:** `EDF_A1_Original_Large` y `EDF_A2_Original_Large` listos, LOD0 + caja; no colocados en el tile.
+- **A1 actual:** atlas propio `T_Atlas_A1_Actual.png` (2048×4096) que incluye la región 2mat + un bloque de vidrio opaco; **1 material**. La región de fake del atlas se rellenó con el color de vidrio opaco, así que las ventanas ya no muestran el fake. A1 original también recibió el mask en su atlas.
+- **Caras traseras/laterales:** las UV de las caras traseras y laterales ciegas de los A1/A2 actuales se remapearon al ladrillo del atlas para evitar que el detalle/fake se viera en paredes. En Medium/Small se incluyen laterales; en Corner/Rowhouse/Large solo la trasera, para conservar fachadas laterales.
+- **Cajas:** las UV se hornearon a un color de ladrillo del atlas; no se usan `MaterialPropertyBlock` porque no se serializan al guardar el prefab. A1/A2 actuales y originales usan la misma textura de su atlas.
+- **LODs:** LOD0 + **LOD1 decimado 50 %** + caja + culled. Umbrales `0.25 / 0.12 / 0.05 / 0.02`.
+- **LOD1:** 22 mallas generadas con Blender 5.2 (`decimar_lote.py`), FBX importado y corregido el espejo X del pipeline OBJ→Blender→FBX. El LOD1 conserva UVs y materiales del LOD0. Triángulos actuales: Small ~9–10K, Medium 30K, Corner 7.8K, Rowhouse 2K.
+- **Large:** `EDF_A1_Original_Large` y `EDF_A2_Original_Large` listos con LOD0 + LOD1 + caja; no colocados en el tile.
 - **Convención:** `EDF_<A1|A2>_<Paleta|Original>_<Tipo>[_<Color>]`.
 
 #### Estado de escenas
@@ -354,11 +356,11 @@ Se eliminaron las copias temporales/fallidas (`2Mat_v1`, `B_FakeFix_v1..v4`, `A1
 
 #### Scripts y assets
 
-- **Se mantienen:** `Constructor2MatMain.cs`, `ConstructorPrefabsFinales.cs`, `ConstructorBVerdeFake.cs`, `ConstructorPaletaPartes.cs`, `ConstructorAtlasArboles.cs`, `ConstructorAtlasArbolesLOD0.cs`, `ConfiguracionAndroid.cs` y `AjusteLODDispositivo.cs`.
+- **Se mantienen:** `Constructor2MatMain.cs`, `ConstructorPrefabsFinales.cs`, `ConstructorBVerdeFake.cs`, `ConstructorPaletaPartes.cs`, `ConstructorAtlasArboles.cs`, `ConstructorAtlasArbolesLOD0.cs`, `ConfiguracionAndroid.cs`, `AjusteLODDispositivo.cs`, `RevisorPrefabs.cs`, `CorrectorCarasActual.cs`, `ExportarLOD0OBJ.cs`, `AgregarLOD1Prefabs.cs` y `CorregirEspejoLOD1.cs`.
 - **Obsoletos movidos fuera de Assets:** `ConstructorA1A2Limpio.cs`, `ConstructorA2Actual.cs`, `CorrectorA2Actual.cs`, `ConstructorOriginalA2.cs`, `ConstructorA1OriginalLimpio.cs`, `ConstructorAtlasCompleto*.cs`, `ConstructorAtlasEdificios.cs`, `ConstructorB3Escena.cs`, `Exportador*.cs`, `ImportadorLOD1A2Original.cs` y `SincronizarLODs.cs` (respaldo en `%LOCALAPPDATA%/Temp/opencode/UTEC_Editor_Obsoletos_2026-10-21`).
 - **Assets viejos eliminados:** `A2/`, `A2Original/`, `AtlasCompleto/`, `A1OriginalLimpio/`, `B3Fix/`, `FinalA1 1/`, `FinalA2 1/`, mallas duplicadas de `2MatMain`, `FinalA1`, `FinalA2`, `FinalA1_Actual`, `BVerdeFake` y `Atlas`.
-- `Assets/Models/CiudadNueva` bajó de **~574 MB a ~200 MB**.
-- **No hay commits nuevos.**
+- `Assets/Models/CiudadNueva` bajó de **~574 MB a ~207 MB** (incluye LOD1Final).
+- **Commit base:** `492c1ce` (prefabs A1/A2, atlas 2mat y limpieza). Los cambios de LOD1/corrección de caras y fake se commitean al finalizar esta pasada.
 
 #### Capturas
 
@@ -371,10 +373,11 @@ Se eliminaron las copias temporales/fallidas (`2Mat_v1`, `B_FakeFix_v1..v4`, `A1
 
 ### 2.7 Prueba 2mat y decisiones
 
-- La escena principal usa el atlas `M_Atlas_2Mat` (ladrillo + detalle/fake + trims alternos) y `M_Glass_Transparente`; 12 draw calls de edificios en LOD0 + 6 cajas.
+- La escena principal usa el atlas `M_Atlas_2Mat` (ladrillo + detalle/fake + trims alternos) y `M_Glass_Transparente`; 12 draw calls de edificios en LOD0, LOD1 decimado y 6 cajas.
 - Las UVs de ladrillo/trims se hornearon con **`Mathf.Repeat`** para evitar manchas y bandas por UVs fuera de 0–1.
-- La caja LOD1 no usa property blocks; el color se resolvió con UVs dentro del atlas.
-- **Pendiente:** LOD1 decimado, bake de luz, medición real en Quest 2/3 y decidir si A2 2mat o B fix 3–4 materiales es la versión visual definitiva.
+- Las cajas usan UVs dentro del atlas; no property blocks.
+- **Revisión:** se renderizaron 4 vistas de los 22 prefabs. A1 actual se corrigió con el mask de fake; los triángulos oscuros de las esquinas traseras del Medium A2 corresponden a la geometría de los laterales de los bay windows/trims (no los crea la fusión de materiales), no a triángulos nuevos del atlas.
+- **Pendiente:** bake de luz, medición real en Quest 2/3 y decidir si A2 2mat o B fix 3–4 materiales es la versión visual definitiva.
 
 ---
 
