@@ -149,3 +149,25 @@
 - 452 draw calls sigue por encima del objetivo (<200 en Quest 3).
 - Siguiente: **Frame Debugger en build** + combinar mallas por material o atlas de texturas.
 - Los 3 tiles + Persistente + interiores siguen siendo el escenario objetivo (~1.1M triángulos).
+
+---
+
+## 10. Resultados Fase 2 — combinación de mallas (20/10/2026)
+
+Se probaron dos variantes de `Mesh.CombineMeshes` sobre los objetos estáticos (excluyendo puertas/portones animados):
+
+| Variante | Renderers tile | Draw calls (Editor) | Triángulos renderizados | Veredicto |
+|---|---|---|---|---|
+| Base (Fase 1) | 323 | 452 | 527.544 | — |
+| Combine total (por material) | **112** | 420 | **639.578 (+21 %)** | ❌ pierde culling |
+| Combine por celda 20 m | **166** | **452** | **593.870 (+12 %)** | ❌ sin ganancia en draw calls |
+
+**Decisión: revertido.** La combinación reduce renderers pero:
+- No baja los draw calls en el Editor (el número parece incluir la Scene View).
+- Aumenta los triángulos renderizados al perder granularidad de frustum culling.
+
+**Conclusión**: la combinación de mallas queda pendiente de validar en un **build Android** (donde el static batching sí se aplica). No debe repetirse a ciegas.
+
+### Estado actual tras revertir
+- Tile: **323 renderers**, 452 draw calls (Editor), 527K triángulos renderizados — igual que al final de Fase 1.
+- `Assets/Generated/` eliminado.
