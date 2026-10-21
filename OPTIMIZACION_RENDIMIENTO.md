@@ -171,3 +171,130 @@ Se probaron dos variantes de `Mesh.CombineMeshes` sobre los objetos estáticos (
 ### Estado actual tras revertir
 - Tile: **323 renderers**, 452 draw calls (Editor), 527K triángulos renderizados — igual que al final de Fase 1.
 - `Assets/Generated/` eliminado.
+
+---
+
+# Anexo: LODs, streaming y edificios (Quest 2 / Quest 3)
+
+# Plan de LODs, streaming y edificios nuevos — Quest 2 / Quest 3
+
+> **Estado**: 📋 PLAN — pendiente de implementar
+> **Fecha**: 20/10/2026
+> **Proyecto**: UTEC_MetaQuestVR (Unity 2022.3 · Meta Quest · Built-in RP)
+
+---
+
+## 1. Presupuestos por dispositivo (objetivo seguro)
+
+| Métrica | Quest 2 | Quest 3 |
+|---|---|---|
+| FPS objetivo | 72 | 72–90 |
+| Triángulos renderizados | **<750K** | **<1.5M** |
+| Draw calls | **<100** | **<200** |
+| Tiles cargados | **3 normales / 4 en esquinas** | **4–5** |
+| Triángulos por tile (renderizados) | **~120–150K** | **~150–200K** |
+| Draw calls por tile | **≤25** | **≤40** |
+
+> Nota: 750K/100 no son límites oficiales de Meta; son presupuestos conservadores del proyecto para Quest 2.
+
+---
+
+## 2. LODs
+
+### 2.1 Perfiles por dispositivo
+
+| Perfil | LOD0 | LOD1 | LOD2 | Culled / descarga |
+|---|---|---|---|---|
+| **Quest 2** | 0–15 m | 15–35 m | 35–60 m | >70–80 m |
+| **Quest 3** | 0–20 m | 20–50 m | 50–90 m | >90–110 m |
+
+- **3 LODs + culled** para edificios y árboles. No hace falta LOD3 salvo un objeto “hero” concreto.
+- **Sin LODs** para props pequeños (macetas, bolardos, tapas) y para calles/veredas/suelo.
+- **Backdrop** lejano (skyline) aparte, no como LOD.
+
+### 2.2 Objetos
+| Objeto | LOD0 | LOD1 | LOD2 |
+|---|---|---|---|
+| Edificios | Completo | ~50 % | ~15–20 % o caja texturizada |
+| Árboles | Completo | Copa simplificada | Billboard / impostor |
+| Props | — | — | — (culling por distancia) |
+| Calles/suelo | — | — | — (mipmaps) |
+
+### 2.3 Pipeline
+1. Modelo base en Unity (módulos del kit) → malla combinada por material.
+2. Exportar/decimar en **Blender headless** (`--background --python`) para LOD1 y LOD2.
+3. Importar a Unity y crear `LODGroup` con las distancias del perfil.
+4. Medir triángulos y verificar visualmente.
+
+---
+
+## 3. Streaming de tiles
+
+- Tiles de **80×65 m**, 4×4 = 16.
+- **Prioridad de carga**:
+  1. Tile actual (siempre).
+  2. Tile en la dirección de movimiento.
+  3. Tile dentro del frustum.
+  4. Tile anterior (gracia).
+- **Precarga**: ~25–30 m antes de cruzar el borde.
+- **Descarga**: ~100 m del centro del tile o cuando el presupuesto se exceda.
+- **Máximo**: 3 tiles en Quest 2 (4 en esquinas si el presupuesto lo permite); 4–5 en Quest 3.
+- **Mitigaciones visuales**:
+  - Fog a ~120–150 m del color del cielo.
+  - **Suelo global** (un plano que cubra toda la ciudad, no por tile).
+  - Prefetch para evitar pop-in.
+- En esquinas de 4 tiles: cargar actual + adelante + lateral visible; descargar el de atrás.
+
+---
+
+## 4. Edificios nuevos y variantes
+
+### 4.1 Dos modelos base
+| Modelo | Dimensiones | Estilo |
+|---|---|---|
+| **Rowhouse_A** | ~9 × 12 m · ~12.5 m alto | Boston rowhouse de 3 pisos, ventana bay, cornisa, techo de pizarra |
+| **Corner_Shop_B** | ~12 × 12 m · ~14 m alto | Esquina con local/escaparate en planta baja y 2 pisos de ladrillo |
+
+- Ensamblados en **Unity** con módulos del kit (`Brick_*`, `Cornice_*`, `Roof_*`, `Door_*`, `Entrance_*`).
+- Materiales del kit (`MI_RedBrick`, `MI_Trim`, `MI_Ornaments`, `MI_Glass`, `MI_Roof_Slate`).
+- Malla combinada por material, **1 BoxCollider**, pivote al suelo, fachada a **+Z**.
+- Presupuesto: **≤10K triángulos**, **≤5 materiales** por modelo.
+
+### 4.2 Variantes de los 3 existentes
+| Variante | Cambio |
+|---|---|
+| `Building_Small_1_Pale` | `MI_RedBrick` → `MI_RedBrick_Pale` |
+| `Building_Medium_2_001_Pale` | Ídem + puerta/entrada distinta |
+| `Building_Large_2_Pale` | Ídem |
+| `Building_Small_1_Mirror` (opcional) | Fachada espejada en Blender |
+
+### 4.3 Colocación
+- **Fila este**: `Building_Small_1` (sur) · `Rowhouse_A` (centro) · `Corner_Shop_B` (norte/esquina).
+- **Fila norte**: `Building_Medium_2_001_Pale` · `Building_Small_1_Pale` · `Building_Large_2` (o mirror).
+
+### 4.4 Orden
+1. Rowhouse_A.
+2. Corner_Shop_B.
+3. Variantes pale/mirror de los existentes.
+4. Reemplazar instancias repetidas en el tile.
+5. Medir triángulos/materiales y capturas.
+6. LODs con los perfiles Quest 2 / Quest 3.
+7. Draw calls: combinar mallas por material/celda + atlas de texturas.
+8. Streaming con presupuesto dinámico.
+9. Bake de luz + occlusion.
+
+---
+
+## 5. Criterios de aceptación
+- Estilo coherente con el kit.
+- Sin huecos, z-fighting ni piezas flotantes.
+- Colisión y escala correctas.
+- Presupuesto de triángulos/materiales/draw calls respetado.
+- LODs sin “pop” exagerado.
+- Prefabs reutilizables en otros tiles.
+
+---
+
+## 6. Blender
+- Blender 5.2 instalado en `C:\Program Files\Blender Foundation\Blender 5.2`.
+- Uso en **headless** para espejar y decimar; **no requiere MCP**.
