@@ -27,6 +27,12 @@ Escena principal: `Assets/Scenes/Ciudad_Tile_00_Estacion.unity` (tile de la ciud
 
 ## Juego interactivo: "Emergencia en la estación"
 
+### Elegir modo al empezar
+Al darle Play aparecen frente a ti dos **botones que se presionan tocándolos con la mano** (no se usan teclas):
+- **EXPLORAR** (azul): recorres todo libremente, sin tareas, sin orden y sin tiempo. Los portones, la manguera, el chaleco, el extintor y el camión funcionan directo, y puedes subir a manejar cuando quieras.
+- **MISIÓN** (rojo): la emergencia completa con todos los pasos en orden, tiempo y puntaje (ver abajo).
+
+
 Al darle Play aparece un panel de bienvenida con los controles. Presiona **A** (o pellizca) para empezar —o espera 15 s y empieza solo—. Suena la alarma y hay que completar las tareas **lo más rápido posible**:
 
 1. **Abrir el portón de la cochera**: toca el botón rojo con el dedo o con la punta del control.

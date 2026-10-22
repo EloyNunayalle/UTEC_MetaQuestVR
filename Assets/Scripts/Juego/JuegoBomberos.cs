@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -17,7 +18,7 @@ using UnityEngine.SceneManagement;
 public class JuegoBomberos : MonoBehaviour
 {
     public enum TipoAviso { Info, Exito, Error }
-    enum Fase { Intro, Mision, Completado }
+    enum Fase { Intro, Explorar, Mision, Completado }
 
     public static JuegoBomberos Instancia { get; private set; }
 
@@ -42,8 +43,6 @@ public class JuegoBomberos : MonoBehaviour
     public bool exigirPorton = true;
     [Tooltip("Crea la manguera fisica con chorro de agua en el costado del camion.")]
     public bool usarManguera = true;
-    [Tooltip("La mision empieza sola despues de estos segundos si no se presiona A.")]
-    public float segundosIntroMax = 15f;
     public int puntosPorTarea = 100;
     public float tiempoExcelente = 120f;
     public float tiempoBueno = 210f;
@@ -76,7 +75,7 @@ public class JuegoBomberos : MonoBehaviour
     float _limiteBusquedaPrincipal, _proximaBusquedaPrincipal;
 
     /// <summary>El porton de la cochera solo se puede abrir despues del porton principal.</summary>
-    public bool CocheraHabilitada => _tPrincipal == null || _tPrincipal.hecha;
+    public bool CocheraHabilitada => _fase == Fase.Explorar || _tPrincipal == null || _tPrincipal.hecha;
     Transform _cabeza;
     HudBomberos _hud;
     MarcadorObjetivo _marcador;
@@ -236,6 +235,7 @@ public class JuegoBomberos : MonoBehaviour
 
         _inicioIntro = Time.time;
         MostrarIntro();
+        CrearSelector();
     }
 
     Tarea NuevaTarea(string titulo, string pista, Func<Vector3?> punto)
@@ -402,9 +402,15 @@ public class JuegoBomberos : MonoBehaviour
         switch (_fase)
         {
             case Fase.Intro:
-                float resta = segundosIntroMax - (Time.time - _inicioIntro);
-                _hud.Pie($"Presiona A o pellizca para comenzar  (empieza solo en {Mathf.CeilToInt(Mathf.Max(0f, resta))} s)");
-                if (EntradaVR.ConfirmarDown() || resta <= 0f) IniciarMision();
+                ActualizarSelector();
+                break;
+
+            case Fase.Explorar:
+                if (Time.time >= _proximoHud)
+                {
+                    _proximoHud = Time.time + 0.25f;
+                    MostrarExplorar();
+                }
                 break;
 
             case Fase.Mision:
@@ -425,11 +431,110 @@ public class JuegoBomberos : MonoBehaviour
         }
     }
 
+    // ------------------------------------------------------------------
+    // Selector de modo (botones tactiles frente al jugador)
+    // ------------------------------------------------------------------
+
+    Transform _selector;
+    float _inicioSelector;
+
+    void CrearSelector()
+    {
+        _selector = new GameObject("Selector_Modo").transform;
+        _inicioSelector = Time.time;
+
+        var fondo = VisualesVR.Primitiva(PrimitiveType.Cube, "Fondo", _selector, VisualesVR.MaterialOpaco(new Color(0.12f, 0.12f, 0.15f)));
+        fondo.transform.localPosition = new Vector3(0f, 0.08f, 0.03f);
+        fondo.transform.localScale = new Vector3(0.78f, 0.52f, 0.02f);
+
+        var titulo = VisualesVR.Texto("Titulo", _selector, 0.05f, new Vector2(0.75f, 0.1f));
+        titulo.transform.localPosition = new Vector3(0f, 0.38f, -0.01f);
+        titulo.fontStyle = FontStyles.Bold;
+        titulo.outlineWidth = 0.2f;
+        titulo.outlineColor = Color.black;
+        titulo.text = "ELIGE UN MODO\n<size=55%>Toca un botón con la mano</size>";
+
+        BotonTactil.Crear("Explorar", _selector, new Vector3(-0.19f, 0f, 0f), new Color(0.15f, 0.5f, 0.95f),
+            "EXPLORAR\n<size=60%>Libre, sin tareas</size>", rig, ElegirExplorar);
+        BotonTactil.Crear("Mision", _selector, new Vector3(0.19f, 0f, 0f), new Color(0.85f, 0.12f, 0.08f),
+            "MISIÓN\n<size=60%>Todos los pasos</size>", rig, ElegirMision);
+
+        ColocarSelector();
+    }
+
+    /// <summary>Frente al jugador, a 0.55 m y a la altura del pecho, mirandolo.</summary>
+    void ColocarSelector()
+    {
+        Vector3 f = _cabeza.forward; f.y = 0f;
+        if (f.sqrMagnitude < 0.001f) f = Vector3.forward;
+        f.Normalize();
+        Vector3 pos = _cabeza.position + f * 0.55f;
+        pos.y = Mathf.Max(rig.transform.position.y + 0.8f, _cabeza.position.y - 0.45f);
+        _selector.SetPositionAndRotation(pos, Quaternion.LookRotation(f, Vector3.up)); // +Z lejos del jugador
+    }
+
+    void ActualizarSelector()
+    {
+        if (_selector == null) return;
+        // Los primeros segundos la pose del visor se esta ubicando: se recoloca seguido.
+        // Despues, solo si el jugador se aleja o deja de mirarlo.
+        Vector3 a = _selector.position - _cabeza.position; a.y = 0f;
+        Vector3 f = _cabeza.forward; f.y = 0f;
+        if (Time.time - _inicioSelector < 2f || a.magnitude > 2f || Vector3.Angle(a, f) > 75f)
+            ColocarSelector();
+    }
+
+    void CerrarSelector()
+    {
+        if (_selector != null) Destroy(_selector.gameObject);
+        _selector = null;
+    }
+
+    void ElegirExplorar()
+    {
+        if (_fase != Fase.Intro) return;
+        CerrarSelector();
+        _fase = Fase.Explorar;
+        _marcador.Ocultar();
+        _proximoHud = 0f;
+        SonidosVR.Reproducir2D(SonidosVR.Exito, 0.9f);
+        Aviso("MODO EXPLORAR\n<size=55%>Recorre todo libremente</size>", TipoAviso.Info, 3f);
+    }
+
+    void ElegirMision()
+    {
+        if (_fase != Fase.Intro) return;
+        CerrarSelector();
+        IniciarMision();
+    }
+
+    void MostrarExplorar()
+    {
+        if (_camion.JugadorSentado)
+        {
+            _hud.Mostrar("MODO EXPLORAR - CONDUCIENDO",
+                "<b>¡A manejar!</b>  Stick izquierdo: avanzar / retroceder\n" +
+                "Stick a los lados: girar   -   A: sirena   -   B: bajar",
+                $"Velocidad {Mathf.RoundToInt(_camion.VelocidadKmh)} km/h     Sirena {(_camion.SirenaEncendida ? "ON" : "OFF")}");
+            return;
+        }
+        _hud.Mostrar("MODO EXPLORAR",
+            "Recorre la estación libremente: sin tareas, sin orden y sin tiempo.\n\n" +
+            "<color=#FFD54A>Puedes probar</color>\n" +
+            "- Botón verde del poste: portón principal\n" +
+            "- Botón rojo: portón de la cochera\n" +
+            "- Manguera: en el panel del camión (GRIP y gatillo)\n" +
+            "- Chaleco y extintor: agárralos con GRIP\n" +
+            "- Camión: párate en el círculo amarillo para manejar",
+            "");
+    }
+
     void MostrarIntro()
     {
         _hud.Mostrar("ESTACIÓN DE BOMBEROS VR",
-            "<b>¡Suena la alarma! Hay una emergencia.</b>\n" +
-            "Abre el portón principal, luego la cochera, equípate\ny sal en el camión lo más rápido posible.\n\n" +
+            "<b>Elige un modo tocando un botón con la mano:</b>\n" +
+            "- <color=#5AA9FF>EXPLORAR</color>: recorre todo libremente, sin tareas.\n" +
+            "- <color=#FF6B5A>MISIÓN</color>: ¡emergencia! Portón principal, cochera,\n  chaleco, extintor y sal en el camión lo más rápido posible.\n\n" +
             "<color=#FFD54A>Controles</color>\n" +
             "- Moverse: joystick o teletransporte\n" +
             "- Agarrar: GRIP / gatillo (o pellizco con la mano)\n" +
@@ -534,6 +639,15 @@ public class JuegoBomberos : MonoBehaviour
     void CompletarTarea(Tarea t, string mensaje)
     {
         if (t == null || t.hecha) return;
+        if (_fase == Fase.Explorar)
+        {
+            // Sin puntaje ni orden: solo el feedback de lo que hiciste.
+            t.hecha = true;
+            SonidosVR.Reproducir2D(SonidosVR.Exito, 0.9f);
+            EntradaVR.VibrarAmbas(0.6f, 0.2f, 0.7f);
+            if (!string.IsNullOrEmpty(mensaje)) Aviso(mensaje, TipoAviso.Exito, 2f);
+            return;
+        }
         t.hecha = true;
         _puntaje += puntosPorTarea;
         _ultimoProgreso = Time.time;
@@ -552,6 +666,7 @@ public class JuegoBomberos : MonoBehaviour
     bool PuedeSubir()
     {
         if (_fase == Fase.Intro) return false;
+        if (_fase == Fase.Explorar) return true;
         foreach (var t in _tareas)
             if (t != _tSubir && !t.hecha) return false;
         return true;
@@ -559,7 +674,7 @@ public class JuegoBomberos : MonoBehaviour
 
     string MotivoNoPuedeSubir()
     {
-        if (_fase == Fase.Intro) return "Comienza la misión primero";
+        if (_fase == Fase.Intro) return "Primero elige un modo";
         var pendientes = new List<string>();
         foreach (var t in _tareas)
             if (t != _tSubir && !t.hecha) pendientes.Add(t.titulo.ToLowerInvariant());
@@ -568,6 +683,13 @@ public class JuegoBomberos : MonoBehaviour
 
     void AlSubirCamion()
     {
+        if (_fase == Fase.Explorar)
+        {
+            _hud.alturaRelativa = -0.55f;
+            _proximoHud = 0f;
+            Aviso("¡A manejar!", TipoAviso.Exito, 2f);
+            return;
+        }
         if (_fase == Fase.Completado) { MostrarResultado(); return; }
         if (_fase != Fase.Mision) return;
         _tiempoFinal = Time.time - _inicioMision;
@@ -592,6 +714,7 @@ public class JuegoBomberos : MonoBehaviour
     {
         _bloqueoReinicio = Time.time + 1f;
         _hud.alturaRelativa = -0.32f;
+        _proximoHud = 0f;
         if (_fase == Fase.Completado) MostrarResultado();
     }
 
