@@ -79,7 +79,9 @@ Abre y cierra con una interpolación suave (*smoothstep*) y brazos hidráulicos 
 - **Seguridad**: no se cierra si el jugador o el camión están bajo su recorrido. Mientras está cerrado, el camión choca con él y no puede salir.
 
 ### Manguera física (`MangueraBomberos.cs`)
-Va conectada al costado derecho trasero del camión y se tiende en el piso a lo largo del camión.
+Sale del **panel de bomba**, en el costado del conductor justo detrás de la puerta de la cabina. La boquilla queda **colgada en un soporte** a la altura de la cintura, así no hay que agacharse.
+- **Se estira al caminar**: funciona como un carrete. Mientras jalas la boquilla se van agregando tramos en la conexión, hasta 8 m. El panel de la boquilla muestra cuánto va desenrollado.
+- **Se recoge sola**: si sueltas la boquilla cerca del soporte se vuelve a colgar. Si la dejas tirada, a los 6 s se enrolla sola y vuelve al soporte.
 - **Física**: cadena de `Rigidbody` unidos con `ConfigurableJoint`. La distancia entre eslabones está bloqueada (no se estira), el doblez está limitado a ±35° por unión y un resorte de flexión le da rigidez. Con agua, la manguera se pone más dura.
 - **Visual**: tubo suave (curva Catmull-Rom) generado cada frame.
 - **Boquilla**: acércale la mano y presiona **GRIP**. Sigue a tu mano con un pequeño retraso (seguimiento por velocidad), así se sienten su **peso e inercia**. Si la sueltas en movimiento, sale despedida. Si te alejas más de lo que da la manguera, se te suelta con un aviso.

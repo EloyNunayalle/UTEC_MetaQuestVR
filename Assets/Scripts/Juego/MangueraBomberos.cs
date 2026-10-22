@@ -3,29 +3,46 @@ using TMPro;
 using UnityEngine;
 
 /// <summary>
-/// Manguera de bomberos fisica conectada al costado del camion.
+/// Manguera de bomberos fisica conectada al PANEL DE BOMBA del camion
+/// (costado del conductor, justo detras de la puerta de la cabina).
 ///
-/// - Cuerpo: cadena de Rigidbodies unidos con ConfigurableJoint (posicion bloqueada,
-///   giro limitado y un "resorte" de flexion), asi la manguera cae, se arrastra y se dobla.
-/// - Visual: un tubo suave (malla generada cada frame sobre una curva Catmull-Rom).
-/// - Boquilla: se toma con GRIP (o pellizco). Sigue a la mano con un pequeno retraso
-///   (seguimiento por velocidad), por eso se siente su peso y su inercia.
-/// - Al subir al camion la manguera se guarda; al bajar se vuelve a desplegar.
+/// - La boquilla queda colgada en un soporte junto al panel, a la altura de la cintura
+///   (no hay que agacharse). Se toma con GRIP (o pellizco).
+/// - Carrete: la manguera empieza corta y SE DESENROLLA mientras caminas jalando la
+///   boquilla (se agregan eslabones en la conexion), hasta la longitud maxima.
+/// - Si sueltas la boquilla cerca del soporte se vuelve a enganchar; si queda tirada,
+///   a los pocos segundos se enrolla sola y vuelve al soporte.
+/// - Cuerpo: cadena de Rigidbodies con ConfigurableJoint (no se estira, giro limitado,
+///   resorte de flexion). Visual: tubo suave generado cada frame.
+/// - La boquilla sigue a la mano con retraso (peso e inercia) y tiene retroceso al echar agua.
 ///
-/// Se crea sola desde JuegoBomberos (no requiere prefab). Si quieres ajustar valores
-/// en el Inspector antes de Play, agrega este componente al objeto del camion.
+/// Se crea sola desde JuegoBomberos: no requiere configuracion en el Inspector.
 /// </summary>
 [DefaultExecutionOrder(9500)]
 public class MangueraBomberos : MonoBehaviour
 {
-    [Header("Conexion al camion")]
-    [Tooltip("Punto donde se conecta la manguera. Vacio = costado derecho trasero, a 1 m de altura.")]
+    [Header("Conexion (panel de bomba)")]
+    [Tooltip("Punto de conexion. Vacio = panel de bomba detras de la puerta del conductor.")]
     public Transform puntoConexion;
-    [Tooltip("Ajuste del punto automatico (ejes del camion: X derecha, Y arriba, Z frente).")]
+    [Tooltip("Metros desde el frente del camion hasta la conexion del panel.")]
+    public float distanciaDesdeFrente = 2.95f;
+    public float alturaConexion = 0.8f;
+    [Tooltip("Ajuste fino (ejes del camion: X hacia afuera del costado, Y arriba, Z frente).")]
     public Vector3 ajusteConexion = Vector3.zero;
 
+    [Header("Soporte de la boquilla")]
+    [Tooltip("Posicion del soporte respecto a la conexion (X afuera, Y arriba, Z frente).")]
+    public Vector3 offsetSoporte = new Vector3(0.12f, 0.2f, 0.55f);
+    [Tooltip("Si sueltas la boquilla a menos de esta distancia del soporte, se engancha.")]
+    public float radioEnganche = 0.45f;
+    [Tooltip("Segundos que la boquilla puede quedar tirada antes de enrollarse sola.")]
+    public float segundosParaEnrollar = 6f;
+
     [Header("Manguera")]
-    public float longitud = 7.5f;
+    [Tooltip("Longitud maxima desenrollada (m).")]
+    public float longitud = 8f;
+    [Tooltip("Eslabones con la boquilla en el soporte.")]
+    public int eslabonesIniciales = 4;
     [Tooltip("Largo de cada eslabon fisico. Menor = mas flexible y suave, pero mas costoso.")]
     public float largoEslabon = 0.25f;
     public float radio = 0.035f;
@@ -64,17 +81,22 @@ public class MangueraBomberos : MonoBehaviour
 
     public bool Desplegada => _raiz != null;
     public bool Agarrada => _mano >= 0;
+    public bool EnSoporte => _enSoporte;
     /// <summary>Mano que sostiene la boquilla: 0 izquierda, 1 derecha, -1 ninguna.</summary>
     public int Mano => _mano;
     public Rigidbody Boquilla => _boquilla;
     public LanzaAgua Lanza => _lanza;
+    public float LongitudDesenrollada => _eslabones.Count * largoEslabon;
 
     OVRCameraRig _rig;
     CamionBomberos _camion;
-    Transform _ancla;
+    Transform _ancla, _soporte;
+    Rigidbody _anclaRb;
     GameObject _raiz;
     readonly List<Rigidbody> _eslabones = new List<Rigidbody>();
-    readonly List<ConfigurableJoint> _juntas = new List<ConfigurableJoint>();
+    readonly List<ConfigurableJoint> _juntas = new List<ConfigurableJoint>(); // _juntas[i] une _eslabones[i] con el anterior; la ultima es la de la boquilla
+    readonly List<Collider> _colliders = new List<Collider>();
+    Collider[] _collidersCamion;
     Rigidbody _boquilla;
     Transform _agarreBoquilla;
     LanzaAgua _lanza;
@@ -90,148 +112,177 @@ public class MangueraBomberos : MonoBehaviour
 
     int _mano = -1;
     int _hoverPrev = -1;
-    float _tiempoEstirada, _proximaRigidez, _proximaVibracion, _rigidezAplicada = -1f;
+    bool _enSoporte;
+    float _tiempoEstirada, _proximaRigidez, _proximaVibracion, _rigidezAplicada = -1f, _sueltaDesde = -1f;
     bool _sentadoPrev;
     bool _listo;
+
+    int MaxEslabones => Mathf.Max(eslabonesIniciales + 1, Mathf.RoundToInt(longitud / largoEslabon));
 
     public void Inicializar(OVRCameraRig rig, CamionBomberos camion)
     {
         _rig = rig;
         _camion = camion;
+        _collidersCamion = _camion.GetComponentsInChildren<Collider>();
         _ancla = puntoConexion != null ? puntoConexion : CrearAnclaAutomatica();
+        _anclaRb = _ancla.GetComponent<Rigidbody>();
+        if (_anclaRb == null) _anclaRb = _ancla.gameObject.AddComponent<Rigidbody>();
+        _anclaRb.isKinematic = true;
+        CrearSoporte();
         _listo = true;
         Desplegar();
     }
 
+    // ------------------------------------------------------------------
+    // Puntos en el camion
+    // ------------------------------------------------------------------
+
+    Vector3 Frente => _camion.Frente;
+    /// <summary>Hacia afuera del costado del conductor (donde esta la puerta y el panel).</summary>
+    Vector3 Afuera => Vector3.Cross(Vector3.up, Frente) * (_camion.conductorIzquierda ? -1f : 1f);
+
+    /// <summary>Caja de referencia del camion: su BoxCollider (ajustado a la carroceria) o sus limites visuales.</summary>
+    Bounds CajaCamion()
+    {
+        var box = _camion.GetComponent<BoxCollider>();
+        return box != null && box.enabled ? box.bounds : _camion.Limites;
+    }
+
     Transform CrearAnclaAutomatica()
     {
-        Bounds b = _camion.Limites;
-        Vector3 fwd = _camion.Frente;
-        Vector3 der = Vector3.Cross(Vector3.up, fwd);
+        Bounds b = CajaCamion();
+        Vector3 fwd = Frente, fuera = Afuera;
         float largo = Mathf.Abs(Vector3.Dot(b.extents, new Vector3(Mathf.Abs(fwd.x), 0f, Mathf.Abs(fwd.z))));
-        float ancho = Mathf.Abs(Vector3.Dot(b.extents, new Vector3(Mathf.Abs(der.x), 0f, Mathf.Abs(der.z))));
+        float ancho = Mathf.Abs(Vector3.Dot(b.extents, new Vector3(Mathf.Abs(fuera.x), 0f, Mathf.Abs(fuera.z))));
         Vector3 basePiso = new Vector3(b.center.x, b.min.y, b.center.z);
 
-        var t = new GameObject("Manguera_Conexion").transform;
+        var t = new GameObject("Manguera_Conexion_PanelBomba").transform;
         t.SetParent(_camion.transform, true);
         t.position = basePiso
-                     + der * (ancho + 0.05f + ajusteConexion.x)
-                     + Vector3.up * (1.0f + ajusteConexion.y)
-                     + fwd * (-largo * 0.45f + ajusteConexion.z);
-        t.rotation = Quaternion.LookRotation(fwd, Vector3.up);
+                     + fuera * (ancho - 0.04f + ajusteConexion.x)
+                     + Vector3.up * (alturaConexion + ajusteConexion.y)
+                     + fwd * (largo - distanciaDesdeFrente + ajusteConexion.z);
+        t.rotation = Quaternion.LookRotation(fuera, Vector3.up); // +Z: hacia afuera del panel
 
-        // Toma visible en el camion (racor de bronce).
-        var racor = VisualesVR.Primitiva(PrimitiveType.Cylinder, "Racor", t, VisualesVR.MaterialOpaco(new Color(0.75f, 0.55f, 0.2f)));
-        racor.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
-        racor.transform.localScale = new Vector3(0.11f, 0.05f, 0.11f);
+        // Racor de bronce saliendo del panel (tapa cualquier separacion con la carroceria).
+        var racor = VisualesVR.Primitiva(PrimitiveType.Cylinder, "Racor", t, VisualesVR.MaterialOpaco(new Color(0.78f, 0.58f, 0.22f)));
+        racor.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        racor.transform.localPosition = new Vector3(0f, 0f, -0.1f);
+        racor.transform.localScale = new Vector3(0.1f, 0.13f, 0.1f);
         return t;
+    }
+
+    void CrearSoporte()
+    {
+        _soporte = new GameObject("Manguera_Soporte").transform;
+        _soporte.SetParent(_camion.transform, true);
+        _soporte.position = _ancla.position + Afuera * offsetSoporte.x + Vector3.up * offsetSoporte.y + Frente * offsetSoporte.z;
+        _soporte.rotation = Quaternion.LookRotation(Frente, Vector3.up); // la boquilla descansa apuntando al frente
+
+        var gris = VisualesVR.MaterialOpaco(new Color(0.35f, 0.36f, 0.38f));
+        var base_ = VisualesVR.Primitiva(PrimitiveType.Cube, "Bandeja", _soporte, gris);
+        base_.transform.localPosition = new Vector3(0f, -0.07f, 0f);
+        base_.transform.localScale = new Vector3(0.12f, 0.025f, largoBoquilla + 0.04f);
+        var brazo = VisualesVR.Primitiva(PrimitiveType.Cube, "Brazo", _soporte, gris);
+        brazo.transform.localPosition = new Vector3(-0.07f, -0.07f, 0f);
+        brazo.transform.localScale = new Vector3(0.12f, 0.025f, 0.06f);
     }
 
     // ------------------------------------------------------------------
     // Construccion
     // ------------------------------------------------------------------
 
-    /// <summary>Crea la manguera colgando del camion y tendida en el piso junto a el.</summary>
+    /// <summary>Crea la manguera corta con la boquilla enganchada en el soporte (manguera "enrollada").</summary>
     public void Desplegar()
     {
         if (!_listo || _ancla == null) return;
         Guardar();
 
         _raiz = new GameObject("Manguera_Bomberos");
-        int n = Mathf.Max(4, Mathf.RoundToInt(longitud / largoEslabon));
-        List<Vector3> camino = CalcularCamino(n);
-
-        // Ancla fisica (cinematica) que sigue al camion.
-        var anclaRb = _ancla.GetComponent<Rigidbody>();
-        if (anclaRb == null) anclaRb = _ancla.gameObject.AddComponent<Rigidbody>();
-        anclaRb.isKinematic = true;
-
-        Rigidbody previo = anclaRb;
-        Vector3 anclaPrevio = Vector3.zero;
         _eslabones.Clear();
         _juntas.Clear();
+        _colliders.Clear();
 
+        // Boquilla en el soporte; la manguera cuelga en "V" entre la conexion y la boquilla.
+        Vector3 inicio = _ancla.position;
+        Vector3 fin = _soporte.position - _soporte.forward * (largoBoquilla * 0.5f);
+        int n = Mathf.Max(2, eslabonesIniciales);
+        if (n % 2 == 1) n++;
+        var camino = CaminoEnV(inicio, fin, n);
+
+        Rigidbody previo = _anclaRb;
+        Vector3 anclaPrevio = Vector3.zero;
         for (int i = 0; i < n; i++)
         {
-            Vector3 a = camino[i], b = camino[i + 1];
-            var go = new GameObject("Eslabon_" + i) { layer = CapaManguera };
-            go.transform.SetParent(_raiz.transform, false);
-            go.transform.SetPositionAndRotation((a + b) * 0.5f, Quaternion.LookRotation(b - a, Vector3.up));
-
-            var col = go.AddComponent<CapsuleCollider>();
-            col.direction = 2;
-            col.radius = radio;
-            col.height = largoEslabon + radio * 2f;
-
-            var rb = go.AddComponent<Rigidbody>();
-            ConfigurarCuerpo(rb, masaEslabon);
-
-            _juntas.Add(Unir(go, previo, new Vector3(0f, 0f, -largoEslabon * 0.5f), anclaPrevio));
+            var rb = CrearEslabon(camino[i], camino[i + 1]);
+            var j = Unir(rb.gameObject, previo, new Vector3(0f, 0f, -largoEslabon * 0.5f), anclaPrevio);
+            if (i == 0) ConfigurarCarrete(j);
             _eslabones.Add(rb);
+            _juntas.Add(j);
             previo = rb;
             anclaPrevio = new Vector3(0f, 0f, largoEslabon * 0.5f);
         }
 
-        CrearBoquilla(camino[n], camino[n] - camino[n - 1], previo, anclaPrevio);
-        IgnorarColisiones();
+        CrearBoquilla(previo, anclaPrevio);
+        for (int i = 0; i + 1 < _colliders.Count; i++) Physics.IgnoreCollision(_colliders[i], _colliders[i + 1]);
         CrearTubo();
         _rigidezAplicada = -1f;
         AplicarRigidez(0f);
+        _sueltaDesde = -1f;
     }
 
     /// <summary>Retira la manguera (al subir al camion o antes de re-desplegarla).</summary>
     public void Guardar()
     {
-        SoltarBoquilla();
+        _mano = -1;
+        _hoverPrev = -1;
         if (_raiz != null) Destroy(_raiz);
         _raiz = null;
         _boquilla = null;
         _lanza = null;
         _eslabones.Clear();
         _juntas.Clear();
+        _colliders.Clear();
     }
 
-    /// <summary>
-    /// Camino inicial: baja desde la conexion hasta el piso con una curva suave
-    /// y sigue tendida hacia el frente del camion, pegada a su costado.
-    /// </summary>
-    List<Vector3> CalcularCamino(int n)
+    /// <summary>Puntos de una "V" colgante de n tramos exactos entre a y b.</summary>
+    List<Vector3> CaminoEnV(Vector3 a, Vector3 b, int n)
     {
-        var puntos = new List<Vector3>(n + 1);
-        Vector3 fwd = _camion.Frente;
-        Vector3 p = _ancla.position;
-        float piso = BuscarPiso(p);
-        puntos.Add(p);
+        float mitad = n * 0.5f * largoEslabon;
+        float d = Vector3.Distance(a, b);
+        Vector3 medio = (a + b) * 0.5f;
+        float caida = Mathf.Sqrt(Mathf.Max(0.0001f, mitad * mitad - d * d * 0.25f));
+        Vector3 vertice = medio + Vector3.down * caida;
 
-        Vector3 dir = Vector3.down;
-        for (int i = 0; i < n; i++)
-        {
-            float alturaLibre = p.y - (piso + radio + 0.01f);
-            // Cerca del piso, la direccion gira gradualmente hacia el frente (sin superar el doblez maximo).
-            Vector3 deseada = alturaLibre > largoEslabon * 2.5f ? Vector3.down : fwd;
-            dir = Vector3.RotateTowards(dir, deseada, Mathf.Deg2Rad * dobladoMaximo * 0.8f, 0f).normalized;
-            Vector3 siguiente = p + dir * largoEslabon;
-            if (siguiente.y < piso + radio + 0.01f)
-            {
-                siguiente.y = piso + radio + 0.01f;
-                siguiente = p + (siguiente - p).normalized * largoEslabon;
-            }
-            puntos.Add(siguiente);
-            p = siguiente;
-        }
+        var puntos = new List<Vector3>(n + 1);
+        for (int i = 0; i <= n / 2; i++) puntos.Add(Vector3.Lerp(a, vertice, i / (n * 0.5f)));
+        for (int i = 1; i <= n / 2; i++) puntos.Add(Vector3.Lerp(vertice, b, i / (n * 0.5f)));
         return puntos;
     }
 
-    float BuscarPiso(Vector3 desde)
+    Rigidbody CrearEslabon(Vector3 a, Vector3 b)
     {
-        float mejor = desde.y - 1f;
-        foreach (var h in Physics.RaycastAll(desde, Vector3.down, 5f, ~0, QueryTriggerInteraction.Ignore))
-        {
-            if (h.collider.transform.IsChildOf(_camion.transform)) continue;
-            if (h.normal.y < 0.5f) continue;
-            if (h.point.y > mejor) mejor = h.point.y;
-        }
-        return mejor;
+        var go = new GameObject("Eslabon") { layer = CapaManguera };
+        go.transform.SetParent(_raiz.transform, false);
+        Vector3 dir = b - a;
+        go.transform.SetPositionAndRotation((a + b) * 0.5f, Quaternion.LookRotation(dir.sqrMagnitude > 1e-6f ? dir : Frente, Vector3.up));
+
+        var col = go.AddComponent<CapsuleCollider>();
+        col.direction = 2;
+        col.radius = radio;
+        col.height = largoEslabon + radio * 2f;
+        IgnorarCamion(col);
+
+        var rb = go.AddComponent<Rigidbody>();
+        ConfigurarCuerpo(rb, masaEslabon);
+        return rb;
+    }
+
+    void IgnorarCamion(Collider c)
+    {
+        _colliders.Insert(0, c);
+        if (_collidersCamion == null) return;
+        foreach (var t in _collidersCamion) if (t != null) Physics.IgnoreCollision(t, c);
     }
 
     void ConfigurarCuerpo(Rigidbody rb, float masa)
@@ -252,13 +303,16 @@ public class MangueraBomberos : MonoBehaviour
         j.connectedBody = conectado;
         j.anchor = anclaLocal;
         j.connectedAnchor = anclaConectada;
+        ConfigurarUnion(j);
+        return j;
+    }
 
-        // La distancia entre eslabones no cambia: la manguera no se estira.
+    /// <summary>Union normal: no se estira; dobla hasta cierto angulo, con poca torsion.</summary>
+    void ConfigurarUnion(ConfigurableJoint j)
+    {
         j.xMotion = ConfigurableJointMotion.Locked;
         j.yMotion = ConfigurableJointMotion.Locked;
         j.zMotion = ConfigurableJointMotion.Locked;
-
-        // Puede doblarse hasta cierto angulo; el giro sobre su propio eje es menor (torsion).
         j.angularXMotion = ConfigurableJointMotion.Limited;
         j.angularYMotion = ConfigurableJointMotion.Limited;
         j.angularZMotion = ConfigurableJointMotion.Limited;
@@ -266,30 +320,43 @@ public class MangueraBomberos : MonoBehaviour
         j.highAngularXLimit = new SoftJointLimit { limit = dobladoMaximo };
         j.angularYLimit = new SoftJointLimit { limit = dobladoMaximo };
         j.angularZLimit = new SoftJointLimit { limit = 10f };
-
         j.rotationDriveMode = RotationDriveMode.Slerp;
         j.projectionMode = JointProjectionMode.PositionAndRotation;
         j.projectionDistance = 0.02f;
         j.projectionAngle = 5f;
         j.enablePreprocessing = false;
-        return j;
     }
 
-    void CrearBoquilla(Vector3 pos, Vector3 dir, Rigidbody previo, Vector3 anclaPrevio)
+    /// <summary>Union del carrete: el primer eslabon puede alejarse hasta un tramo de la conexion (asi "sale" manguera).</summary>
+    void ConfigurarCarrete(ConfigurableJoint j)
+    {
+        j.xMotion = ConfigurableJointMotion.Limited;
+        j.yMotion = ConfigurableJointMotion.Limited;
+        j.zMotion = ConfigurableJointMotion.Limited;
+        j.linearLimit = new SoftJointLimit { limit = largoEslabon };
+        j.angularXMotion = ConfigurableJointMotion.Free;
+        j.angularYMotion = ConfigurableJointMotion.Free;
+        j.angularZMotion = ConfigurableJointMotion.Free;
+        j.projectionMode = JointProjectionMode.None;
+        j.enablePreprocessing = false;
+    }
+
+    void CrearBoquilla(Rigidbody previo, Vector3 anclaPrevio)
     {
         var go = new GameObject("Boquilla") { layer = CapaManguera };
         go.transform.SetParent(_raiz.transform, false);
-        Quaternion rot = Quaternion.LookRotation(dir.normalized, Vector3.up);
-        go.transform.SetPositionAndRotation(pos + dir.normalized * (largoBoquilla * 0.5f), rot);
+        go.transform.SetPositionAndRotation(_soporte.position, _soporte.rotation);
 
         var col = go.AddComponent<CapsuleCollider>();
         col.direction = 2;
         col.radius = 0.05f;
         col.height = largoBoquilla;
+        IgnorarCamion(col);
 
         _boquilla = go.AddComponent<Rigidbody>();
         ConfigurarCuerpo(_boquilla, masaBoquilla);
         _juntas.Add(Unir(go, previo, new Vector3(0f, 0f, -largoBoquilla * 0.5f), anclaPrevio));
+        Enganchar();
 
         if (modeloBoquilla != null)
         {
@@ -350,20 +417,46 @@ public class MangueraBomberos : MonoBehaviour
         palanca.transform.localScale = new Vector3(0.09f, 0.015f, 0.12f);
     }
 
-    void IgnorarColisiones()
+    /// <summary>Deja la boquilla quieta en el soporte (cinematica).</summary>
+    void Enganchar()
     {
-        var propios = new List<Collider>();
-        foreach (var rb in _eslabones) propios.Add(rb.GetComponent<Collider>());
-        propios.Add(_boquilla.GetComponent<Collider>());
+        _enSoporte = true;
+        _boquilla.isKinematic = true;
+        _boquilla.transform.SetPositionAndRotation(_soporte.position, _soporte.rotation);
+    }
 
-        // Eslabones vecinos no chocan entre si (evita temblores en las uniones).
-        for (int i = 0; i + 1 < propios.Count; i++)
-            Physics.IgnoreCollision(propios[i], propios[i + 1]);
+    // ------------------------------------------------------------------
+    // Carrete: agrega manguera en la conexion mientras se jala la boquilla
+    // ------------------------------------------------------------------
 
-        // La manguera no se engancha con la carroceria del camion.
-        foreach (var c in _camion.GetComponentsInChildren<Collider>())
-            foreach (var p in propios)
-                Physics.IgnoreCollision(c, p);
+    void Desenrollar()
+    {
+        if (_eslabones.Count == 0 || _eslabones.Count >= MaxEslabones) return;
+        var primero = _eslabones[0];
+        Vector3 a = _ancla.position;
+        Vector3 b = primero.transform.TransformPoint(0f, 0f, -largoEslabon * 0.5f);
+        if (Vector3.Distance(a, b) < largoEslabon * 0.9f) return;
+
+        // Nuevo eslabon entre la conexion y el que era el primero.
+        var nuevo = CrearEslabon(a, a + (b - a).normalized * largoEslabon);
+        nuevo.velocity = primero.velocity * 0.5f;
+        var jNuevo = Unir(nuevo.gameObject, _anclaRb, new Vector3(0f, 0f, -largoEslabon * 0.5f), Vector3.zero);
+        ConfigurarCarrete(jNuevo);
+
+        // El antiguo primero queda unido al nuevo con una union normal.
+        var jViejo = _juntas[0];
+        jViejo.connectedBody = nuevo;
+        jViejo.connectedAnchor = new Vector3(0f, 0f, largoEslabon * 0.5f);
+        ConfigurarUnion(jViejo);
+        Physics.IgnoreCollision(nuevo.GetComponent<Collider>(), primero.GetComponent<Collider>());
+
+        _eslabones.Insert(0, nuevo);
+        _juntas.Insert(0, jNuevo);
+        _rigidezAplicada = -1f;
+
+        // Feedback del carrete: clic suave y pulso en la mano.
+        SonidosVR.ReproducirEn(SonidosVR.Clic, a, 0.35f);
+        if (_mano >= 0) EntradaVR.Vibrar(_mano == 0, 0.15f, 0.03f, 0.9f);
     }
 
     // ------------------------------------------------------------------
@@ -377,12 +470,13 @@ public class MangueraBomberos : MonoBehaviour
         _tubo = new Mesh { name = "Manguera" };
         _tubo.MarkDynamic();
 
-        int tramos = (_eslabones.Count + 1) * Subdivisiones + 1; // = puntos de la curva
-        _vertices = new Vector3[tramos * (Lados + 1)];
+        // Se reserva para la longitud maxima: los anillos sobrantes se colapsan al final.
+        int anillos = (MaxEslabones + 1) * Subdivisiones + 1;
+        _vertices = new Vector3[anillos * (Lados + 1)];
         _normales = new Vector3[_vertices.Length];
-        var tris = new int[(tramos - 1) * Lados * 6];
+        var tris = new int[(anillos - 1) * Lados * 6];
         int k = 0;
-        for (int r = 0; r < tramos - 1; r++)
+        for (int r = 0; r < anillos - 1; r++)
             for (int s = 0; s < Lados; s++)
             {
                 int a = r * (Lados + 1) + s, b = a + Lados + 1;
@@ -433,9 +527,15 @@ public class MangueraBomberos : MonoBehaviour
         Vector3 normal = Vector3.zero;
         for (int r = 0; r < anillos; r++)
         {
-            int idx = Mathf.Min(r, _curva.Count - 1);
-            Vector3 c = _curva[idx];
-            Vector3 tangente = (_curva[Mathf.Min(idx + 1, _curva.Count - 1)] - _curva[Mathf.Max(idx - 1, 0)]);
+            if (r >= _curva.Count)
+            {
+                // Anillos no usados (manguera aun enrollada): colapsados en el ultimo punto.
+                Vector3 fin = _curva[_curva.Count - 1];
+                for (int s = 0; s <= Lados; s++) { _vertices[r * (Lados + 1) + s] = fin; _normales[r * (Lados + 1) + s] = Vector3.up; }
+                continue;
+            }
+            Vector3 c = _curva[r];
+            Vector3 tangente = _curva[Mathf.Min(r + 1, _curva.Count - 1)] - _curva[Mathf.Max(r - 1, 0)];
             if (tangente.sqrMagnitude < 1e-8f) tangente = Vector3.forward;
             tangente.Normalize();
 
@@ -469,15 +569,24 @@ public class MangueraBomberos : MonoBehaviour
         if (!_listo) return;
         if (_ancla == null) { Guardar(); enabled = false; return; } // la escena del camion se descargo
 
-        // Se guarda al subir al camion y se despliega al bajar (con el camion detenido).
+        // Se guarda al subir al camion y se vuelve a colgar en el soporte al bajar.
         bool sentado = _camion != null && _camion.JugadorSentado;
         if (sentado && !_sentadoPrev) Guardar();
         if (!sentado && !Desplegada && Mathf.Abs(_camion.Velocidad) < 0.1f) Desplegar();
         _sentadoPrev = sentado;
         if (!Desplegada) return;
 
-        // Si la fisica se descontrolo (atravesó el piso, salio disparada) se vuelve a desplegar.
+        // Si la fisica se descontrolo (atraveso el piso, salio disparada) vuelve al soporte.
         if (!EsValida()) { Desplegar(); return; }
+
+        // Tirada en el piso mucho tiempo: se enrolla sola y vuelve al soporte (no hay que agacharse).
+        if (_mano < 0 && !_enSoporte && _sueltaDesde > 0f && Time.time - _sueltaDesde > segundosParaEnrollar)
+        {
+            Desplegar();
+            SonidosVR.ReproducirEn(SonidosVR.Agarrar, _soporte.position, 0.8f);
+            JuegoBomberos.Instancia?.Aviso("La manguera se enrolló sola", JuegoBomberos.TipoAviso.Info, 1.5f);
+            return;
+        }
 
         bool permitido = JuegoBomberos.Instancia == null || JuegoBomberos.Instancia.PermiteInteractuar;
 
@@ -528,11 +637,14 @@ public class MangueraBomberos : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (!Desplegada || _boquilla == null) return;
+        if (!Desplegada || _boquilla == null || _enSoporte) return;
         float empuje = _lanza != null ? _lanza.Empuje : 0f;
 
         if (_mano >= 0)
         {
+            // Mientras se jala, el carrete suelta manguera.
+            Desenrollar();
+
             var mano = AnclaMano(_mano);
             if (mano == null) { SoltarBoquilla(); return; }
 
@@ -592,6 +704,8 @@ public class MangueraBomberos : MonoBehaviour
     {
         _mano = mano;
         _tiempoEstirada = 0f;
+        _enSoporte = false;
+        _boquilla.isKinematic = false;
         VisualesVR.Tenir(_rendersBoquilla, Color.white, 0f);
         EntradaVR.Vibrar(mano == 0, 0.7f, 0.15f, 0.5f);
         SonidosVR.ReproducirEn(SonidosVR.Agarrar, _boquilla.position, 0.9f);
@@ -603,7 +717,17 @@ public class MangueraBomberos : MonoBehaviour
         EntradaVR.Vibrar(_mano == 0, 0.3f, 0.05f);
         _mano = -1;
         _hoverPrev = -1;
-        // La boquilla conserva su velocidad: si la sueltas en movimiento, sale despedida y cae.
+
+        // Cerca del soporte: se vuelve a colgar y la manguera se enrolla.
+        if (_boquilla != null && Vector3.Distance(_boquilla.position, _soporte.position) < radioEnganche)
+        {
+            Desplegar();
+            SonidosVR.ReproducirEn(SonidosVR.Puerta, _soporte.position, 0.6f);
+            JuegoBomberos.Instancia?.Aviso("Manguera guardada", JuegoBomberos.TipoAviso.Exito, 1.2f);
+            return;
+        }
+        // Si no, cae con su velocidad (se puede lanzar) y empieza la cuenta para enrollarse sola.
+        _sueltaDesde = Time.time;
     }
 
     void AplicarRigidez(float empuje)
@@ -612,7 +736,7 @@ public class MangueraBomberos : MonoBehaviour
         if (Mathf.Abs(k - _rigidezAplicada) < 0.05f) return;
         _rigidezAplicada = k;
         var drive = new JointDrive { positionSpring = k, positionDamper = k * 0.08f, maximumForce = float.MaxValue };
-        foreach (var j in _juntas) if (j != null) j.slerpDrive = drive;
+        for (int i = 1; i < _juntas.Count; i++) if (_juntas[i] != null) _juntas[i].slerpDrive = drive; // la 0 es el carrete (libre)
     }
 
     bool EsValida()
@@ -635,18 +759,19 @@ public class MangueraBomberos : MonoBehaviour
         if (_mano >= 0 && _lanza != null)
         {
             int barras = Mathf.RoundToInt(_lanza.Caudal * 10f);
-            texto = $"PRESIÓN {_lanza.NombrePresion}  -  {(_lanza.Niebla ? "NIEBLA" : "CHORRO")}\n" +
+            texto = $"PRESIÓN {_lanza.NombrePresion}  -  {(_lanza.Niebla ? "NIEBLA" : "CHORRO")}   <size=80%>{LongitudDesenrollada:0.0}/{longitud:0} m</size>\n" +
                     $"<size=80%>Caudal <color=#7FD4FF>{new string('|', barras)}</color><color=#555555>{new string('|', 10 - barras)}</color></size>\n" +
                     "<size=60%>Gatillo: agua   A/X: presión   B/Y: chorro/niebla</size>";
         }
         else if (dist < 3f)
         {
-            texto = "MANGUERA\n<size=65%>Acerca la mano y presiona GRIP</size>";
+            texto = _enSoporte ? "MANGUERA\n<size=65%>Acerca la mano y presiona GRIP</size>"
+                               : "MANGUERA\n<size=65%>GRIP para tomar - se enrolla sola si la dejas</size>";
         }
         _etiqueta.text = texto;
         if (texto.Length == 0) return;
 
-        Vector3 pos = _boquilla.position + Vector3.up * (_mano >= 0 ? 0.28f : 0.4f);
+        Vector3 pos = _boquilla.position + Vector3.up * (_mano >= 0 ? 0.28f : 0.35f);
         _etiqueta.transform.position = pos;
         Vector3 mirar = pos - cabeza.position;
         if (mirar.sqrMagnitude > 0.0001f) _etiqueta.transform.rotation = Quaternion.LookRotation(mirar, Vector3.up);
