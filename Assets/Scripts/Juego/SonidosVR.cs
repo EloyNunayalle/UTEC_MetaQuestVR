@@ -9,7 +9,7 @@ public static class SonidosVR
 {
     const int Hz = 22050;
 
-    static AudioClip _alarma, _exito, _error, _clic, _agarrar, _sirena, _motor, _puerta, _victoria, _campana;
+    static AudioClip _alarma, _exito, _error, _clic, _agarrar, _sirena, _motor, _puerta, _victoria, _campana, _agua;
 
     public static AudioClip Alarma => Obtener(ref _alarma, "Alarma", 2.4f, Alarma_);
     public static AudioClip Campana => Obtener(ref _campana, "Campana", 1.2f, Campana_);
@@ -21,6 +21,7 @@ public static class SonidosVR
     public static AudioClip Motor => Obtener(ref _motor, "Motor", 2f, Motor_);
     public static AudioClip Puerta => Obtener(ref _puerta, "Puerta", 0.7f, Puerta_);
     public static AudioClip Victoria => Obtener(ref _victoria, "Victoria", 1.8f, Victoria_);
+    public static AudioClip Agua => Obtener(ref _agua, "Agua", 2f, Agua_);
 
     static AudioSource _fuente2D;
 
@@ -166,6 +167,16 @@ public static class SonidosVR
         float v = 0.6f * Seno(45f, t) + 0.3f * Seno(90f, t) + 0.15f * Cuadrada(30f, t);
         v *= 0.8f + 0.2f * Seno(6f, t);
         return 0.35f * v;
+    }
+
+    static float Agua_(float t, float d)
+    {
+        // Chorro de agua: siseo (ruido blanco suave) + rumor (ruido de baja frecuencia). Es ruido, asi que el loop no se nota.
+        float blanco = Mathf.Sin((t * Hz) * 12.9898f) * 43758.5453f;
+        blanco = (blanco - Mathf.Floor(blanco)) * 2f - 1f;
+        float rumor = (Mathf.PerlinNoise(t * 600f, 0.7f) - 0.5f) * 2f;
+        float silbido = (Mathf.PerlinNoise(t * 4000f, 3.1f) - 0.5f) * 2f;
+        return 0.18f * blanco + 0.3f * rumor + 0.25f * silbido;
     }
 
     static float Puerta_(float t, float d)

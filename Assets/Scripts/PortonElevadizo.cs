@@ -26,11 +26,22 @@ public class PortonElevadizo : MonoBehaviour
     public Vector3 zonaBarridoCentro;
     public Vector3 zonaBarridoTamano;
 
+    [Header("Activacion extra")]
+    [Tooltip("Tecla para abrir/cerrar (editor o teclado).")]
+    public KeyCode teclaAlternar = KeyCode.P;
+    [Tooltip("Abre solo cuando el jugador se acerca manejando el camion.")]
+    public bool abrirAlAcercarseCamion = true;
+    [Tooltip("Distancia (m) entre el camion y la zona del porton para abrir.")]
+    public float distanciaCamion = 5f;
+
     public Estado estado = Estado.Cerrado;
+    public bool EstaAbierto => estado == Estado.Abierto;
 
     Quaternion _rotCerrado;
     float _t;
     float _proximaBusquedaJugador;
+    CamionBomberos _camion;
+    float _proximaBusquedaCamion;
 
     void Awake()
     {
@@ -69,6 +80,10 @@ public class PortonElevadizo : MonoBehaviour
 
     void Update()
     {
+        if (teclaAlternar != KeyCode.None && Input.GetKeyDown(teclaAlternar)) Alternar();
+        if (abrirAlAcercarseCamion && (estado == Estado.Cerrado || estado == Estado.Cerrando) && CamionCerca(distanciaCamion, true))
+            Abrir();
+
         float dt = Time.deltaTime / Mathf.Max(0.1f, duracion);
         if (estado == Estado.Abriendo)
         {
@@ -116,8 +131,26 @@ public class PortonElevadizo : MonoBehaviour
         vara.localScale = new Vector3(radioVara * 2f, varaLen * 0.5f, radioVara * 2f);
     }
 
+    /// <summary>El camion (opcionalmente solo si alguien lo maneja) esta a menos de "margen" de la zona del porton.</summary>
+    bool CamionCerca(float margen, bool soloManejando)
+    {
+        if (_camion == null && Time.unscaledTime >= _proximaBusquedaCamion)
+        {
+            _proximaBusquedaCamion = Time.unscaledTime + 1f;
+            _camion = FindObjectOfType<CamionBomberos>();
+        }
+        if (_camion == null || (soloManejando && !_camion.JugadorSentado)) return false;
+        Bounds zona = new Bounds(zonaBarridoCentro, zonaBarridoTamano);
+        Bounds b = _camion.Limites;
+        b.Expand(margen * 2f);
+        return b.Intersects(zona);
+    }
+
     bool HayJugadorEnZona()
     {
+        // Seguridad: nunca se cierra sobre el camion.
+        if (CamionCerca(0f, false)) return true;
+
         if (jugador == null) BuscarJugador();
         if (jugador == null) return false;
         Bounds zona = new Bounds(zonaBarridoCentro, zonaBarridoTamano);

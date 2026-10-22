@@ -66,6 +66,38 @@ Al subir se muestra el **tiempo, el puntaje** (100 por tarea + bono por rapidez)
 - `VolanteInteractivo.cs`: volante agarrable (GRIP/pellizco cerca del aro) con tope ±120° y joystick de respaldo; gira sobre el centro visual (estable, sin parpadeos) y las piezas que van con el volante giran con él; entrega el eje de giro al camión (`ejeGiroManual`).
 - `PalancaCambios.cs`: palanca de cambios agarrable (modelo importado o procedural) que se asienta en la ranura más cercana; soporta ranuras extra (p. ej. L → D), **ilumina la letra activa** y publica la marcha al camión (`marchaManual`).
 
+## Portón, manguera y agua
+
+### Portón de la estación (`PortonElevadizo.cs`)
+Abre y cierra con una interpolación suave (*smoothstep*) y brazos hidráulicos animados. Formas de activarlo:
+- **Botón rojo** junto al portón (poke con el dedo o la punta del control).
+- **Tecla `P`** (editor). Se cambia en `Tecla Alternar`.
+- **Proximidad**: se abre solo cuando te acercas **manejando el camión** (`Abrir Al Acercarse Camion`, `Distancia Camion`).
+- **Seguridad**: no se cierra si el jugador o el camión están bajo su recorrido. Mientras está cerrado, el camión choca con él y no puede salir.
+
+### Manguera física (`MangueraBomberos.cs`)
+Va conectada al costado derecho trasero del camión y se tiende en el piso a lo largo del camión.
+- **Física**: cadena de `Rigidbody` unidos con `ConfigurableJoint`. La distancia entre eslabones está bloqueada (no se estira), el doblez está limitado a ±35° por unión y un resorte de flexión le da rigidez. Con agua, la manguera se pone más dura.
+- **Visual**: tubo suave (curva Catmull-Rom) generado cada frame.
+- **Boquilla**: acércale la mano y presiona **GRIP**. Sigue a tu mano con un pequeño retraso (seguimiento por velocidad), así se sienten su **peso e inercia**. Si la sueltas en movimiento, sale despedida. Si te alejas más de lo que da la manguera, se te suelta con un aviso.
+- Al subir al camión la manguera se guarda, y al bajar se vuelve a desplegar.
+- Está en la capa *Ignore Raycast*, así no bloquea el teletransporte ni al jugador.
+
+### Agua (`LanzaAgua.cs`)
+| Acción | Control (el que sostiene la boquilla) | Teclado |
+|---|---|---|
+| Abrir el agua (caudal analógico) | **Gatillo** | `F` |
+| Presión baja / media / alta | **A / X** | `T` |
+| Chorro directo / niebla (abanico) | **B / Y** | `N` |
+
+- `ParticleSystem` en espacio de mundo, con gravedad ajustable y **World Collision**. Al chocar genera salpicaduras.
+- La presión cambia la velocidad del chorro y su alcance. El gatillo abre la válvula con una pequeña inercia.
+- **Retroceso**: el chorro empuja la boquilla hacia atrás y la hace temblar levemente, con vibración del control y sonido de agua proporcionales a la fuerza.
+- El agua solo sale mientras sostienes la boquilla.
+- Evento `AlMojar(objeto, punto)` para conectar después, por ejemplo, un fuego que se apague.
+
+Todo se crea solo al darle Play (`JuegoBomberos` → `Usar Manguera`). Para ajustar valores antes de Play, agrega el componente `MangueraBomberos` al objeto `Camion_Bomberos`: tus valores se respetan.
+
 ## Créditos y licencias
 
 ### Modelo 3D: "Fire Department Building"

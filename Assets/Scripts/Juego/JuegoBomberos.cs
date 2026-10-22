@@ -39,6 +39,8 @@ public class JuegoBomberos : MonoBehaviour
 
     [Header("Reglas")]
     public bool exigirPorton = true;
+    [Tooltip("Crea la manguera fisica con chorro de agua en el costado del camion.")]
+    public bool usarManguera = true;
     [Tooltip("La mision empieza sola despues de estos segundos si no se presiona A.")]
     public float segundosIntroMax = 15f;
     public int puntosPorTarea = 100;
@@ -161,6 +163,14 @@ public class JuegoBomberos : MonoBehaviour
         _camion.alSubir += AlSubirCamion;
         _camion.alBajar += AlBajarCamion;
         _camion.alChocar += AlChocar;
+
+        // ---- Manguera con agua ----
+        if (usarManguera)
+        {
+            var manguera = camion.GetComponent<MangueraBomberos>();
+            if (manguera == null) manguera = camion.gameObject.AddComponent<MangueraBomberos>();
+            manguera.Inicializar(rig, _camion);
+        }
 
         // ---- HUD y marcador ----
         _hud = new GameObject("HUD_Bomberos").AddComponent<HudBomberos>();
@@ -601,6 +611,7 @@ public class JuegoBomberos : MonoBehaviour
         foreach (var c in candidatos)
         {
             if (c == null || c.transform.IsChildOf(rig.transform)) continue;
+            if (c.gameObject.layer == MangueraBomberos.CapaManguera) continue; // la manguera en el piso no cuenta
             if (!_bloqueosAvisados.Add(c)) continue;
             string ruta = Ruta(c.transform);
             Debug.LogWarning($"[JuegoBomberos] Bloqueado por: {ruta} ({c.GetType().Name}, limites {c.bounds.center} tam {c.bounds.size})", c);
