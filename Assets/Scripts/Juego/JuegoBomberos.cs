@@ -34,6 +34,7 @@ public class JuegoBomberos : MonoBehaviour
     public string nombreCamion = "Camion_Bomberos";
     public string nombreChaleco = "Chaleco";
     public string nombreExtintor = "Extintor";
+    public string nombrePortonPrincipal = "Porton_Principal";
     [Tooltip("Donde crear un camion de reemplazo si el objeto del camion no existe en la escena.")]
     public Vector3 posicionCamionReemplazo = new Vector3(-5.19f, 0.127f, -10.2f);
 
@@ -70,7 +71,12 @@ public class JuegoBomberos : MonoBehaviour
 
     Fase _fase = Fase.Intro;
     readonly List<Tarea> _tareas = new List<Tarea>();
-    Tarea _tPorton, _tChaleco, _tExtintor, _tSubir;
+    Tarea _tPrincipal, _tPorton, _tChaleco, _tExtintor, _tSubir;
+    PortonPrincipal _principal;
+    float _limiteBusquedaPrincipal, _proximaBusquedaPrincipal;
+
+    /// <summary>El porton de la cochera solo se puede abrir despues del porton principal.</summary>
+    public bool CocheraHabilitada => _tPrincipal == null || _tPrincipal.hecha;
     Transform _cabeza;
     HudBomberos _hud;
     MarcadorObjetivo _marcador;
@@ -179,6 +185,14 @@ public class JuegoBomberos : MonoBehaviour
         _marcador.Inicializar(_cabeza);
 
         // ---- Tareas ----
+        // 1) Porton principal del cerco (vive en la escena de la ciudad: se engancha en cuanto aparece).
+        _tPrincipal = NuevaTarea("Abre el portón principal",
+            "Toca el botón verde del poste, junto al portón del patio.",
+            () => _principal == null || _principal.AbiertoOAbriendo ? (Vector3?)null : _principal.PuntoBoton + Vector3.up * 0.3f);
+        _limiteBusquedaPrincipal = Time.time + 10f;
+        PrepararPortonPrincipal();
+
+        // 2) Porton de la cochera.
         if (porton != null)
         {
             _tPorton = NuevaTarea("Abre el portón de la cochera",
@@ -298,6 +312,16 @@ public class JuegoBomberos : MonoBehaviour
     /// proximidad) y les añade la interacción en cuanto están disponibles. Se vuelve
     /// a llamar desde Update hasta encontrar ambos (por eso las guardas).
     /// </summary>
+    void PrepararPortonPrincipal()
+    {
+        if (_principal != null) return;
+        var t = Buscar(nombrePortonPrincipal);
+        if (t == null) return;
+        _principal = t.GetComponent<PortonPrincipal>();
+        if (_principal == null) _principal = t.gameObject.AddComponent<PortonPrincipal>();
+        _principal.Inicializar(_camion.Limites.center);
+    }
+
     void PrepararEquipamiento()
     {
         if (chaleco == null) chaleco = Buscar(nombreChaleco);
@@ -360,6 +384,18 @@ public class JuegoBomberos : MonoBehaviour
             PrepararEquipamiento();
         }
 
+        if (_principal == null && _tPrincipal != null && Time.time >= _proximaBusquedaPrincipal)
+        {
+            _proximaBusquedaPrincipal = Time.time + 0.5f;
+            PrepararPortonPrincipal();
+            // Si la escena no tiene porton principal, la tarea se quita para no trabar la mision.
+            if (_principal == null && Time.time > _limiteBusquedaPrincipal)
+            {
+                _tareas.Remove(_tPrincipal);
+                _tPrincipal = null;
+            }
+        }
+
         VigilarPuertas();
         DetectarBloqueo();
 
@@ -393,7 +429,7 @@ public class JuegoBomberos : MonoBehaviour
     {
         _hud.Mostrar("ESTACIÓN DE BOMBEROS VR",
             "<b>¡Suena la alarma! Hay una emergencia.</b>\n" +
-            "Prepárate y sal en el camión lo más rápido posible.\n\n" +
+            "Abre el portón principal, luego la cochera, equípate\ny sal en el camión lo más rápido posible.\n\n" +
             "<color=#FFD54A>Controles</color>\n" +
             "- Moverse: joystick o teletransporte\n" +
             "- Agarrar: GRIP / gatillo (o pellizco con la mano)\n" +
@@ -413,12 +449,16 @@ public class JuegoBomberos : MonoBehaviour
         EntradaVR.VibrarAmbas(0.8f, 0.5f, 0.3f);
         Aviso("¡EMERGENCIA!\n<size=55%>Equípate y sube al camión</size>", TipoAviso.Error, 3f);
         // Si el porton ya estaba abierto, cuenta como hecho.
+        if (_tPrincipal != null && _principal != null && _principal.AbiertoOAbriendo) CompletarTarea(_tPrincipal, "¡Portón principal abierto!");
         if (_tPorton != null && PortonAbierto()) CompletarTarea(_tPorton, "¡Portón abierto!");
     }
 
     void ActualizarMision()
     {
         float t = Time.time - _inicioMision;
+
+        if (_tPrincipal != null && !_tPrincipal.hecha && _principal != null && _principal.AbiertoOAbriendo)
+            CompletarTarea(_tPrincipal, "¡Portón principal abierto!");
 
         if (_tPorton != null && !_tPorton.hecha && PortonAbierto())
             CompletarTarea(_tPorton, "¡Portón abierto!");
@@ -540,8 +580,7 @@ public class JuegoBomberos : MonoBehaviour
         _marcador.Ocultar();
         _luzAlarma.enabled = false;
 
-        // Al final de la mision el jugador puede manejar el camion (y sale por el porton).
-        if (porton != null && !PortonAbierto()) porton.Abrir();
+        // Al final de la mision el jugador puede manejar el camion (los portones ya los abrio con sus botones).
         _hud.alturaRelativa = -0.55f;
 
         SonidosVR.Reproducir2D(SonidosVR.Victoria, 0.9f);

@@ -26,14 +26,6 @@ public class PortonElevadizo : MonoBehaviour
     public Vector3 zonaBarridoCentro;
     public Vector3 zonaBarridoTamano;
 
-    [Header("Activacion extra")]
-    [Tooltip("Tecla para abrir/cerrar (editor o teclado).")]
-    public KeyCode teclaAlternar = KeyCode.P;
-    [Tooltip("Abre solo cuando el jugador se acerca manejando el camion.")]
-    public bool abrirAlAcercarseCamion = true;
-    [Tooltip("Distancia (m) entre el camion y la zona del porton para abrir.")]
-    public float distanciaCamion = 5f;
-
     public Estado estado = Estado.Cerrado;
     public bool EstaAbierto => estado == Estado.Abierto;
 
@@ -64,6 +56,15 @@ public class PortonElevadizo : MonoBehaviour
 
     public void Alternar()
     {
+        // Orden de la mision: primero el porton principal, despues la cochera.
+        var juego = JuegoBomberos.Instancia;
+        if (juego != null && !juego.CocheraHabilitada && (estado == Estado.Cerrado || estado == Estado.Cerrando))
+        {
+            juego.Aviso("Primero abre el portón principal", JuegoBomberos.TipoAviso.Error, 2f);
+            SonidosVR.Reproducir2D(SonidosVR.Error, 0.8f);
+            EntradaVR.VibrarAmbas(0.6f, 0.2f, 0.2f);
+            return;
+        }
         if (estado == Estado.Cerrado || estado == Estado.Cerrando) Abrir();
         else Cerrar();
     }
@@ -80,10 +81,6 @@ public class PortonElevadizo : MonoBehaviour
 
     void Update()
     {
-        if (teclaAlternar != KeyCode.None && Input.GetKeyDown(teclaAlternar)) Alternar();
-        if (abrirAlAcercarseCamion && (estado == Estado.Cerrado || estado == Estado.Cerrando) && CamionCerca(distanciaCamion, true))
-            Abrir();
-
         float dt = Time.deltaTime / Mathf.Max(0.1f, duracion);
         if (estado == Estado.Abriendo)
         {

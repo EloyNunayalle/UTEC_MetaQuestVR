@@ -68,11 +68,14 @@ Al subir se muestra el **tiempo, el puntaje** (100 por tarea + bono por rapidez)
 
 ## Portón, manguera y agua
 
+### Portón principal del patio (`PortonPrincipal.cs`), el primero que se abre
+Portón corredizo del cerco: se separa del muro y se desliza detrás del muro izquierdo con movimiento suave.
+- Se abre **solo con su botón verde inmersivo**, en el poste derecho (por dentro del patio, a 1.2 m): tócalo con la mano o la punta del control. No usa teclas ni botones del control.
+- Feedback: pitido, vibración, motor mientras se mueve, baliza ámbar y golpe al terminar. No se cierra si estás en el paso.
+- **Orden de la misión**: mientras el portón principal no esté abierto, el portón de la cochera no responde (avisa "Primero abre el portón principal").
+
 ### Portón de la estación (`PortonElevadizo.cs`)
-Abre y cierra con una interpolación suave (*smoothstep*) y brazos hidráulicos animados. Formas de activarlo:
-- **Botón rojo** junto al portón (poke con el dedo o la punta del control).
-- **Tecla `P`** (editor). Se cambia en `Tecla Alternar`.
-- **Proximidad**: se abre solo cuando te acercas **manejando el camión** (`Abrir Al Acercarse Camion`, `Distancia Camion`).
+Abre y cierra con una interpolación suave (*smoothstep*) y brazos hidráulicos animados. Se activa **solo con su botón rojo inmersivo**, junto al portón (poke con el dedo o la punta del control).
 - **Seguridad**: no se cierra si el jugador o el camión están bajo su recorrido. Mientras está cerrado, el camión choca con él y no puede salir.
 
 ### Manguera física (`MangueraBomberos.cs`)
