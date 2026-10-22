@@ -86,6 +86,8 @@ public class MangueraBomberos : MonoBehaviour
     public int Mano => _mano;
     public Rigidbody Boquilla => _boquilla;
     public LanzaAgua Lanza => _lanza;
+    /// <summary>Valvula de presion de la bomba (en el panel, junto a la conexion).</summary>
+    public ValvulaBomba Valvula { get; private set; }
     public float LongitudDesenrollada => _eslabones.Count * largoEslabon;
 
     OVRCameraRig _rig;
@@ -129,6 +131,11 @@ public class MangueraBomberos : MonoBehaviour
         if (_anclaRb == null) _anclaRb = _ancla.gameObject.AddComponent<Rigidbody>();
         _anclaRb.isKinematic = true;
         CrearSoporte();
+
+        // Valvula de presion + manometro en el panel, detras de la conexion (hacia la parte trasera).
+        Vector3 posValvula = _ancla.position + Vector3.up * 0.28f - Frente * 0.32f + Afuera * 0.02f;
+        Valvula = ValvulaBomba.Crear(_camion.transform, posValvula, Quaternion.LookRotation(Afuera, Vector3.up), _rig, this);
+
         _listo = true;
         Desplegar();
     }
@@ -761,7 +768,7 @@ public class MangueraBomberos : MonoBehaviour
             int barras = Mathf.RoundToInt(_lanza.Caudal * 10f);
             texto = $"PRESIÓN {_lanza.NombrePresion}  -  {(_lanza.Niebla ? "NIEBLA" : "CHORRO")}   <size=80%>{LongitudDesenrollada:0.0}/{longitud:0} m</size>\n" +
                     $"<size=80%>Caudal <color=#7FD4FF>{new string('|', barras)}</color><color=#555555>{new string('|', 10 - barras)}</color></size>\n" +
-                    "<size=60%>Gatillo: agua   A/X: presión   B/Y: chorro/niebla</size>";
+                    "<size=60%>Gatillo: agua   B/Y: chorro/niebla   Presión: válvula del camión</size>";
         }
         else if (dist < 3f)
         {

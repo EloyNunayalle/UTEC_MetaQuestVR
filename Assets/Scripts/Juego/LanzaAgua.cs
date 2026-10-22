@@ -8,9 +8,11 @@ using UnityEngine;
 ///   al chocar, un sub-emisor genera salpicaduras.
 /// - Control con el control que sostiene la boquilla:
 ///     Gatillo (analogico) = valvula / caudal (0 a 100 %).
-///     A / X               = presion: BAJA -> MEDIA -> ALTA.
 ///     B / Y               = patron: CHORRO directo / NIEBLA (abanico).
-///   Teclado (editor): F = agua, T = presion, N = patron.
+///   La PRESION la da la valvula de la bomba en el panel del camion (ValvulaBomba).
+///   Teclado (editor): F = agua, N = patron.
+/// - Collision Module (World): cada impacto del chorro se envia a ZonaFuego.AplicarAgua,
+///   que apaga los focos de fuego cercanos al punto; la potencia de cada gota = presion.
 /// - Expone <see cref="Empuje"/> (0-1) para el retroceso, la vibracion y la rigidez de la manguera.
 /// - Evento <see cref="AlMojar"/>: para apagar fuego u otras reacciones al agua.
 /// </summary>
@@ -19,8 +21,8 @@ public class LanzaAgua : MonoBehaviour
     [Header("Presion (velocidad de salida en m/s)")]
     public float velocidadMinima = 7f;
     public float velocidadMaxima = 22f;
-    public float[] nivelesPresion = { 0.4f, 0.7f, 1f };
-    public string[] nombresPresion = { "BAJA", "MEDIA", "ALTA" };
+    [Tooltip("Presion si no hay valvula de bomba (0-1).")]
+    [Range(0f, 1f)] public float presionSinValvula = 0.7f;
 
     [Header("Caudal (particulas por segundo a valvula abierta)")]
     public float particulasMinimas = 120f;
@@ -39,8 +41,11 @@ public class LanzaAgua : MonoBehaviour
 
     /// <summary>Caudal real 0-1 (valvula, suavizado).</summary>
     public float Caudal { get; private set; }
-    public float Presion => nivelesPresion[Mathf.Clamp(_nivel, 0, nivelesPresion.Length - 1)];
-    public string NombrePresion => nombresPresion[Mathf.Clamp(_nivel, 0, nombresPresion.Length - 1)];
+    /// <summary>Presion 0-1: la de la valvula de la bomba del camion.</summary>
+    public float Presion => _manguera != null && _manguera.Valvula != null ? _manguera.Valvula.Presion : presionSinValvula;
+    public string NombrePresion => Mathf.RoundToInt(Presion * 100f) + "%";
+    /// <summary>Potencia de cada gota contra el fuego (la niebla moja mas area pero con menos fuerza).</summary>
+    public float PotenciaGota => Presion * (Niebla ? 0.6f : 1f);
     public bool Niebla { get; private set; }
     /// <summary>Fuerza relativa del chorro (caudal x presion): retroceso, vibracion, rigidez.</summary>
     public float Empuje => Caudal * Presion * (Niebla ? 0.5f : 1f);
@@ -51,9 +56,9 @@ public class LanzaAgua : MonoBehaviour
     MangueraBomberos _manguera;
     ParticleSystem _ps, _salpicadura;
     AudioSource _sonido;
-    int _nivel = 1;
     readonly List<ParticleCollisionEvent> _eventos = new List<ParticleCollisionEvent>();
     readonly Dictionary<GameObject, float> _ultimoMojado = new Dictionary<GameObject, float>();
+    float _ultimaVibracionFuego;
 
     static Material _material;
 
@@ -224,13 +229,6 @@ public class LanzaAgua : MonoBehaviour
             valvula = OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, c);
             if (Input.GetKey(KeyCode.F)) valvula = 1f;
 
-            if (OVRInput.GetDown(OVRInput.Button.One, c) || Input.GetKeyDown(KeyCode.T))
-            {
-                _nivel = (_nivel + 1) % nivelesPresion.Length;
-                SonidosVR.ReproducirEn(SonidosVR.Clic, transform.position, 0.8f);
-                EntradaVR.Vibrar(mano == 0, 0.4f, 0.06f, 0.9f);
-                JuegoBomberos.Instancia?.Aviso("Presión " + NombrePresion, JuegoBomberos.TipoAviso.Info, 1f);
-            }
             if (OVRInput.GetDown(OVRInput.Button.Two, c) || Input.GetKeyDown(KeyCode.N))
             {
                 Niebla = !Niebla;
@@ -266,12 +264,31 @@ public class LanzaAgua : MonoBehaviour
         else if (_sonido.isPlaying) _sonido.Stop();
     }
 
+    /// <summary>Maximo de impactos procesados por objeto y por frame (los demas se compensan en potencia).</summary>
+    const int MaxImpactosPorFrame = 48;
+
     void OnParticleCollision(GameObject otro)
     {
-        if (AlMojar == null || otro == null) return;
-        if (_ultimoMojado.TryGetValue(otro, out float t) && Time.time - t < 0.1f) return;
+        if (otro == null) return;
         int n = _ps.GetCollisionEvents(otro, _eventos);
         if (n == 0) return;
+
+        // Cada gota que choca cerca de un foco de fuego le quita vida (Collision Module -> ZonaFuego).
+        int procesar = Mathf.Min(n, MaxImpactosPorFrame);
+        float potencia = PotenciaGota * (n / (float)procesar);
+        bool mojoFuego = false;
+        for (int i = 0; i < procesar; i++)
+            mojoFuego |= ZonaFuego.AplicarAgua(_eventos[i].intersection, potencia);
+
+        // Vibracion extra en la mano cuando el chorro esta pegando en el fuego.
+        if (mojoFuego && _manguera != null && _manguera.Mano >= 0 && Time.time - _ultimaVibracionFuego > 0.15f)
+        {
+            _ultimaVibracionFuego = Time.time;
+            EntradaVR.Vibrar(_manguera.Mano == 0, 0.35f, 0.08f, 0.6f);
+        }
+
+        if (AlMojar == null) return;
+        if (_ultimoMojado.TryGetValue(otro, out float t) && Time.time - t < 0.1f) return;
         _ultimoMojado[otro] = Time.time;
         AlMojar(otro, _eventos[0].intersection);
     }

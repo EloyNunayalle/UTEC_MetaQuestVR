@@ -9,7 +9,7 @@ public static class SonidosVR
 {
     const int Hz = 22050;
 
-    static AudioClip _alarma, _exito, _error, _clic, _agarrar, _sirena, _motor, _puerta, _victoria, _campana, _agua;
+    static AudioClip _alarma, _exito, _error, _clic, _agarrar, _sirena, _motor, _puerta, _victoria, _campana, _agua, _fuego;
 
     public static AudioClip Alarma => Obtener(ref _alarma, "Alarma", 2.4f, Alarma_);
     public static AudioClip Campana => Obtener(ref _campana, "Campana", 1.2f, Campana_);
@@ -22,6 +22,7 @@ public static class SonidosVR
     public static AudioClip Puerta => Obtener(ref _puerta, "Puerta", 0.7f, Puerta_);
     public static AudioClip Victoria => Obtener(ref _victoria, "Victoria", 1.8f, Victoria_);
     public static AudioClip Agua => Obtener(ref _agua, "Agua", 2f, Agua_);
+    public static AudioClip Fuego => Obtener(ref _fuego, "Fuego", 3f, Fuego_);
 
     static AudioSource _fuente2D;
 
@@ -167,6 +168,22 @@ public static class SonidosVR
         float v = 0.6f * Seno(45f, t) + 0.3f * Seno(90f, t) + 0.15f * Cuadrada(30f, t);
         v *= 0.8f + 0.2f * Seno(6f, t);
         return 0.35f * v;
+    }
+
+    static float Hash01(float x)
+    {
+        float h = Mathf.Sin(x * 127.1f) * 43758.5453f;
+        return h - Mathf.Floor(h);
+    }
+
+    static float Fuego_(float t, float d)
+    {
+        // Fuego: rumor grave + siseo suave + chasquidos aleatorios (crepitar de madera).
+        float rumor = (Mathf.PerlinNoise(t * 90f, 1.3f) - 0.5f) * 2f;
+        float siseo = (Mathf.PerlinNoise(t * 1800f, 5.7f) - 0.5f) * 2f;
+        float k = Mathf.Floor(t * 35f), local = t * 35f - k;
+        float chasquido = Hash01(k) > 0.8f ? (Hash01(t * Hz) * 2f - 1f) * Mathf.Exp(-local * 25f) : 0f;
+        return 0.35f * rumor + 0.12f * siseo + 0.55f * chasquido;
     }
 
     static float Agua_(float t, float d)

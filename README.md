@@ -27,6 +27,16 @@ Escena principal: `Assets/Scenes/Ciudad_Tile_00_Estacion.unity` (tile de la ciud
 
 ## Juego interactivo: "Emergencia en la estación"
 
+### Incendio del edificio (`EdificioEnLlamas.cs` + `ZonaFuego.cs`)
+El edificio de enfrente, **cruzando la calle desde el portón principal** (`Building_Small_1_LOD`), tiene **varios focos de fuego independientes** en su fachada: 3 columnas por piso, hasta 3 pisos.
+- Cada foco tiene llamas, humo, luz que parpadea, crepitar y una **barra de vida** flotante (azul mientras le pega el agua).
+- El chorro, con el **Collision Module en modo World**, dispara `OnParticleCollision`. Cada gota que choca cerca de un foco le resta vida según la **presión**. Así cada foco se apaga **por separado**, con vapor y siseo.
+- Si dejas de mojar un foco antes de apagarlo, **se reaviva**. Los pisos altos necesitan más agua y más presión para llegar.
+- Si el edificio no tiene collider, cada foco crea un panel de impacto invisible sobre la fachada para que el agua choque.
+- **Misión**: después de subir al camión, la última tarea es **"Apaga el incendio (x/9)"**. La flecha marca el foco encendido más cercano y la misión termina al apagar todos.
+- **Explorar**: el edificio también arde. Al apagarlo entero, se vuelve a encender a los 30 s para practicar.
+- Todo se crea solo. En `JuegoBomberos` puedes desactivarlo (`Incendio En Edificio`) o elegir otro edificio (`Nombre Edificio Fuego`).
+
 ### Elegir modo al empezar
 Al darle Play aparecen frente a ti dos **botones que se presionan tocándolos con la mano** (no se usan teclas):
 - **EXPLORAR** (azul): recorres todo libremente, sin tareas, sin orden y sin tiempo. Los portones, la manguera, el chaleco, el extintor y el camión funcionan directo, y puedes subir a manejar cuando quieras.
@@ -94,11 +104,16 @@ Sale del **panel de bomba**, en el costado del conductor justo detrás de la pue
 - Al subir al camión la manguera se guarda, y al bajar se vuelve a desplegar.
 - Está en la capa *Ignore Raycast*, así no bloquea el teletransporte ni al jugador.
 
+### Válvula de presión de la bomba (`ValvulaBomba.cs`)
+Volante rojo en el panel de bomba, junto a la conexión de la manguera, con un **manómetro de aguja** encima.
+- Tómalo con **GRIP** y **gira la muñeca** como si giraras una perilla. A la derecha sube la presión (15 % – 100 %), con clic y vibración cada 15° y un tope al llegar a los extremos.
+- **A mayor presión**: el chorro sale más rápido y llega **más lejos y más alto** (pisos superiores), sale más agua, apaga el fuego más rápido y el **retroceso** de la boquilla es mayor.
+- Mientras sale agua, la bomba suena más aguda con más presión.
+
 ### Agua (`LanzaAgua.cs`)
 | Acción | Control (el que sostiene la boquilla) | Teclado |
 |---|---|---|
 | Abrir el agua (caudal analógico) | **Gatillo** | `F` |
-| Presión baja / media / alta | **A / X** | `T` |
 | Chorro directo / niebla (abanico) | **B / Y** | `N` |
 
 - `ParticleSystem` en espacio de mundo, con gravedad ajustable y **World Collision**. Al chocar genera salpicaduras.
