@@ -4,7 +4,8 @@ using UnityEngine;
 /// <summary>
 /// Valvula de presion de la bomba, en el panel del camion (junto a la conexion de la manguera),
 /// con manometro de aguja.
-/// - Se toma con GRIP y se gira como una perilla (gira la muneca): a la derecha sube la presion.
+/// - Se toma con GRIP y se gira: moviendo la mano en circulo alrededor de la rueda (como un
+///   volante) o girando la muneca. A la derecha (horario) sube la presion.
 /// - Presion 15 % - 100 %: a mayor presion el chorro llega mas lejos y mas alto, sale mas agua,
 ///   apaga el fuego mas rapido y el retroceso de la boquilla es mayor.
 /// - Feedback: clic y vibracion cada 15 grados, tope al llegar al minimo o maximo,
@@ -14,11 +15,13 @@ using UnityEngine;
 public class ValvulaBomba : MonoBehaviour
 {
     [Tooltip("Grados de giro de la valvula entre la presion minima y la maxima.")]
-    public float giroTotal = 540f;
+    public float giroTotal = 270f;
+    [Tooltip("Multiplicador del giro de la mano (mayor = la valvula gira mas con menos movimiento).")]
+    public float sensibilidad = 1.6f;
     [Range(0f, 1f)] public float presionMinima = 0.15f;
     [Tooltip("Presion al iniciar (0-1).")]
     [Range(0f, 1f)] public float presionInicial = 0.5f;
-    public float radioAgarre = 0.17f;
+    public float radioAgarre = 0.24f;
 
     /// <summary>Presion de la bomba 0-1 (la usa LanzaAgua).</summary>
     public float Presion => Mathf.Lerp(presionMinima, 1f, _giro / giroTotal);
@@ -33,6 +36,7 @@ public class ValvulaBomba : MonoBehaviour
     float _giro;
     int _mano = -1, _hoverPrev = -1;
     Quaternion _rotManoPrev;
+    Vector3 _vecManoPrev;
     float _ultimoClic;
 
     /// <summary>Crea la valvula y el manometro. Su +Z local apunta hacia afuera del panel.</summary>
@@ -135,6 +139,7 @@ public class ValvulaBomba : MonoBehaviour
                 {
                     _mano = i;
                     _rotManoPrev = m.rotation;
+                    _vecManoPrev = VectorEnRueda(m.position);
                     EntradaVR.Vibrar(i == 0, 0.5f, 0.08f, 0.6f);
                     SonidosVR.ReproducirEn(SonidosVR.Agarrar, _rueda.position, 0.7f);
                     break;
@@ -153,21 +158,33 @@ public class ValvulaBomba : MonoBehaviour
             }
             else
             {
-                // Giro de la muneca alrededor del eje de la valvula (como girar una perilla).
+                // Visto desde afuera, girar en sentido horario sube la presion.
+                Vector3 eje = transform.forward;
+
+                // 1) Mano girando en circulo alrededor del centro de la rueda (como un volante).
+                Vector3 vec = VectorEnRueda(m.position);
+                float orbita = 0f;
+                if (vec.magnitude > 0.035f && _vecManoPrev.magnitude > 0.035f)
+                    orbita = Vector3.SignedAngle(_vecManoPrev, vec, eje);
+                _vecManoPrev = vec;
+
+                // 2) Giro de la muneca alrededor del eje (como una perilla).
                 Quaternion delta = m.rotation * Quaternion.Inverse(_rotManoPrev);
                 _rotManoPrev = m.rotation;
-                delta.ToAngleAxis(out float angulo, out Vector3 eje);
+                delta.ToAngleAxis(out float angulo, out Vector3 ejeDelta);
                 if (angulo > 180f) angulo -= 360f;
-                if (!float.IsNaN(eje.x))
-                {
-                    // Visto desde afuera, girar a la derecha (horario) sube la presion.
-                    float giro = -angulo * Vector3.Dot(eje, transform.forward);
-                    Girar(giro);
-                }
+                float muneca = float.IsNaN(ejeDelta.x) ? 0f : angulo * Vector3.Dot(ejeDelta, eje);
+
+                // Se usa el movimiento mas grande de los dos (no se suman: al girar el volante la muneca tambien gira).
+                float giro = Mathf.Abs(orbita) > Mathf.Abs(muneca) ? orbita : muneca;
+                if (Mathf.Abs(giro) < 40f) Girar(giro * sensibilidad); // ignora saltos del tracking
             }
         }
         Actualizar();
     }
+
+    /// <summary>Posicion de la mano proyectada en el plano de la rueda, relativa a su centro.</summary>
+    Vector3 VectorEnRueda(Vector3 mano) => Vector3.ProjectOnPlane(mano - _rueda.position, transform.forward);
 
     void Girar(float grados)
     {
@@ -188,14 +205,14 @@ public class ValvulaBomba : MonoBehaviour
 
     void Actualizar()
     {
-        _rueda.localRotation = Quaternion.Euler(0f, 0f, -_giro);
-        // Aguja de -120 grados (minimo) a +120 grados (maximo), en sentido horario visto de frente.
+        _rueda.localRotation = Quaternion.Euler(0f, 0f, _giro); // la rueda gira con la mano
+        // Desde afuera, un angulo positivo sobre +Z local se ve en sentido horario.
         float t = _giro / giroTotal;
-        _aguja.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(120f, -120f, t));
+        _aguja.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(-120f, 120f, t)); // de izquierda a derecha, visto de frente
 
         int pct = PresionPorcentaje;
         string color = pct >= 80 ? "#FF6B5A" : pct >= 45 ? "#FFD54A" : "#7FD4FF";
-        _texto.text = $"PRESIÓN BOMBA <color={color}>{pct}%</color>\n<size=60%>{(_mano >= 0 ? "Gira la muñeca" : "Toma la válvula con GRIP y gírala")}</size>";
+        _texto.text = $"PRESIÓN BOMBA <color={color}>{pct}%</color>\n<size=60%>{(_mano >= 0 ? "Gira la mano en círculo (horario = más)" : "Toma la válvula con GRIP y gírala")}</size>";
 
         // Sonido de la bomba mientras sale agua.
         var lanza = _manguera != null ? _manguera.Lanza : null;

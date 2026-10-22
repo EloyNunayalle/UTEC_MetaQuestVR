@@ -42,6 +42,8 @@ public class CamionBomberos : MonoBehaviour
     public float frenado = 7f;
     [Tooltip("Grados por segundo de giro a buena velocidad.")]
     public float giroMaximo = 40f;
+    [Tooltip("Altura maxima (m) de la caja de choque al manejar. Mas baja = no se engancha con techos, ramas ni marcos de portones.")]
+    public float alturaChoque = 2.5f;
     [Tooltip("Zona muerta del joystick.")]
     public float zonaMuerta = 0.15f;
 
@@ -435,8 +437,10 @@ public class CamionBomberos : MonoBehaviour
         if (Mathf.Abs(grados) > 0.0001f)
         {
             Quaternion antes = transform.rotation;
+            Vector3 posAntes = transform.position;
+            RecordarContactos();
             transform.RotateAround(CentroBase, Vector3.up, grados);
-            if (HayChoqueAqui()) { transform.rotation = antes; Chocar(); }
+            if (HayChoqueAqui()) { transform.SetPositionAndRotation(posAntes, antes); Chocar(); }
         }
 
         // Avance con deteccion de choques.
@@ -479,11 +483,13 @@ public class CamionBomberos : MonoBehaviour
         alChocar?.Invoke();
     }
 
-    // Caja de choque: elevada del piso (para no chocar con el suelo ni con desniveles chicos).
+    // Caja de choque: elevada del piso (no choca con el suelo ni con veredas) y recortada
+    // arriba en "alturaChoque" (no se engancha con marcos de portones, techos ni ramas).
     const float AlturaLibre = 0.35f;
 
-    Vector3 CentroCaja => Local(0f, AlturaLibre + (_alto - AlturaLibre) * 0.5f, 0f);
-    Vector3 MitadCaja => new Vector3(_anchoMedio - 0.05f, Mathf.Max(0.2f, (_alto - AlturaLibre) * 0.5f - 0.1f), _largoMedio - 0.05f);
+    float AltoCaja => Mathf.Max(0.4f, Mathf.Min(_alto, alturaChoque) - AlturaLibre - 0.1f);
+    Vector3 CentroCaja => Local(0f, AlturaLibre + AltoCaja * 0.5f, 0f);
+    Vector3 MitadCaja => new Vector3(_anchoMedio - 0.05f, AltoCaja * 0.5f, _largoMedio - 0.05f);
     Quaternion RotCaja => Quaternion.LookRotation(Fwd, Vector3.up);
 
     bool HayChoqueEnCamino(Vector3 dir, float distancia)
@@ -499,10 +505,24 @@ public class CamionBomberos : MonoBehaviour
         return false;
     }
 
+    static readonly HashSet<Collider> _tocandoAntes = new HashSet<Collider>();
+
+    /// <summary>Guarda lo que el camion ya toca antes de girar.</summary>
+    void RecordarContactos()
+    {
+        _tocandoAntes.Clear();
+        foreach (var c in Physics.OverlapBox(CentroCaja, MitadCaja * 0.97f, RotCaja, ~0, QueryTriggerInteraction.Ignore))
+            if (!Ignorar(c)) _tocandoAntes.Add(c);
+    }
+
+    /// <summary>
+    /// True si al girar el camion se mete en algo NUEVO. Lo que ya tocaba antes no cuenta
+    /// (asi, si quedo rozando una pared, igual puede girar para salir y no se queda atascado).
+    /// </summary>
     bool HayChoqueAqui()
     {
         foreach (var c in Physics.OverlapBox(CentroCaja, MitadCaja * 0.97f, RotCaja, ~0, QueryTriggerInteraction.Ignore))
-            if (!Ignorar(c)) return true;
+            if (!Ignorar(c) && !_tocandoAntes.Contains(c)) return true;
         return false;
     }
 

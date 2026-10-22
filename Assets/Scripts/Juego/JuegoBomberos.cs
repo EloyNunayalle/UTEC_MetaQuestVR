@@ -40,10 +40,12 @@ public class JuegoBomberos : MonoBehaviour
     [Header("Incendio")]
     [Tooltip("Crea un edificio en llamas cruzando la calle (ultima tarea de la mision; tambien en Explorar).")]
     public bool incendioEnEdificio = true;
-    [Tooltip("Nombre del edificio que se incendia. Vacio = el edificio mas cercano al porton principal.")]
+    [Tooltip("Nombre del edificio que se incendia (opcional). Si hay varios con el mismo nombre se usa el mas cercano a 'Posicion Edificio Fuego'.")]
     public string nombreEdificioFuego = "";
-    [Tooltip("Punto de referencia para elegir el edificio si no se encuentra el porton principal.")]
-    public Vector3 referenciaEdificio = new Vector3(-5.25f, 0f, 13.65f);
+    [Tooltip("Se incendia el edificio (raiz de escena) mas cercano a este punto: el edificio gris alto de la calle este.")]
+    public Vector3 posicionEdificioFuego = new Vector3(13.96f, 0f, -27.31f);
+    [Tooltip("Punto de la calle desde donde se ve la fachada en llamas (los fuegos van en la cara que mira hacia aca).")]
+    public Vector3 calleFrenteEdificio = new Vector3(5.65f, 0f, -27.31f);
     [Tooltip("Donde crear un camion de reemplazo si el objeto del camion no existe en la escena.")]
     public Vector3 posicionCamionReemplazo = new Vector3(-5.19f, 0.127f, -10.2f);
 
@@ -237,7 +239,7 @@ public class JuegoBomberos : MonoBehaviour
         if (incendioEnEdificio)
         {
             _tFuego = NuevaTarea("Apaga el incendio",
-                "Cruza la calle con el camión, bájate, toma la manguera y apunta el chorro a cada fuego. Sube la presión con la válvula del panel para llegar a los pisos altos.",
+                "Sal por el portón y maneja hasta el edificio gris alto de la calle del costado. Bájate, toma la manguera y apunta el chorro a cada fuego; sube la presión con la válvula para los pisos altos.",
                 () =>
                 {
                     var z = _edificio != null ? _edificio.ZonaActivaMasCercana(_cabeza.position) : null;
@@ -340,30 +342,30 @@ public class JuegoBomberos : MonoBehaviour
     void PrepararEdificio()
     {
         if (_edificio != null) return;
-        Vector3 referencia = _principal != null ? _principal.transform.position : referenciaEdificio;
 
+        // Edificio = raiz de escena mas cercana a la posicion configurada (hay varios con el mismo nombre).
         Transform elegido = null;
-        if (!string.IsNullOrEmpty(nombreEdificioFuego)) elegido = Buscar(nombreEdificioFuego);
-        else
+        float mejor = float.MaxValue;
+        foreach (var t in FindObjectsOfType<Transform>())
         {
-            float mejor = float.MaxValue;
-            foreach (var t in FindObjectsOfType<Transform>())
-            {
-                if (t.parent != null) continue; // solo raices de escena (los edificios del kit)
-                string n = t.name;
-                if (!(n.StartsWith("Building") || n.StartsWith("Rowhouse") || n.Contains("Shop"))) continue;
-                Vector3 d = t.position - referencia; d.y = 0f;
-                if (d.sqrMagnitude < mejor) { mejor = d.sqrMagnitude; elegido = t; }
-            }
+            if (t.parent != null) continue; // solo raices de escena (los edificios del kit)
+            string n = t.name;
+            bool candidato = string.IsNullOrEmpty(nombreEdificioFuego)
+                ? n.StartsWith("Building") || n.StartsWith("Rowhouse") || n.Contains("Shop")
+                : n == nombreEdificioFuego;
+            if (!candidato) continue;
+            Vector3 d = t.position - posicionEdificioFuego; d.y = 0f;
+            if (d.sqrMagnitude < mejor) { mejor = d.sqrMagnitude; elegido = t; }
         }
-        if (elegido == null) return;
+        if (elegido == null || mejor > 15f * 15f) return; // el edificio aun no se cargo
 
         _edificio = elegido.GetComponent<EdificioEnLlamas>();
         if (_edificio == null) _edificio = elegido.gameObject.AddComponent<EdificioEnLlamas>();
-        _edificio.Inicializar(referencia); // la fachada que mira hacia la estacion
+        _edificio.alturaPiso = 3.3f;
+        _edificio.Inicializar(calleFrenteEdificio); // fachada que da a la calle
         _edificio.alApagarZona += AlApagarZonaFuego;
         _edificio.alApagarTodo += AlApagarIncendio;
-        Debug.Log($"[JuegoBomberos] Edificio en llamas: {elegido.name} ({_edificio.Total} focos)", elegido);
+        Debug.Log($"[JuegoBomberos] Edificio en llamas: {elegido.name} en {elegido.position} ({_edificio.Total} focos)", elegido);
     }
 
     void AlApagarZonaFuego(ZonaFuego z)
@@ -622,7 +624,7 @@ public class JuegoBomberos : MonoBehaviour
             "- Manguera: en el panel del camión (GRIP y gatillo)\n" +
             "- Chaleco y extintor: agárralos con GRIP\n" +
             "- Camión: párate en el círculo amarillo para manejar\n" +
-            (_edificio != null ? $"- Edificio en llamas (cruzando la calle): {_edificio.Apagadas}/{_edificio.Total} apagados\n" : "") +
+            (_edificio != null ? $"- Edificio en llamas (calle del costado): {_edificio.Apagadas}/{_edificio.Total} apagados\n" : "") +
             "- Válvula del panel del camión: sube la presión del agua",
             "");
     }
@@ -805,7 +807,7 @@ public class JuegoBomberos : MonoBehaviour
 
         // Sin incendio (o ya apagado): la mision termina al subir, como antes.
         if (_tFuego == null || _tFuego.hecha) { CompletarMision(); return; }
-        Aviso("¡Al camión!\n<size=55%>Maneja hasta el edificio en llamas, cruzando la calle</size>", TipoAviso.Exito, 3.5f);
+        Aviso("¡Al camión!\n<size=55%>Sigue la flecha hasta el edificio en llamas</size>", TipoAviso.Exito, 3.5f);
     }
 
     void CompletarMision()
