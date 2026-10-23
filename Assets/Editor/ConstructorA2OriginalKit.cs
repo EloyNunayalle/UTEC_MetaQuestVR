@@ -17,6 +17,8 @@ public static class ConstructorA2OriginalKit
     private const string Carpeta = "Assets/Models/CiudadNueva/FinalA2Kit";
     private const string PrefabsOriginal = "Assets/Prefabs/Ciudad/Edificios/A2/Original";
     private const float Margen = 0.02f;
+    // Piso interior elevado para evitar z-fighting con el suelo exterior (Medium/Large).
+    private const float DeltaPiso = 0.03f;
 
     private class Fuente
     {
@@ -164,6 +166,15 @@ public static class ConstructorA2OriginalKit
                         var normal = Vector3.Cross(pb - pa, pc - pa).normalized;
                         if (Vector3.Dot(normal, (pa + pb + pc) / 3f - centro) < 0f) normal = -normal;
                         pa += normal * Margen; pb += normal * Margen; pc += normal * Margen;
+                    }
+                    else if (destino == 1)
+                    {
+                        // Piso interior a nivel de suelo: se sube para que no pelee con la calle.
+                        var nf = Vector3.Cross(pb - pa, pc - pa).normalized;
+                        if (nf.y > 0.55f && (pa.y + pb.y + pc.y) / 3f < 0.2f)
+                        {
+                            pa.y += DeltaPiso; pb.y += DeltaPiso; pc.y += DeltaPiso;
+                        }
                     }
                     int ia = AgregarVertice(nv, nn, nt, nuv, pa, hn ? n[a] : Vector3.up, ht ? t[a] : Vector4.zero, UvPara(m, uv, huv, a, ladrillo, vidrio, fake, atlas));
                     int ib = AgregarVertice(nv, nn, nt, nuv, pb, hn ? n[b2] : Vector3.up, ht ? t[b2] : Vector4.zero, UvPara(m, uv, huv, b2, ladrillo, vidrio, fake, atlas));
