@@ -333,12 +333,14 @@ Se probaron dos variantes de `Mesh.CombineMeshes` sobre los objetos estáticos (
 |---|---:|---|---|---|
 | `A2/Paleta/` | 6 actuales | **3: ladrillo + `M_Detalle_BVerdeFake` + `M_Glass_Transparente`** | Transparente | Visible |
 | `A1/Paleta/` | 6 actuales | **2: ladrillo + `M_Atlas_A1_2Mat`** | Opaco | Oculto |
-| `A2/Original/` | 5 (incluye Large) | 2: `M_Atlas_A2_Final` + `M_Glass_Transparente` | Transparente | Visible |
-| `A1/Original/` | 5 (incluye Large) | 1: `M_Atlas_A1_Final` | Opaco | Oculto |
+| `A2/Original/` | 5 (incluye Large) | **3: ladrillo original + `M_Atlas_Original_A2` + `M_Glass_Transparente`** | Transparente | Visible |
+| `A1/Original/` | 5 (incluye Large) | **2: ladrillo original + `M_Atlas_Original_A1`** | Opaco | Oculto |
 
 - **A2 actual:** reconstruido desde el B fix, conservando su atlas original de detalle/fake. **3 materiales**: ladrillo + detalle/fake + vidrio. Se eliminó el renderer/material extra de trim alterno para cumplir el máximo de 3.
 - **A1 actual:** **2 materiales**: ladrillo + atlas opaco `M_Atlas_A1_2Mat`. El atlas elimina el fake y las caras de vidrio se mandan a un bloque de ventana opaca.
 - **Escaleras Rowhouse/Corner:** se elevó el edificio **+1.006 m**, se dejó la escalera en el suelo y se agregó una base/fundación. El umbral de la puerta coincide con el último escalón.
+- **Originales:** reconstruidos desde las mallas/materiales originales con la misma arquitectura: A2 3mat y A1 2mat. El fake quedó solo en las caras de ventana; techos, pisos y detalles usan su material propio.
+- **Techos/tapas:** se agregó una tapa superior a los 22 prefabs para cerrar la vista desde arriba; se eliminaron los bordes invisibles y el cambio de color por coplanaridad/mipmaps.
 - **Cajas:** usan el material de ladrillo; no se usan `MaterialPropertyBlock`.
 - **LODs:** LOD0 + **LOD1 decimado 50 %** + caja + culled. Umbrales `0.25 / 0.12 / 0.05 / 0.02`.
 - **LOD1:** 22 mallas generadas con Blender 5.2 (`decimar_lote.py`), FBX importado y corregido el espejo X del pipeline OBJ→Blender→FBX. El LOD1 conserva UVs y materiales del LOD0. Triángulos actuales: Small ~9–10K, Medium 30K, Corner 7.8K, Rowhouse 2K.

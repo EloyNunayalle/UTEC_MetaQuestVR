@@ -13,11 +13,22 @@
 - **Atlas opaco** `M_Atlas_A1_2Mat` con detalles + ventanas opacas, sin fake.
 - No usa vidrio transparente.
 
+### Originales A1/A2
+- Reconstruidos con las mallas/materiales originales.
+- A2 Original: 3 materiales y fake solo en ventanas.
+- A1 Original: 2 materiales sin fake.
+- Techos, pisos y detalles ya no comparten UV con el fake.
+
 ## Escaleras Rowhouse / Corner
 - El edificio se elevó **1.006 m**.
 - La escalera queda en el suelo y su último escalón coincide con el umbral.
 - Se agregó una base/fundación de 0 a 1.006 m.
 - La puerta y el marco dejan de verse cortados.
+
+## Techos
+- Se agregó una **tapa superior** a los 22 prefabs para cerrar la vista desde arriba.
+- Evita que desaparezcan los bordes por backface culling.
+- Tapa el posible cambio de color por caras coplanares/mipmaps del techo.
 
 ## LODs
 - **LOD0 + LOD1 decimado 50 % + caja + culled**.

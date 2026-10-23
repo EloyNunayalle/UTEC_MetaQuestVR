@@ -52,7 +52,7 @@
 - **Piernas al sentarse**: sin animación quedan **rectas** ✗ (el "crouch" que las doblaba era parte del sistema de animación ✗).
 - **Caminar**: descartado por ahora ✗ (requiere un sistema procedural propio ✗).
 
-## 5. Evidencia (capturas en `Assets/Screenshots/_trabajo/`)
+## 5. Evidencia (capturas en `Assets/Screenshots/`)
 
 | Captura | Muestra |
 |---|---|

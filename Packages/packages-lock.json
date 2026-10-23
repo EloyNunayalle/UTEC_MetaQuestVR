@@ -15,7 +15,7 @@
         "com.unity.nuget.newtonsoft-json": "3.0.2",
         "com.unity.test-framework": "1.1.31"
       },
-      "hash": "142ea0af4890337f0ff6658df61db23982313717"
+      "hash": "ed4e205d31a545bac3686d5e19210e67959aeddd"
     },
     "com.meta.xr.mrutilitykit": {
       "version": "201.0.0",
