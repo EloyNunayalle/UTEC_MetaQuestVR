@@ -37,7 +37,7 @@ public static class SubirPisoInteriorA1A2
                     var lod = content.GetComponent<LODGroup>();
                     if (lod == null) continue;
                     var niveles = lod.GetLODs();
-                    var procesadas = new HashSet<int>();
+                    var mapaMallas = new Dictionary<int, Mesh>();
                     for (int li = 0; li < niveles.Length; li++)
                     {
                         if (niveles[li].renderers == null) continue;
@@ -46,12 +46,19 @@ public static class SubirPisoInteriorA1A2
                             if (r == null || r.name.Contains("Caja")) continue;
                             var mf = r.GetComponent<MeshFilter>();
                             if (mf == null || mf.sharedMesh == null) continue;
-                            if (!procesadas.Add(mf.sharedMesh.GetInstanceID())) continue;
+                            Mesh yaCorregida;
+                            if (mapaMallas.TryGetValue(mf.sharedMesh.GetInstanceID(), out yaCorregida))
+                            {
+                                // Malla compartida entre LODs: reusar la versión ya corregida.
+                                if (mf.sharedMesh != yaCorregida) { mf.sharedMesh = yaCorregida; cambio = true; }
+                                continue;
+                            }
                             var nueva = Levantar(mf.sharedMesh, r.sharedMaterials);
                             if (nueva == null) continue;
                             string rutaMesh = AssetDatabase.GenerateUniqueAssetPath(
                                 Carpeta + "/" + nombre + "_" + mf.sharedMesh.name.Replace(" ", "_") + "_PisoUp.asset");
                             AssetDatabase.CreateAsset(nueva, rutaMesh);
+                            mapaMallas[mf.sharedMesh.GetInstanceID()] = nueva;
                             mf.sharedMesh = nueva;
                             cambio = true;
                         }
@@ -116,7 +123,13 @@ public static class SubirPisoInteriorA1A2
         var m = new Mesh();
         m.name = src.name + "_PisoUp";
         m.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-        m.SetVertices(nv); m.SetNormals(nn); m.SetTangents(nt); m.SetUVs(0, nuv); m.SetUVs(1, nuv2); m.SetColors(nc);
+        m.SetVertices(nv); m.SetNormals(nn);
+        // Solo escribir los canales que existían en la malla original:
+        // añadir colores/tangentes en cero tiñe el edificio de negro.
+        if (ht) m.SetTangents(nt);
+        m.SetUVs(0, nuv);
+        if (huv2) m.SetUVs(1, nuv2);
+        if (hc) m.SetColors(nc);
         m.subMeshCount = tris.Length;
         for (int s = 0; s < tris.Length; s++) m.SetTriangles(tris[s], s);
         m.RecalculateBounds();
