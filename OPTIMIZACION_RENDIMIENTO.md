@@ -397,6 +397,18 @@ Se eliminaron las copias temporales/fallidas (`2Mat_v1`, `B_FakeFix_v1..v4`, `A1
 - Pipeline: exportar la malla atlas a OBJ, decimar en Blender 5.2 headless (`Herramientas/Blender/decimar_lod.py`), importar el FBX, corregir el espejo X y crear las mallas finales. El script `UTEC > Árboles > 4 Insertar LOD1 decimado en escena` arma los `LODGroup` (idempotente).
 - Nota: los edificios conservan su LOD vacío final; su caja se culla al 0.05, no al 0.02. Es un ajuste independiente que no se tocó en esta pasada.
 
+### 2.9 Optimización de draw calls de la escena (25/10/2026)
+
+- **Baseline en build Windows Development** con static batching real: 620–742 draw calls y 450–680K triángulos en las vistas principales.
+- **Props combinados por material** (226 renderers → 6 combos): veredas, flores, pasto, asfalto, tierra y decals. Se conservan los GameObjects originales con colliders; solo se desactivan sus renderers.
+- **Estación de bomberos**: 18 renderers estáticos → 14 combos por material; se agregó LODGroup `LOD0 29 / LOD1 15 / LOD2 1 caja`, manteniendo portón, puerta y mecanismos dinámicos.
+- **Cerco**: 19 renderers estáticos → 2 combos; la rampa se marcó estática. Se preserva el portón dinámico.
+- **Sombras**: 59 casters apagados (vegetación baja, vidrio/fake, props, cerco y mecanismos). Se mantiene sombra en edificios, árboles LOD0 y estructura principal de la estación. En Android, `AjusteLODDispositivo` fija **1 cascada** y hard shadows.
+- **Perfil Quest (Medium, 1 cascada)**: 226–238 draw calls en vistas principales y **106** en la esquina lejana con LOD de estación; 399–488K triángulos.
+- **Sin sombras**: 139–150 draw calls y 203–376K triángulos.
+- **Descartado**: GPU instancing en árboles/billboards no redujo draw calls con LODGroup; el cambio de Read/Write en las mallas tampoco cambió el batching. Ambos se revirtieron.
+- **Pendiente**: los draw calls 226–238 siguen por encima del objetivo Quest 3 (<200) y Quest 2 (<100). El siguiente trabajo es reducir árboles/edificios/estación en LOD0, evaluar sombras de árboles y avanzar con streaming/atlas de edificios.
+
 ---
 
 ## 3. Streaming de tiles

@@ -47,6 +47,30 @@ public class DiagnosticoRT : MonoBehaviour
 
     private void Start()
     {
+        var args = System.Environment.GetCommandLineArgs();
+        bool perfilQuest = System.Array.IndexOf(args, "--quest") >= 0;
+        bool sinSombras = System.Array.IndexOf(args, "--sin-sombras") >= 0;
+
+        if (perfilQuest)
+        {
+            QualitySettings.SetQualityLevel(2, true);
+            QualitySettings.shadowCascades = 1;
+            QualitySettings.shadows = ShadowQuality.HardOnly;
+            Debug.Log("[Diagnostico] perfil=Quest (Medium, 1 cascada)");
+        }
+
+        if (sinSombras)
+        {
+            QualitySettings.shadows = ShadowQuality.Disable;
+            foreach (var luz in Object.FindObjectsOfType<Light>(true))
+                luz.shadows = LightShadows.None;
+            Debug.Log("[Diagnostico] sombras=OFF");
+        }
+        else
+        {
+            Debug.Log("[Diagnostico] sombras=ON");
+        }
+
         StartCoroutine(Registrar());
     }
 

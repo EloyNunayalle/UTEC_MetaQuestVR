@@ -14,6 +14,11 @@ public static class AjusteLODDispositivo
 
         string modelo = SystemInfo.deviceModel.ToLowerInvariant();
 
+        // Menos cascadas = menos pasada de sombras. Con sombras a 40 m alcanza
+        // para la escala de la ciudad y libera draw calls en Quest 2/3.
+        QualitySettings.shadowCascades = 1;
+        QualitySettings.shadows = ShadowQuality.HardOnly;
+
         if (modelo.Contains("quest 3"))
             QualitySettings.lodBias = 1.5f;
         else if (modelo.Contains("quest 2"))
