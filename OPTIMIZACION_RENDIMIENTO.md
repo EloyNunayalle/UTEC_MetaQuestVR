@@ -285,7 +285,8 @@ Se probaron dos variantes de `Mesh.CombineMeshes` sobre los objetos estáticos (
 - `Assets/Screenshots/lod_arboles.png` — árboles LOD0 + billboards.
 
 #### Pendiente de esta fase
-- Atlas de billboards de árboles (11 texturas → 1 material) para bajar draw calls de árboles.
+- Atlas de billboards de árboles (11 texturas → 1 material): **hecho** en la escena principal.
+- LOD1 decimado de árboles: **hecho** en la escena principal (ver 2.8).
 - Decimar Rowhouse/Corner solo si se quiere una vista media aún más barata (son low-poly).
 - Convertir los `LODGroup` montados en la escena en **prefabs/variantes reutilizables** para los demás tiles.
 - Validar transiciones/pop y FPS en Quest 2/3 (sin visor disponible).
@@ -382,6 +383,19 @@ Se eliminaron las copias temporales/fallidas (`2Mat_v1`, `B_FakeFix_v1..v4`, `A1
 - **LOD1:** regenerado para los 12 prefabs actuales y los originales.
 - **Respaldo previo:** `Backups/Ciudad_Antes_3Mat_2026-10-22/` (escena, prefabs A1/A2 y prefabs fuente Rowhouse/Corner), fuera de `Assets/` para no duplicar GUIDs.
 - **Pendiente:** bake de luz y medición real en Quest 2/3.
+
+---
+
+### 2.8 LODs de árboles en la escena principal (25/10/2026)
+
+- **LOD0:** malla completa con el atlas de árboles (1 material).
+- **LOD1:** árbol decimado al **50 %** (BirchTree_3 al **70 %** para conservar la copa), conservando UVs y material del atlas. Mallas finales en `Assets/Models/StylizedNature/LOD1Final`.
+- **LOD2:** billboard (atlas propio, a doble cara desde el fix anterior).
+- **Culled:** umbral efectivo **0.02**.
+- Umbrales: `0.18 / 0.06 / 0.02`. El LOD vacío anterior en 0.02 hacía que el árbol se cullara realmente a **0.06**; ahora el billboard es el último LOD visible y el culling es a 0.02.
+- Triángulos de las 26 instancias: **140.364 (LOD0) → 75.622 (LOD1, −46 %)**; billboards 208 tris. El LOD1 copia sombras/probes del LOD0; el billboard no proyecta sombras.
+- Pipeline: exportar la malla atlas a OBJ, decimar en Blender 5.2 headless (`Herramientas/Blender/decimar_lod.py`), importar el FBX, corregir el espejo X y crear las mallas finales. El script `UTEC > Árboles > 4 Insertar LOD1 decimado en escena` arma los `LODGroup` (idempotente).
+- Nota: los edificios conservan su LOD vacío final; su caja se culla al 0.05, no al 0.02. Es un ajuste independiente que no se tocó en esta pasada.
 
 ---
 
