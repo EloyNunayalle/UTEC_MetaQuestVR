@@ -10,11 +10,11 @@ using UnityEngine.SceneManagement;
 /// Reconstruye el atlas de árboles (corteza + hojas) y las mallas LOD0.
 ///
 /// La corteza original usa UVs tileados fuera de [0,1] (p. ej. v de -4.3 a 5.3).
-/// Por eso su celda del atlas contiene una repetición 4x4 de la textura: cada
+/// Por eso su celda del atlas contiene una repetición 2x2 de la textura: cada
 /// triángulo se desplaza por un número entero de tiles y se mapea dentro de la
 /// celda, de modo que nunca muestrea fuera del atlas. Las hojas ya usan UVs 0..1.
-/// Los pocos triángulos de corteza que abarcan más de 4 tiles (Normal) se
-/// ajustan uniformemente a la celda; la compresión máxima es ~10%.
+/// Los pocos triángulos de corteza que abarcan más de 2 tiles (Normal) se
+/// ajustan uniformemente a la celda; el resto conserva la densidad original.
 ///
 /// Los assets se modifican en sitio para conservar GUIDs y las referencias de
 /// la escena. Se puede ejecutar varias veces sin crear assets duplicados.
@@ -26,10 +26,10 @@ public static class ConstructorAtlasArbolesLOD0
     private const string CarpetaPrefabs = "Assets/Models/StylizedNature/Prefabs";
     private const string RutaAtlas = Carpeta + "/T_Arboles_Atlas.png";
     private const string RutaMaterial = Carpeta + "/M_Arboles_Atlas.mat";
-    private const int TamanoAtlas = 4096;
-    private const int TamanoCelda = 1016;
+    private const int TamanoAtlas = 2048;
+    private const int TamanoCelda = 504;
     private const int Padding = 4;
-    private const int FactorCorteza = 4;
+    private const int FactorCorteza = 2;
     private const float InsetTexeles = 1.5f;
 
     private class DatosTipo
@@ -365,7 +365,7 @@ public static class ConstructorAtlasArbolesLOD0
                     {
                         // Triángulo que abarca más de FactorCorteza tiles (solo
                         // algunos de Normal). Se ajusta uniformemente a la celda;
-                        // la compresión es como máximo ~10%.
+                        // el resto de triángulos conserva su escala original.
                         float escala = 1f / Mathf.Max(spanU, spanV);
                         int ia = AgregarAjustado(a, rect, minU, minV, escala);
                         int ib = AgregarAjustado(b, rect, minU, minV, escala);
