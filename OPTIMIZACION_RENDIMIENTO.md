@@ -409,6 +409,17 @@ Se eliminaron las copias temporales/fallidas (`2Mat_v1`, `B_FakeFix_v1..v4`, `A1
 - **Descartado**: GPU instancing en árboles/billboards no redujo draw calls con LODGroup; el cambio de Read/Write en las mallas tampoco cambió el batching. Ambos se revirtieron.
 - **Pendiente**: los draw calls 226–238 siguen por encima del objetivo Quest 3 (<200) y Quest 2 (<100). El siguiente trabajo es reducir árboles/edificios/estación en LOD0, evaluar sombras de árboles y avanzar con streaming/atlas de edificios.
 
+### 2.10 Diagnóstico de batching y submeshes (25/10/2026)
+
+- **El static batching del build sí funciona**: 115/150 renderers activos están en batches estáticos; árboles 51/52 y billboards 25/26. Probar los árboles como no estáticos empeora (233 → 239 draw calls) con los mismos triángulos; se mantiene el static batching.
+- **Read/Write y GPU instancing**: descartados. El test de instancing anterior estaba contaminado porque los árboles seguían siendo estáticos.
+- **Submeshes**: los meshes fuente de árboles, billboards, estación combinada y props ya son **1 submesh / 1 material**. Los 612/626 submeshes del log de build son submeshes internos de los static batches, no de los meshes fuente. **No hay que fusionar submeshes** en estos assets.
+- **Medición del tile**: 150 renderers, main pass 139–150 draw calls, sombras ~94, total 226–238; 399–488K triángulos. La cámara del diagnóstico no reproduce bien la selección de LOD de árboles/billboards (todos aparecen activos; los edificios muestran LOD0); no se usa para concluir que los LODs están rotos. Falta medir con la cámara real del juego.
+- **El juego completo no es solo el tile**: `GestorEscenas` carga `Persistente + Ciudad_Tile_00` de forma aditiva, `JuegoBomberos` instancia el camión y `Estacion_Interior` se carga por proximidad. La medición del tile no incluye camión, manos/controles ni interior; el presupuesto real es mayor.
+- **Plan corregido**: (1) medir el juego completo con la cámara real; (2) agrupar los 26 árboles por celdas de 25 m → 7 LODGroups; (3) sombras; (4) camión/interior; (5) HLOD por tile y streaming multi-tile.
+- **Resultado de la agrupación por celdas (25/10/2026)**: 26 árboles → **7 LODGroups**; renderers activos **150 → 93**; draw calls **226–238 → 194–205**; esquina lejana **106 → 98**; 403–490K triángulos. Los LOD0/LOD1/billboard se combinan por celda y los colliders originales se conservan. Captura: `Assets/Screenshots/Arboles_Celdas_25m.png`.
+- **Estado**: el tile solo queda en ~200 draw calls (Quest 3 casi cumplido; Quest 2 sigue >100). El juego completo (Persistente + camión + interior) todavía no está medido; es el siguiente paso P0.
+
 ---
 
 ## 3. Streaming de tiles

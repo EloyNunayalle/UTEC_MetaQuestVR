@@ -34,6 +34,7 @@ public class DiagnosticoRT : MonoBehaviour
         _cam.clearFlags = CameraClearFlags.SolidColor;
         _cam.backgroundColor = new Color(0.09f, 0.12f, 0.18f);
         _cam.cullingMask = ~0;
+        _cam.tag = "MainCamera";
     }
 
     private void OnEnable()
@@ -71,7 +72,44 @@ public class DiagnosticoRT : MonoBehaviour
             Debug.Log("[Diagnostico] sombras=ON");
         }
 
+        LogBatching();
         StartCoroutine(Registrar());
+    }
+
+    private void LogBatching()
+    {
+        int total = 0;
+        int batched = 0;
+        var porRoot = new System.Collections.Generic.Dictionary<string, int[]>();
+        var porMaterial = new System.Collections.Generic.Dictionary<string, int[]>();
+
+        foreach (var r in Object.FindObjectsOfType<MeshRenderer>(true))
+        {
+            if (!r.enabled) continue;
+            total++;
+            bool estaBatcheado = r.isPartOfStaticBatch;
+            if (estaBatcheado) batched++;
+
+            var t = r.transform;
+            while (t.parent != null) t = t.parent;
+            string root = t.name;
+            if (!porRoot.TryGetValue(root, out var datosRoot))
+                porRoot[root] = datosRoot = new int[2];
+            datosRoot[0]++;
+            if (estaBatcheado) datosRoot[1]++;
+
+            string mat = r.sharedMaterial != null ? r.sharedMaterial.name : "(sin material)";
+            if (!porMaterial.TryGetValue(mat, out var datosMat))
+                porMaterial[mat] = datosMat = new int[2];
+            datosMat[0]++;
+            if (estaBatcheado) datosMat[1]++;
+        }
+
+        Debug.Log("[Diagnostico] staticBatch=" + batched + "/" + total);
+        foreach (var par in porRoot)
+            Debug.Log("[Diagnostico] batch root " + par.Key + "=" + par.Value[1] + "/" + par.Value[0]);
+        foreach (var par in porMaterial)
+            Debug.Log("[Diagnostico] batch mat " + par.Key + "=" + par.Value[1] + "/" + par.Value[0]);
     }
 
     private void OnDisable()
@@ -124,6 +162,7 @@ public class DiagnosticoRT : MonoBehaviour
             _cam.transform.position = pos;
             _cam.transform.LookAt(look);
             yield return new WaitForSecondsRealtime(0.6f);
+            if (i == 1) LogActivos("este");
 
             float drawCalls = _drawCalls.LastValue;
             float batches = _batches.LastValue;
@@ -156,6 +195,50 @@ public class DiagnosticoRT : MonoBehaviour
         Debug.Log("[Diagnostico] archivo=" + _ruta);
 
         Application.Quit();
+    }
+
+    private void LogActivos(string etiqueta)
+    {
+        int total = 0;
+        int batched = 0;
+        int submeshes = 0;
+        var porRoot = new System.Collections.Generic.Dictionary<string, int[]>();
+        var porMaterial = new System.Collections.Generic.Dictionary<string, int[]>();
+
+        foreach (var r in Object.FindObjectsOfType<MeshRenderer>(true))
+        {
+            if (!r.enabled) continue;
+            total++;
+            if (r.isPartOfStaticBatch) batched++;
+            var mf = r.GetComponent<MeshFilter>();
+            int sub = (mf != null && mf.sharedMesh != null) ? mf.sharedMesh.subMeshCount : 0;
+            submeshes += sub;
+
+            var t = r.transform;
+            while (t.parent != null) t = t.parent;
+            string root = t.name;
+            if (!porRoot.TryGetValue(root, out var datosRoot))
+                porRoot[root] = datosRoot = new int[3];
+            datosRoot[0]++;
+            if (r.isPartOfStaticBatch) datosRoot[1]++;
+            datosRoot[2] += sub;
+
+            string mat = r.sharedMaterial != null ? r.sharedMaterial.name : "(sin material)";
+            if (!porMaterial.TryGetValue(mat, out var datosMat))
+                porMaterial[mat] = datosMat = new int[3];
+            datosMat[0]++;
+            if (r.isPartOfStaticBatch) datosMat[1]++;
+            datosMat[2] += sub;
+        }
+
+        Debug.Log("[Diagnostico] activos " + etiqueta + " renderers=" + total +
+                  " submeshes=" + submeshes + " batched=" + batched);
+        foreach (var par in porRoot)
+            Debug.Log("[Diagnostico] activo root " + par.Key + " rend=" + par.Value[0] +
+                      " sub=" + par.Value[2] + " batch=" + par.Value[1]);
+        foreach (var par in porMaterial)
+            Debug.Log("[Diagnostico] activo mat " + par.Key + " rend=" + par.Value[0] +
+                      " sub=" + par.Value[2] + " batch=" + par.Value[1]);
     }
 
     private string ValorF0(ProfilerRecorder rec)
