@@ -189,6 +189,26 @@ Todo se crea solo al darle Play (`JuegoBomberos` → `Usar Manguera`). Para ajus
 - **Licencia**: CC0 1.0 Universal (dominio público) — https://creativecommons.org/publicdomain/zero/1.0/ — **no exige atribución** (se acredita igualmente por trazabilidad).
 - **Modificaciones**: ninguna en la malla; en el proyecto se coloca sobre el tablero del camión (misma posición/rotación, corrida a la derecha) y muestra el GPS de la misión por código.
 
+### Misión 2 — Incendio eléctrico
+
+Assets incorporados para la M2 (ver `Assets/Models/Mision2/LICENCIAS_MISION2.md`):
+
+- **"VR-Ready Fuse Box" (tablero eléctrico)** — autor: Jimmy Johansson (Sketchfab)
+  - Fuente: https://sketchfab.com/3d-models/vr-ready-fuse-box-e7ffc35358af4ae0b981f4bd2eadb38a
+  - Licencia: **CC BY 4.0** — https://creativecommons.org/licenses/by/4.0/
+  - **Incluido en el repositorio** en `Assets/Models/Mision2/TableroElectrico/`, con atribución.
+  - Modificaciones: ninguna en la malla; se usará como tablero principal de la M2.
+
+- **"CO2 FIRE EXTINGUISHER LOW POLY" (extintor CO₂)** — autor: TheAppXR team / Oobe-Xr Srl (Fab)
+  - Fuente: https://www.fab.com/listings/871bfbbd-90a2-48dd-8e9c-02541572cc57
+  - Licencia: **Fab Standard License** (Personal/Professional, gratuita; se registra Personal). Permite uso y modificación dentro del proyecto, pero **prohíbe redistribuir el archivo original**.
+  - **No incluido en el repositorio**: el `.glb` queda local en `Assets/Models/Mision2/ExtintorCO2/`. Se versionan el `.meta` y `ATRIBUCION.txt` para re-vincularlo al agregar el archivo con el mismo nombre.
+
+- **"Ac units - Game Ready" (equipo que se incendia)** — autor: abistar (CGTrader)
+  - Fuente: https://www.cgtrader.com/items/5046685
+  - Licencia: **CGTrader Royalty-Free** (modelo gratuito). Permite uso dentro del proyecto, pero **prohíbe redistribuir el archivo 3D original**.
+  - **No incluido en el repositorio**: el `.fbx` queda local en `Assets/Models/Mision2/EquipoIncendio/`. Se versionan el `.meta` y `ATRIBUCION.txt` para re-vincularlo al agregar el archivo con el mismo nombre.
+
 ### Kit de ciudad: "Downtown City MegaKit" (Standard)
 - **Autor**: Quaternius (https://quaternius.com)
 - **Fuente**: https://quaternius.com/packs/downtowncitymegakit.html

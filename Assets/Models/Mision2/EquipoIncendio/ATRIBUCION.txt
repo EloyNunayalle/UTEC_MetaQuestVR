@@ -1,0 +1,16 @@
+"Ac units - Game Ready" — Atribución de licencia
+=================================================
+
+Modelo:   Ac units - Game Ready
+Autor:    abistar
+Perfil:   https://www.cgtrader.com/designers/abistar
+Fuente:   https://www.cgtrader.com/items/5046685
+Licencia: CGTrader Royalty-Free License (modelo gratuito).
+          Permite uso personal y comercial dentro de un proyecto mayor;
+          prohíbe redistribuir o revender el archivo 3D original por separado.
+          La atribución no es obligatoria, pero se acredita igualmente.
+
+Modificaciones realizadas a este modelo:
+- Ninguna en la malla: se importa tal cual.
+- En el proyecto se usará como equipo/máquina que se incendia en la Misión 2
+  (el fuego, chispas y arcos se añadirán por código).

@@ -1,0 +1,17 @@
+"CO2 FIRE EXTINGUISHER LOW POLY" — Atribución de licencia
+==========================================================
+
+Modelo:   CO2 FIRE EXTINGUISHER LOW POLY
+Autor:    TheAppXR team / Oobe-Xr Srl
+Perfil:   https://www.fab.com/sellers/Oobe-Xr%20Srl
+Fuente:   https://www.fab.com/listings/871bfbbd-90a2-48dd-8e9c-02541572cc57
+Licencia: Fab Standard License (modalidades Personal y Professional, gratuitas).
+          El listado ofrece ambas; para este proyecto académico se registra la
+          modalidad Personal (menos de 100 000 USD de ingresos anuales).
+          Permite uso comercial y modificación; prohíbe redistribuir el archivo
+          original por separado. No exige atribución, pero se acredita igualmente.
+
+Modificaciones realizadas a este modelo:
+- Ninguna en la malla: se importa tal cual.
+- En el proyecto se usará como extintor CO2 de la Misión 2; el chorro, pasador
+  y gatillo se animarán por código.

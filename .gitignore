@@ -142,6 +142,22 @@ InitTestScene*.unity*
 !/Assets/Models/Tablet_Rugged/**/
 !/Assets/Models/Tablet_Rugged/**/*.meta
 !/Assets/Models/Tablet_Rugged/LICENCIA.txt
+#
+# "CO2 FIRE EXTINGUISHER LOW POLY" - TheAppXR / Oobe-Xr (Fab)
+# Fab Standard License: prohibida la redistribucion del archivo original.
+# Se versionan solo .meta y ATRIBUCION.txt; el .glb queda local.
+/Assets/Models/Mision2/ExtintorCO2/**
+!/Assets/Models/Mision2/ExtintorCO2/**/
+!/Assets/Models/Mision2/ExtintorCO2/**/*.meta
+!/Assets/Models/Mision2/ExtintorCO2/ATRIBUCION.txt
+#
+# "Ac units - Game Ready" - abistar (CGTrader)
+# CGTrader Royalty-Free: prohibida la redistribucion del archivo 3D original.
+# Se versionan solo .meta y ATRIBUCION.txt; el .fbx queda local.
+/Assets/Models/Mision2/EquipoIncendio/**
+!/Assets/Models/Mision2/EquipoIncendio/**/
+!/Assets/Models/Mision2/EquipoIncendio/**/*.meta
+!/Assets/Models/Mision2/EquipoIncendio/ATRIBUCION.txt
 
 # ============================================================
 # Meta Avatars SDK - Sample Scenes (288 MB, solo referencia/desarrollo)

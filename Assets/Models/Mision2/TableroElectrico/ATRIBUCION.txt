@@ -1,0 +1,17 @@
+"VR-Ready Fuse Box" — Atribución de licencia
+================================================
+
+Modelo:   VR-Ready Fuse Box
+Autor:    Jimmy Johansson
+Perfil:   https://sketchfab.com/Jimmy_Johansson
+Fuente:   https://sketchfab.com/3d-models/vr-ready-fuse-box-e7ffc35358af4ae0b981f4bd2eadb38a
+Licencia: Creative Commons Attribution 4.0 (CC BY 4.0)
+          https://creativecommons.org/licenses/by/4.0/
+
+La licencia requiere acreditar al autor, enlazar la licencia e indicar
+los cambios realizados. El uso comercial está permitido.
+
+Modificaciones realizadas a este modelo:
+- Ninguna en la malla: se importa tal cual.
+- En el proyecto se usará como tablero eléctrico principal de la Misión 2
+  (interruptor principal, breakers y señalética se añadirán por código/prefabs).
