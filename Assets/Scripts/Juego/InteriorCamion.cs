@@ -42,13 +42,6 @@ public class InteriorCamion : MonoBehaviour
     public Vector3 puntoDestino = new Vector3(-5.19f, 0f, -1f);
     public float velocidadMinimaEta = 3f;
 
-    [Header("Botones de cabina (sirena / luces)")]
-    public bool crearBotonesCabina = true;
-    [Tooltip("Posicion local en el camion: x derecha, y arriba, z frente.")]
-    public Vector3 centroBotonesCabina = new Vector3(-0.30f, 1.80f, 3.95f);
-    public float separacionBotonesCabina = 0.17f;
-    public float escalaBotonesCabina = 0.50f;
-
     // Paleta.
     static readonly Color ColFondo = new Color(0.055f, 0.08f, 0.13f, 0.96f);
     static readonly Color ColBorde = new Color(0.28f, 0.42f, 0.58f, 0.85f);
@@ -71,7 +64,6 @@ public class InteriorCamion : MonoBehaviour
     TextMeshPro _velTxt, _marchaTxt, _lucesTxt, _sirenaTxt, _etaTxt;
     TextMeshPro[] _letras = new TextMeshPro[4];
     Material _matChipLuces, _matChipSirena;
-    OVRCameraRig _rig;
     float _tiempoBusqueda;
     bool _reconstruir;
     bool _construido;
@@ -172,7 +164,6 @@ public class InteriorCamion : MonoBehaviour
         // Si la palanca nueva (modelo importado) esta en la escena, no se construye la procedural.
         if (GameObject.Find("Palanca_Cambios") == null) ConstruirPalanca(raiz);
         if (luzCabina) ConstruirLuz(raiz);
-        if (crearBotonesCabina) ConstruirBotonesCabina(raiz);
 
         // En el editor el preview no se guarda en la escena.
         if (!Application.isPlaying)
@@ -525,41 +516,6 @@ public class InteriorCamion : MonoBehaviour
         l.intensity = 0.40f;
         l.color = new Color(1f, 0.96f, 0.88f);
         l.shadows = LightShadows.None;
-    }
-
-    // ---------------- Botones de sirena y luces ----------------
-
-    void ConstruirBotonesCabina(Transform raiz)
-    {
-        if (_rig == null) _rig = Object.FindObjectOfType<OVRCameraRig>();
-
-        var panel = new GameObject("Interior_BotonesCabina").transform;
-        panel.SetParent(raiz, false);
-        panel.localPosition = centroBotonesCabina;
-        panel.localRotation = Quaternion.identity;
-
-        var fondo = Prim(PrimitiveType.Cube, "Fondo", panel,
-            VisualesVR.MaterialOpaco(new Color(0.07f, 0.08f, 0.10f)));
-        fondo.transform.localPosition = new Vector3(0f, 0f, 0.03f);
-        fondo.transform.localScale = new Vector3(0.19f, separacionBotonesCabina + 0.18f, 0.02f);
-
-        float mitad = separacionBotonesCabina * 0.5f;
-        BotonTactil.Crear("Sirena", panel, new Vector3(0f, mitad, 0f),
-            new Color(0.85f, 0.12f, 0.08f), "SIRENA", _rig,
-            AlternarSirenaCabina, escalaBotonesCabina);
-        BotonTactil.Crear("Luces", panel, new Vector3(0f, -mitad, 0f),
-            new Color(1f, 0.78f, 0.12f), "LUCES", _rig,
-            AlternarLucesCabina, escalaBotonesCabina);
-    }
-
-    void AlternarSirenaCabina()
-    {
-        if (_camion != null && _camion.JugadorSentado) _camion.AlternarSirena();
-    }
-
-    void AlternarLucesCabina()
-    {
-        if (_camion != null && _camion.JugadorSentado) _camion.AlternarLuces();
     }
 
     // ------------------------------------------------------------------ actualizacion

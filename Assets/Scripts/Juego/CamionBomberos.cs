@@ -8,7 +8,7 @@ using UnityEngine;
 /// - Subir: parate en el circulo amarillo junto a la puerta del conductor (se llena) o presiona A / pellizca.
 /// - Manejar (controles): stick izquierdo arriba/abajo = avanzar/retroceder, a los lados = girar
 ///   (tambien sirve el stick derecho para girar). Teclado: flechas o WASD.
-/// - A: prender/apagar la sirena mientras manejas.
+/// - A: prender/apagar la sirena. X: prender/apagar las balizas (independientes).
 /// - Bajar: B (o Y), o mantener el pellizco 2 segundos.
 /// Si el modelo del camion no esta en el proyecto (asset de pago no incluido en git),
 /// se genera un camion simple de reemplazo para que el juego funcione igual.
@@ -473,10 +473,10 @@ public class CamionBomberos : MonoBehaviour
             EntradaVR.VibrarAmbas(0.04f + 0.12f * rapidez, 0.1f, 0.2f);
         }
 
-        // Atajos: A / X / H = sirena; L = luces. Los botones del tablero son la via principal.
-        if (OVRInput.GetDown(OVRInput.Button.One) || OVRInput.GetDown(OVRInput.Button.Three) || Input.GetKeyDown(KeyCode.H))
+        // Controles: A = sirena; X = luces; B/Y = bajar. En editor: H = sirena, L = luces.
+        if (OVRInput.GetDown(OVRInput.Button.One) || Input.GetKeyDown(KeyCode.H))
             AlternarSirena();
-        if (Input.GetKeyDown(KeyCode.L))
+        if (OVRInput.GetDown(OVRInput.Button.Three) || Input.GetKeyDown(KeyCode.L))
             AlternarLuces();
     }
 
