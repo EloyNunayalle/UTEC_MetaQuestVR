@@ -42,13 +42,20 @@ public static class ConfigurarAvatarJugador
         var so = new SerializedObject(componente);
 
         var features = so.FindProperty("_creationInfo.features");
-        if (features != null) features.intValue = 342;
+        if (features != null) features.intValue = 382;
 
         var renderFilters = so.FindProperty("_creationInfo.renderFilters.manifestationFlags");
-        if (renderFilters != null) renderFilters.intValue = piernas ? 31 : 3;
+        if (renderFilters != null) renderFilters.intValue = 3;
 
         var quality = so.FindProperty("_creationInfo.renderFilters.quality");
         if (quality != null) quality.intValue = 1;
+
+        // Sin piernas: usar primitivos (Half) en vez del LOD combinado completo.
+        var useRenderLods = so.FindProperty("useRenderLods");
+        if (useRenderLods != null) useRenderLods.boolValue = true;
+
+        var activeView = so.FindProperty("_activeView");
+        if (activeView != null) activeView.intValue = piernas ? 2 : 1; // Third / First
 
         var activeManifestation = so.FindProperty("_activeManifestation");
         if (activeManifestation != null) activeManifestation.intValue = piernas ? 1 : 2;

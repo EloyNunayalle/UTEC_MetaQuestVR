@@ -10091,10 +10091,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _creationInfo:
-    features: 342
+    features: 382
     renderFilters:
       lodFlags: 31
-      manifestationFlags: 31
+      manifestationFlags: 3
       viewFlags: 3
       subMeshInclusionFlags: -1
       quality: 1
@@ -10102,8 +10102,8 @@ MonoBehaviour:
       reserved: 0000000000000000000000000000000000000000000000000000000000000000
       subMeshVertexPreference: 0
   _validateCache: 1
-  _activeView: 2
-  _activeManifestation: 1
+  _activeView: 1
+  _activeManifestation: 2
   _activeSubMeshes: -1
   _activeSubMeshesIncludeUntyped: 1
   _inputManager: {fileID: 939225276}
@@ -10149,7 +10149,8 @@ MonoBehaviour:
   _isLocal: 1
   cargarDeCuenta: 0
   esperaMaxima: 20
-  mostrarPiernas: 1
+  mostrarPiernas: 0
+  generoAvatar: 0
 --- !u!4 &1655380797
 Transform:
   m_ObjectHideFlags: 0

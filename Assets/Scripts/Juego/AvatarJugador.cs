@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using Oculus.Avatar2;
 using UnityEngine;
 
@@ -9,6 +10,11 @@ using UnityEngine;
 /// </summary>
 public class AvatarJugador : OvrAvatarEntity
 {
+    public enum GeneroAvatar
+    {
+        Mujer = 0,
+        Hombre = 1
+    }
     [Tooltip("Cargar el avatar de la cuenta Meta (CDN). Requiere registrar el App ID en Meta > Platform. Si falla, usa el preset local.")]
     public bool cargarDeCuenta = false;
 
@@ -19,8 +25,13 @@ public class AvatarJugador : OvrAvatarEntity
     [Tooltip("Activa las piernas. Desactivado: solo cuerpo superior y manos.")]
     public bool mostrarPiernas = false;
 
+    [Tooltip("Preset local de Meta Avatars: Mujer = 0, Hombre = 1. Se aplica al iniciar/recargar.")]
+    public GeneroAvatar generoAvatar = GeneroAvatar.Mujer;
+
     OVRCameraRig _rig;
     float _proxOcultar;
+
+    readonly Dictionary<MeshRenderer, Mesh> _mallasOriginales = new Dictionary<MeshRenderer, Mesh>();
 
     void OcultarControles()
     {
@@ -55,7 +66,7 @@ public class AvatarJugador : OvrAvatarEntity
             OcultarControles();
         }
 
-        // Toggle de piernas: Half = torso/manos, Full = cuerpo completo.
+        // Toggle de piernas: FirstPerson + Half = torso/manos; ThirdPerson + Full = cuerpo completo.
         if (IsCreated)
         {
             var deseadas = mostrarPiernas
@@ -63,6 +74,94 @@ public class AvatarJugador : OvrAvatarEntity
                 : CAPI.ovrAvatar2EntityManifestationFlags.Half;
             if (GetActiveManifestation() != deseadas)
                 SetActiveManifestation(deseadas);
+
+            var vista = mostrarPiernas
+                ? CAPI.ovrAvatar2EntityViewFlags.ThirdPerson
+                : CAPI.ovrAvatar2EntityViewFlags.FirstPerson;
+            if (GetActiveView() != vista)
+                SetActiveView(vista);
+        }
+    }
+
+    /// <summary>
+    /// Meta Avatars no recorta las piernas del LOD combinado con Half. Mientras
+    /// mostrarPiernas=false se eliminan los triángulos por debajo de la cadera;
+    /// al activarlo se restaura la malla original. El avatar se puede cambiar
+    /// de mujer/hombre en el Inspector con generoAvatar antes de Play.
+    /// </summary>
+    void AplicarPiernas()
+    {
+        if (mostrarPiernas)
+        {
+            if (_mallasOriginales.Count == 0) return;
+            foreach (var par in _mallasOriginales)
+            {
+                if (par.Key == null) continue;
+                var mf = par.Key.GetComponent<MeshFilter>();
+                if (mf != null) mf.sharedMesh = par.Value;
+            }
+            _mallasOriginales.Clear();
+            return;
+        }
+
+        foreach (var r in GetComponentsInChildren<MeshRenderer>(true))
+        {
+            if (r == null) continue;
+            var mf = r.GetComponent<MeshFilter>();
+            if (mf == null || mf.sharedMesh == null) continue;
+            if (_mallasOriginales.ContainsKey(r)) continue;
+
+            var original = mf.sharedMesh;
+            var recortada = CrearSinPiernas(original);
+            if (recortada == null) continue;
+
+            _mallasOriginales[r] = original;
+            mf.sharedMesh = recortada;
+        }
+    }
+
+    Mesh CrearSinPiernas(Mesh original)
+    {
+        try
+        {
+            var vertices = original.vertices;
+            var triangulos = original.triangles;
+            if (vertices.Length == 0 || triangulos.Length == 0) return null;
+
+            var bounds = original.bounds;
+            float corte = bounds.min.y + bounds.size.y * 0.52f;
+            var nuevos = new List<int>(triangulos.Length);
+            int eliminados = 0;
+
+            for (int i = 0; i < triangulos.Length; i += 3)
+            {
+                int a = triangulos[i];
+                int b = triangulos[i + 1];
+                int c = triangulos[i + 2];
+                if (vertices[a].y < corte && vertices[b].y < corte && vertices[c].y < corte)
+                {
+                    eliminados++;
+                    continue;
+                }
+                nuevos.Add(a);
+                nuevos.Add(b);
+                nuevos.Add(c);
+            }
+
+            if (eliminados == 0) return null;
+
+            var copia = Object.Instantiate(original);
+            copia.name = original.name + "_SinPiernas";
+            copia.SetVertices(vertices);
+            copia.SetTriangles(nuevos, 0);
+            copia.RecalculateBounds();
+            Debug.Log("[Avatar] Piernas recortadas: " + eliminados + " triángulos en " + original.name);
+            return copia;
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning("[Avatar] No se pudo recortar piernas: " + e.Message);
+            return null;
         }
     }
 
@@ -167,7 +266,8 @@ public class AvatarJugador : OvrAvatarEntity
         while (intentos < 6)
         {
             intentos++;
-            LoadAssets(new[] { "0" + postfix }, AssetSource.Zip);
+            string id = ((int)generoAvatar).ToString();
+            LoadAssets(new[] { id + postfix }, AssetSource.Zip);
             yield return new WaitForSecondsRealtime(2.5f);
             if (entityStatus.IsSuccess() || HasNonDefaultAvatar)
             {
