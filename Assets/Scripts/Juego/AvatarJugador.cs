@@ -10,10 +10,16 @@ using UnityEngine;
 /// </summary>
 public class AvatarJugador : OvrAvatarEntity
 {
-    public enum GeneroAvatar
+    public static readonly string[] NombresPresets = CrearNombresPresets();
+
+    static string[] CrearNombresPresets()
     {
-        Mujer = 0,
-        Hombre = 1
+        var nombres = new string[33];
+        nombres[0] = "Mujer";
+        nombres[1] = "Hombre";
+        for (int i = 2; i < nombres.Length; i++)
+            nombres[i] = "Avatar " + i;
+        return nombres;
     }
     [Tooltip("Cargar el avatar de la cuenta Meta (CDN). Requiere registrar el App ID en Meta > Platform. Si falla, usa el preset local.")]
     public bool cargarDeCuenta = false;
@@ -25,8 +31,9 @@ public class AvatarJugador : OvrAvatarEntity
     [Tooltip("Activa las piernas. Desactivado: solo cuerpo superior y manos.")]
     public bool mostrarPiernas = false;
 
-    [Tooltip("Preset local de Meta Avatars: Mujer = 0, Hombre = 1. Se aplica al iniciar/recargar.")]
-    public GeneroAvatar generoAvatar = GeneroAvatar.Mujer;
+    [Tooltip("Preset local de Meta Avatars: 0–32. Se aplica al iniciar Play.")]
+    [Range(0, 32)]
+    public int presetAvatar = 0;
 
     OVRCameraRig _rig;
     float _proxOcultar;
@@ -266,7 +273,7 @@ public class AvatarJugador : OvrAvatarEntity
         while (intentos < 6)
         {
             intentos++;
-            string id = ((int)generoAvatar).ToString();
+            string id = presetAvatar.ToString();
             LoadAssets(new[] { id + postfix }, AssetSource.Zip);
             yield return new WaitForSecondsRealtime(2.5f);
             if (entityStatus.IsSuccess() || HasNonDefaultAvatar)
