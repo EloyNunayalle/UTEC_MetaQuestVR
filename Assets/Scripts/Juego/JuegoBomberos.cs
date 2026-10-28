@@ -612,8 +612,10 @@ public class JuegoBomberos : MonoBehaviour
         {
             _hud.Mostrar("MODO EXPLORAR - CONDUCIENDO",
                 "<b>¡A manejar!</b>  Stick izquierdo: avanzar / retroceder\n" +
-                "Stick a los lados: girar   -   A: sirena   -   B: bajar",
-                $"Velocidad {Mathf.RoundToInt(_camion.VelocidadKmh)} km/h     Sirena {(_camion.SirenaEncendida ? "ON" : "OFF")}");
+                "Stick a los lados: girar   -   B: bajar\n" +
+                "Tablero: botones SIRENA y LUCES (o A para sirena)",
+                $"Velocidad {Mathf.RoundToInt(_camion.VelocidadKmh)} km/h     " +
+                $"Sirena {(_camion.SirenaEncendida ? "ON" : "OFF")}     Luces {(_camion.LucesEncendidas ? "ON" : "OFF")}");
             return;
         }
         _hud.Mostrar("MODO EXPLORAR",
@@ -640,6 +642,7 @@ public class JuegoBomberos : MonoBehaviour
             "- Agarrar: GRIP / gatillo (o pellizco con la mano)\n" +
             "- Botones: tócalos con el dedo\n" +
             "- Camión: joystick para manejar (B para bajar)\n" +
+            "- Tablero del camión: botones SIRENA y LUCES (independientes)\n" +
             "- Manguera: GRIP para tomar, gatillo para el agua; presión con la válvula del panel",
             "");
     }
@@ -846,9 +849,11 @@ public class JuegoBomberos : MonoBehaviour
             $"Puntaje: <b>{_puntaje}</b>  <size=80%>(bono por rapidez +{_bono})</size>\n" +
             $"Calificación: <color=#FFD54A><b>{_calificacion}</b></color>\n\n" +
             (sentado ? "<b>¡A manejar!</b>  Stick izquierdo: avanzar / retroceder\n" +
-                       "Stick a los lados: girar   -   A: sirena   -   B: bajar"
+                       "Stick a los lados: girar   -   B: bajar\n" +
+                       "Tablero: botones SIRENA y LUCES (o A para sirena)"
                      : "- A / pellizco: jugar de nuevo\n- Puedes volver a subir al camión para manejar"),
-            sentado ? $"Velocidad {Mathf.RoundToInt(_camion.VelocidadKmh)} km/h     Sirena {(_camion.SirenaEncendida ? "ON" : "OFF")}"
+            sentado ? $"Velocidad {Mathf.RoundToInt(_camion.VelocidadKmh)} km/h     " +
+                      $"Sirena {(_camion.SirenaEncendida ? "ON" : "OFF")}     Luces {(_camion.LucesEncendidas ? "ON" : "OFF")}"
                     : "Jugar de nuevo: A");
     }
 

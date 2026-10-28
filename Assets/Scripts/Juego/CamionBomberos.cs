@@ -50,8 +50,15 @@ public class CamionBomberos : MonoBehaviour
     [Header("Camion de reemplazo (si falta el modelo)")]
     public Vector3 tamanoReemplazo = new Vector3(2.5f, 3.0f, 8.5f);
 
+    [Header("Luces y sirena")]
+    [Tooltip("Las balizas arrancan encendidas. La sirena siempre arranca apagada; se controla aparte.")]
+    public bool lucesEncendidasAlIniciar = true;
+    [Tooltip("Ciclos completos por segundo de las balizas. 1.5 Hz = 90 destellos por minuto, ritmo de camion real.")]
+    [Range(0.5f, 3f)] public float frecuenciaBalizas = 1.5f;
+
     public bool JugadorSentado { get; private set; }
     public bool SirenaEncendida => _sirena != null && _sirena.isPlaying;
+    public bool LucesEncendidas => _lucesOn;
     public float Velocidad => _velocidad;
     public float VelocidadKmh => Mathf.Abs(_velocidad) * 3.6f;
     public Vector3 PuntoZonaSubida => _zona != null ? _zona.position : transform.position;
@@ -167,6 +174,11 @@ public class CamionBomberos : MonoBehaviour
         _sirena.transform.position = PosBalizas();
         _motor = SonidosVR.CrearBucle(_efectos, SonidosVR.Motor, 0.6f, 25f);
         _motor.transform.position = Local(0f, 1f, _largoMedio - 1f);
+
+        // Balizas independientes de la sirena: pueden quedar encendidas sin sonido.
+        EncenderLuces(lucesEncendidasAlIniciar);
+        Debug.Log($"[CamionBomberos] Balizas {frecuenciaBalizas:0.0} Hz " +
+                  $"({frecuenciaBalizas * 60f:0} destellos/min); sirena independiente.");
 
         _listo = true;
     }
@@ -461,12 +473,11 @@ public class CamionBomberos : MonoBehaviour
             EntradaVR.VibrarAmbas(0.04f + 0.12f * rapidez, 0.1f, 0.2f);
         }
 
-        // A: sirena on/off.
+        // Atajos: A / X / H = sirena; L = luces. Los botones del tablero son la via principal.
         if (OVRInput.GetDown(OVRInput.Button.One) || OVRInput.GetDown(OVRInput.Button.Three) || Input.GetKeyDown(KeyCode.H))
-        {
-            if (_sirena.isPlaying) _sirena.Stop(); else _sirena.Play();
-            SonidosVR.Reproducir2D(SonidosVR.Clic, 0.6f);
-        }
+            AlternarSirena();
+        if (Input.GetKeyDown(KeyCode.L))
+            AlternarLuces();
     }
 
     void Chocar()
@@ -569,8 +580,8 @@ public class CamionBomberos : MonoBehaviour
         _pellizcoLiberado = false;
         _zona.gameObject.SetActive(false);
 
-        EncenderLuces(true);
-        _sirena.Play();
+        // Luces y sirena son independientes: no se encienden solas al subir.
+        // Las balizas ya vienen encendidas por lucesEncendidasAlIniciar.
         _motor.pitch = 0.8f;
         _motor.Play();
         SonidosVR.ReproducirEn(SonidosVR.Puerta, PosAsiento(), 1f);
@@ -599,7 +610,7 @@ public class CamionBomberos : MonoBehaviour
         EncenderLocomocion();
         TeletransportarLocomotor(new Vector3(piso.x, nuevaPos.y, piso.z), Quaternion.Euler(0f, cabeza.eulerAngles.y, 0f));
 
-        _sirena.Stop();
+        EncenderSirena(false);
         _motor.Stop();
         _enfriamiento = 2f;
         SonidosVR.ReproducirEn(SonidosVR.Puerta, _zona.position + Vector3.up, 1f);
@@ -670,28 +681,63 @@ public class CamionBomberos : MonoBehaviour
     // Luces
     // ------------------------------------------------------------------
 
+    public bool AlternarLuces()
+    {
+        EncenderLuces(!_lucesOn);
+        return _lucesOn;
+    }
+
     public void EncenderLuces(bool on)
     {
         _lucesOn = on;
-        if (!on)
+        if (_luces[0] == null || _luces[1] == null || _balizas[0] == null || _balizas[1] == null)
+            return;
+
+        if (on)
         {
-            for (int i = 0; i < 2; i++)
-            {
-                _luces[i].intensity = 0f;
-                _balizas[i].sharedMaterial.color = _luces[i].color * 0.35f;
-            }
+            ActualizarLuces();
+            return;
+        }
+
+        for (int i = 0; i < 2; i++)
+        {
+            _luces[i].intensity = 0f;
+            _balizas[i].sharedMaterial.color = _luces[i].color * 0.35f;
+        }
+    }
+
+    public bool AlternarSirena()
+    {
+        EncenderSirena(!SirenaEncendida);
+        return SirenaEncendida;
+    }
+
+    public void EncenderSirena(bool on)
+    {
+        if (_sirena == null) return;
+        if (on)
+        {
+            if (!_sirena.isPlaying) _sirena.Play();
+        }
+        else if (_sirena.isPlaying)
+        {
+            _sirena.Stop();
         }
     }
 
     void ActualizarLuces()
     {
         if (!_lucesOn) return;
-        int fase = (int)(Time.time * 5f) % 2;
+        if (_luces[0] == null || _luces[1] == null) return;
+
+        // 1.5 ciclos/s: cada baliza destella 90 veces por minuto, como un camion real.
+        int fase = (int)(Time.time * frecuenciaBalizas * 2f) % 2;
         for (int i = 0; i < 2; i++)
         {
             bool on = fase == i;
             _luces[i].intensity = on ? 3f : 0f;
-            _balizas[i].sharedMaterial.color = on ? _luces[i].color : _luces[i].color * 0.25f;
+            if (_balizas[i] != null)
+                _balizas[i].sharedMaterial.color = on ? _luces[i].color : _luces[i].color * 0.25f;
         }
     }
 

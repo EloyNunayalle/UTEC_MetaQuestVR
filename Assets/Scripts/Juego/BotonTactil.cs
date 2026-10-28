@@ -20,11 +20,12 @@ public class BotonTactil : MonoBehaviour
     float _proximo;
 
     public static BotonTactil Crear(string nombre, Transform padre, Vector3 posLocal, Color color, string texto,
-                                    OVRCameraRig rig, Action accion)
+                                    OVRCameraRig rig, Action accion, float escala = 1f)
     {
         var raiz = new GameObject("Boton_" + nombre).transform;
         raiz.SetParent(padre, false);
         raiz.localPosition = posLocal;
+        raiz.localScale = Vector3.one * Mathf.Max(0.1f, escala);
 
         var placa = VisualesVR.Primitiva(PrimitiveType.Cube, "Placa", raiz, VisualesVR.MaterialOpaco(new Color(0.22f, 0.23f, 0.26f)));
         placa.transform.localScale = new Vector3(0.22f, 0.22f, 0.04f);
@@ -46,6 +47,7 @@ public class BotonTactil : MonoBehaviour
         b._boton = boton.transform;
         b._reposo = boton.transform.localPosition;
         b._escalaBoton = boton.transform.localScale;
+        b.radio = Mathf.Max(0.07f, 0.11f * escala);
         b.alPresionar = accion;
         return b;
     }

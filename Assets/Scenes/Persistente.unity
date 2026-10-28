@@ -277,6 +277,10 @@ MonoBehaviour:
   nombreRuta: Almacen Central
   puntoDestino: {x: -5.19, y: 0, z: -1}
   velocidadMinimaEta: 3
+  crearBotonesCabina: 1
+  centroBotonesCabina: {x: -0.3, y: 1.8, z: 3.95}
+  separacionBotonesCabina: 0.17
+  escalaBotonesCabina: 0.5
 --- !u!1001 &28232590
 PrefabInstance:
   m_ObjectHideFlags: 0
