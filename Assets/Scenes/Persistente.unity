@@ -10091,7 +10091,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _creationInfo:
-    features: 382
+    features: 342
     renderFilters:
       lodFlags: 31
       manifestationFlags: 31
@@ -10149,6 +10149,7 @@ MonoBehaviour:
   _isLocal: 1
   cargarDeCuenta: 0
   esperaMaxima: 20
+  mostrarPiernas: 1
 --- !u!4 &1655380797
 Transform:
   m_ObjectHideFlags: 0
@@ -11818,9 +11819,14 @@ MonoBehaviour:
   nombreCamion: Camion_Bomberos
   nombreChaleco: Chaleco
   nombreExtintor: Extintor
+  nombrePortonPrincipal: Porton_Principal
+  incendioEnEdificio: 1
+  nombreEdificioFuego: 
+  posicionEdificioFuego: {x: 13.96, y: 0, z: -27.31}
+  calleFrenteEdificio: {x: 5.65, y: 0, z: -27.31}
   posicionCamionReemplazo: {x: -5.19, y: 0.127, z: -10.2}
   exigirPorton: 1
-  segundosIntroMax: 15
+  usarManguera: 1
   puntosPorTarea: 100
   tiempoExcelente: 120
   tiempoBueno: 210

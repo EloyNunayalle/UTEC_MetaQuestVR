@@ -47,10 +47,11 @@ public static class CombinarEstacionCerco
             return;
         }
 
-        // Rehabilitar los que se hayan combinado antes.
+        // Rehabilitar solo los que estaban visibles y ya se combinaron antes.
         foreach (var r in raiz.GetComponentsInChildren<MeshRenderer>(true))
         {
             if (r.name == excluir) continue;
+            if (!r.gameObject.activeInHierarchy) continue;
             if (r.gameObject.isStatic || incluirNoEstaticos) r.enabled = true;
         }
 
@@ -61,6 +62,7 @@ public static class CombinarEstacionCerco
         foreach (var r in raiz.GetComponentsInChildren<MeshRenderer>(true))
         {
             if (r.name == excluir) continue;
+            if (!r.gameObject.activeInHierarchy) continue;
             if (!incluirNoEstaticos && !r.gameObject.isStatic) continue;
             var mf = r.GetComponent<MeshFilter>();
             if (mf == null || mf.sharedMesh == null) continue;

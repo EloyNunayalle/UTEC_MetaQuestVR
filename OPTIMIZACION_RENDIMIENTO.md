@@ -418,7 +418,125 @@ Se eliminaron las copias temporales/fallidas (`2Mat_v1`, `B_FakeFix_v1..v4`, `A1
 - **El juego completo no es solo el tile**: `GestorEscenas` carga `Persistente + Ciudad_Tile_00` de forma aditiva, `JuegoBomberos` instancia el camión y `Estacion_Interior` se carga por proximidad. La medición del tile no incluye camión, manos/controles ni interior; el presupuesto real es mayor.
 - **Plan corregido**: (1) medir el juego completo con la cámara real; (2) agrupar los 26 árboles por celdas de 25 m → 7 LODGroups; (3) sombras; (4) camión/interior; (5) HLOD por tile y streaming multi-tile.
 - **Resultado de la agrupación por celdas (25/10/2026)**: 26 árboles → **7 LODGroups**; renderers activos **150 → 93**; draw calls **226–238 → 194–205**; esquina lejana **106 → 98**; 403–490K triángulos. Los LOD0/LOD1/billboard se combinan por celda y los colliders originales se conservan. Captura: `Assets/Screenshots/Arboles_Celdas_25m.png`.
-- **Estado**: el tile solo queda en ~200 draw calls (Quest 3 casi cumplido; Quest 2 sigue >100). El juego completo (Persistente + camión + interior) todavía no está medido; es el siguiente paso P0.
+- **Estado**: el tile solo queda en ~200 draw calls (Quest 3 casi cumplido; Quest 2 sigue >100). El juego completo ya está medido en §2.11: **431–541 draw calls con sombras** y **429–539 con interior + optimizador**, todavía lejos de <200.
+
+### 2.11 Juego completo: medición real (25/10/2026)
+
+- Build **Persistente + Ciudad_Tile_00_Estacion + Estacion_Interior**, con cámara de diagnóstico y carga forzada del interior.
+- **Con sombras (sin interior cargado)**: 431–541 draw calls y 460–817K triángulos. **Sin sombras**: 309–371 draw calls y 309–520K. La pasada de sombras cuesta ~**167 draw calls**.
+- **Con interior + optimizador**: **429–539 draw calls** (centro 116; vistas principales 518–539; esquina 429) y **452–809K** triángulos; **296 renderers activos**. Grupos dominantes: **Camera Rig 87 → 52** tras el optimizador, **Camión 71**, **interior 35**, **HUD/selector/manguera/marcador 23**; el tile queda en ~93.
+- **Optimizador de runtime** (`OptimizadorJuegoCompleto`): apaga sombras de rig/camión/HUD/interior y deja el rig en **52 renderers** (solo manos/controladores, sin rayos/retículas/glows/debug). No baja materialmente el total: el rig, el camión y el interior siguen siendo el cuello.
+- **Conclusión**: el tile solo (194–205) no representa al juego. El objetivo <200 no se alcanza ni con el tile actual: hacen falta **camión combinado/LOD**, **rig simplificado**, **interior/HUD combinados** y **HLOD por tile**. Con el contenido actual, 3 tiles completos no son viables; el objetivo realista es 1 tile cercano + HLOD de vecinos.
+- **Archivos de esta fase (sin commit)**: `ConstructorDiagnosticoJuegoCompleto.cs`, `OptimizadorJuegoCompleto.cs` y los cambios de `DiagnosticoRT.cs`. La escena temporal del tile se restaura automáticamente.
+
+### 2.12 Presupuesto realista y comparación con las guías de Meta (25/10/2026)
+
+> Investigación de referencia. No se modificó el proyecto en esta sección; solo se contrastó el presupuesto del plan con las guías oficiales de Meta y Unity.
+
+#### 1. Rangos oficiales de Meta
+
+Meta publica **rangos de ejemplo por frame**, no un límite duro ni un presupuesto por tile:
+
+| Plataforma | “Busy simulation” | “Medium simulation” | “Light simulation” | Triángulos |
+|---|---:|---:|---:|---:|
+| Quest 2 / Quest Pro | **80–200** | 200–300 | 400–600 | **750K–1M** |
+| Quest 3 / Quest 3S | **200–300** | 400–600 | 700–1000 | **1.3M–1.8M** |
+
+- “Busy” incluye redes, VoIP, animación, skinning y muchos NPCs.
+- “Light” incluye salas de escape, puzzles y cooperativos con pocos cambios de estado.
+- Aplicaciones interactivas: **mínimo 72 FPS** (13,9 ms por frame).
+- El rango depende de cambios de pipeline, hilos principal/render, API gráfica, uso de indirect draws, etc.
+
+Fuente: [Meta - Testing and performance analysis](https://developers.meta.com/vr/documentation/unity/unity-perf/).
+
+#### 2. Presupuesto del proyecto frente a Meta
+
+| Métrica | Plan actual | Meta (referencia) | Lectura |
+|---|---:|---|---|
+| Draw calls Quest 2 | **<100** | 80–200 busy | Meta muy conservadora, en el borde bajo de “busy”. |
+| Draw calls Quest 3 | **<200** | 200–300 busy | Por debajo de “busy”; conservadora. |
+| Triángulos Quest 2 | **<750K** | 750K–1M | Alineado, en el límite bajo. |
+| Triángulos Quest 3 | **<1.5M** | 1.3M–1.8M | Alineado, en el rango medio. |
+| Tiles completos | **3–5** | No es una métrica oficial | Depende de HLOD/streaming, no de cargar todo. |
+| Draw calls por tile | **25–40** | No es una métrica oficial | Solo realista para tiles lejanos en HLOD, no para un tile cercano completo. |
+
+Medición actual del proyecto:
+
+- **Tile solo**: 194–205 draw calls con sombras; 139–150 sin sombras.
+- **Juego completo**: 431–541 con sombras; 309–371 sin sombras.
+- **Triángulos**: 452–817K.
+- **Sombras**: ~167 draw calls del juego completo.
+- **Renderers del juego completo**: 296 activos tras el optimizador; Camera Rig 52, Camión 71, interior 35, HUD/selector/manguera/marcador 23; tile ~93.
+
+Conclusión: **el juego completo actual cae en “light” de Quest 2 y “medium” de Quest 3** según la tabla de Meta, no en “busy”. Pero el proyecto tiene scripts, física, manos/controladores, camión e interior; no es una experiencia “light”. El número aislado no decide: hay que medir CPU/GPU en visor.
+
+#### 3. ¿Es realista el presupuesto?
+
+- **<100 en Quest 2** es una meta **más conservadora que la guía de Meta**. Es posible para un tile cercano muy optimizado + HLOD, sin sombras en tiempo real y con rig/camión simplificados; no con el juego completo actual de 431–541.
+- **<200 en Quest 3** es también conservador (Meta pone “busy” en 200–300). Es alcanzable con **1 tile cercano + HLOD**, rig/camión/interior simplificados y sombras horneadas; no con 3 tiles completos.
+- **25–40 draw calls por tile** no es un presupuesto de tile completo: es un presupuesto de **tile lejano/HLOD**. Un tile cercano con árboles, edificios, estación, props y sombras ronda los 100–200.
+- **3–5 tiles completos** no es realista con la densidad actual. Con 194 draw calls por tile, 3 tiles ya son ~582 antes de sumar el juego completo. Para 3–5 tiles hay que usar **1–2 tiles cercanos completos + HLOD/impostores** para el resto.
+
+#### 4. Mundo abierto en Quest 2
+
+Meta lo dice explícitamente en su guía móvil:
+
+> “The advice to early VR titles is to favor modest ‘scenes’ instead of ‘open worlds,’ and Occlusion Culling may be overkill for modest scenes.”
+
+Traducción: para títulos tempranos de VR conviene favorecer **escenas modestas** antes que **mundos abiertos**; la oclusión puede ser excesiva para escenas pequeñas.
+
+No significa que sea imposible. Significa que un mundo abierto en Quest 2 exige:
+
+- Tiles pequeños/chunks y **streaming** con Addressables o escenas aditivas.
+- **HLOD e impostores** para todo lo lejano.
+- **Luces horneadas**, light probes y sombras estáticas; nada de sombras en tiempo real para la ciudad.
+- **Oclusión** y distancias de culling por capa.
+- **Niebla/far clip** agresivos.
+- **Low-poly**, materiales compartidos, atlas y shaders mobile/unlit.
+- **1–2 tiles cercanos** como máximo; el resto, proxies/impostores.
+
+El caso oficial de Meta, **Dead & Buried 2**, usa LODs y carga/descarga por posición para gestionar el mundo; es el modelo a seguir, no cargar 3–5 tiles completos. Fuente: [Meta - Open World Games and Asset Streaming](https://developers.meta.com/vr/documentation/unity/po-assetstreaming/).
+
+#### 5. Dónde optimizan más los proyectos Quest y qué falta aquí
+
+1. **HLOD e impostores**: agrupar objetos lejanos en una malla/impostor por zona o material. Es lo que más reduce draw calls en mundo abierto. Aquí solo hay LOD por objeto y agrupación de árboles por celda; faltan edificios, estación, props y **HLOD por tile**.
+2. **Sombras y luces horneadas**: Meta recomienda lightmaps, light probes, shaders mobile/unlit y evitar shadow buffers. Aquí la pasada de sombras del juego completo cuesta ~167 draw calls. Es la palanca más rápida.
+3. **Oclusión, `layerCullDistances`, far clip y niebla**: la ciudad tiene edificios que ocluyen; hay que hornear oclusión y limitar props pequeños por distancia. Está pendiente.
+4. **Juego completo, no solo el tile**: Camera Rig 52 (87 antes; 280 en total), Camión 71 (42 en prefab, 21 materiales, sin LOD), interior 35 y HUD/selector/manguera/marcador 23. El tile son solo ~93 renderers; el resto es el 55–60 % del coste del juego completo.
+5. **URP + SRP Batcher y shaders mobile**: el proyecto usa Built-in RP, que **no tiene SRP Batcher**. El SRP Batcher no reduce el número de draw calls, pero reduce el coste CPU de prepararlos; URP también permite shaders mobile más baratos. El shader `Standard` de Built-in es pesado para Quest 2.
+6. **GPU Instancing / BatchRendererGroup / atlas**: el static batching combina mallas estáticas del mismo material, pero no resuelve repeticiones con LODGroups ni materiales únicos. Para árboles, arbustos y props repetidos conviene instancing/indirect o HLOD. Además: camión 21 materiales, rig 26, edificios 3 por edificio; los atlas y la consolidación de materiales reducen cambios de estado.
+7. **Streaming multi-tile y descarga**: `GestorEscenas` carga Persistente + tile y el interior por proximidad, pero no hay un gestor de 3–5 tiles con presupuesto dinámico ni descarga de la ciudad al entrar al interior.
+8. **Funciones Quest**: FFR, Application SpaceWarp y Dynamic Resolution ayudan a GPU/fill rate, no a los draw calls de CPU. No sustituyen HLOD ni batching.
+9. **Perfilado en dispositivo**: el build de Windows es un proxy. Hay que usar OVR Metrics Tool, RenderDoc Meta fork y Unity Profiler en Quest 2/3 para saber si el límite es CPU (draw calls/scripts) o GPU (overdraw/sombras).
+10. **Dirección de arte/contenido**: low-poly ayuda a triángulos, pero no a draw calls. Hay que reducir **número de objetos, materiales y estados**, no solo polígonos. Un mundo abierto Quest 2 se construye con fachadas falsas, impostores, niebla y zonas pequeñas.
+
+#### 6. Presupuesto recomendado
+
+| Objetivo | Quest 2 | Quest 3 |
+|---|---|---|
+| Tiles cercanos completos | **1** | **1–2** |
+| Tiles lejanos | **1–2 HLOD** | **2–3 HLOD** |
+| Draw calls totales | **150–250** | **250–400** |
+| Triángulos | **750K–1M** | **1.3M–1.8M** |
+| Sombras | **Horneadas / blob** | **Horneadas + pocas dinámicas** |
+| Rig | Manos/controladores simples | Manos/controladores simples |
+| Camión | Combinado + LOD | Combinado + LOD |
+
+- **<200 en Quest 3**: alcanzable solo con **1 tile cercano (~120–150) + HLOD + rig/camión/interior simplificados (~50–80)**.
+- **<100 en Quest 2**: alcanzable solo con **1 tile muy optimizado + HLOD, sin sombras en tiempo real**, no con 3 tiles.
+- **3–5 tiles**: solo si los lejanos son **HLOD/impostores**, no geometría completa.
+
+#### 7. Fuentes
+
+- Meta, *Testing and performance analysis* (tabla de draw calls/triángulos y FPS): https://developers.meta.com/vr/documentation/unity/unity-perf/
+- Meta, *Mobile performance* (escenas modestas vs. mundos abiertos, luces horneadas, batching, shaders): https://developers.meta.com/vr/documentation/unity/unity-mobile-performance-intro/
+- Meta, *Draw Call Cost Analysis for Meta Quest* (coste GPU de draws, materiales y vértices): https://developers.meta.com/vr/documentation/unity/po-draw-call-analysis/
+- Meta, *Open World Games and Asset Streaming* (Dead & Buried 2, LOD y carga/descarga): https://developers.meta.com/vr/documentation/unity/po-assetstreaming/
+- Meta, *Dynamic Resolution*: https://developers.meta.com/vr/documentation/unity/dynamic-resolution-unity/
+- Unity, *Static batching*: https://docs.unity3d.com/Manual/static-batching.html
+- Unity, *GPU instancing*: https://docs.unity3d.com/Manual/GPUInstancing.html
+- Unity, *SRP Batcher*: https://docs.unity3d.com/Manual/SRPBatcher.html
+- Unity, *Occlusion Culling*: https://docs.unity3d.com/Manual/OcclusionCulling.html
 
 ---
 

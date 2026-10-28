@@ -15,6 +15,10 @@ public class AvatarJugador : OvrAvatarEntity
     [Tooltip("Segundos maximos de espera para descargar el avatar de la cuenta.")]
     public float esperaMaxima = 20f;
 
+    [Header("Visual")]
+    [Tooltip("Activa las piernas. Desactivado: solo cuerpo superior y manos.")]
+    public bool mostrarPiernas = false;
+
     OVRCameraRig _rig;
     float _proxOcultar;
 
@@ -49,6 +53,16 @@ public class AvatarJugador : OvrAvatarEntity
         {
             _proxOcultar = Time.time + 1f;
             OcultarControles();
+        }
+
+        // Toggle de piernas: Half = torso/manos, Full = cuerpo completo.
+        if (IsCreated)
+        {
+            var deseadas = mostrarPiernas
+                ? CAPI.ovrAvatar2EntityManifestationFlags.Full
+                : CAPI.ovrAvatar2EntityManifestationFlags.Half;
+            if (GetActiveManifestation() != deseadas)
+                SetActiveManifestation(deseadas);
         }
     }
 

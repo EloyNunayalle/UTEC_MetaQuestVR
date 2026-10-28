@@ -2,12 +2,14 @@ using System.Collections;
 using System.Globalization;
 using System.IO;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Unity.Profiling;
 
 /// <summary>
 /// Escena de diagnóstico en build de Windows: mueve una cámara por puntos
 /// representativos del tile y registra draw calls, batches, setPass calls,
 /// triángulos y vértices.
+/// Con --juego mide Persistente + tile + interior y escribe diagnostico_juego.csv.
 /// </summary>
 public class DiagnosticoRT : MonoBehaviour
 {
@@ -23,6 +25,8 @@ public class DiagnosticoRT : MonoBehaviour
     private Vector3[] _lookTargets;
     private string[] _nombres;
     private string _ruta;
+    private string _nombreArchivo = "diagnostico_build.csv";
+    private bool _juegoCompleto;
 
     private void Awake()
     {
@@ -51,6 +55,9 @@ public class DiagnosticoRT : MonoBehaviour
         var args = System.Environment.GetCommandLineArgs();
         bool perfilQuest = System.Array.IndexOf(args, "--quest") >= 0;
         bool sinSombras = System.Array.IndexOf(args, "--sin-sombras") >= 0;
+        bool juegoCompleto = System.Array.IndexOf(args, "--juego") >= 0;
+        _juegoCompleto = juegoCompleto;
+        if (juegoCompleto) _nombreArchivo = "diagnostico_juego.csv";
 
         if (perfilQuest)
         {
@@ -70,6 +77,19 @@ public class DiagnosticoRT : MonoBehaviour
         else
         {
             Debug.Log("[Diagnostico] sombras=ON");
+        }
+
+        if (juegoCompleto)
+        {
+            foreach (var camara in Object.FindObjectsOfType<Camera>(true))
+                if (camara != _cam) camara.enabled = false;
+
+            if (Application.CanStreamedLevelBeLoaded("Estacion_Interior") &&
+                !SceneManager.GetSceneByName("Estacion_Interior").isLoaded)
+            {
+                SceneManager.LoadScene("Estacion_Interior", LoadSceneMode.Additive);
+                Debug.Log("[Diagnostico] interior cargado para medicion");
+            }
         }
 
         LogBatching();
@@ -123,8 +143,10 @@ public class DiagnosticoRT : MonoBehaviour
 
     private IEnumerator Registrar()
     {
-        const string nombreArchivo = "diagnostico_build.csv";
-        _ruta = Path.Combine(Application.persistentDataPath, nombreArchivo);
+        if (_juegoCompleto)
+            yield return new WaitForSecondsRealtime(2.5f);
+
+        _ruta = Path.Combine(Application.persistentDataPath, _nombreArchivo);
 
         var min = Vector3.one * float.MaxValue;
         var max = Vector3.one * float.MinValue;
