@@ -538,6 +538,82 @@ El caso oficial de Meta, **Dead & Buried 2**, usa LODs y carga/descarga por posi
 - Unity, *SRP Batcher*: https://docs.unity3d.com/Manual/SRPBatcher.html
 - Unity, *Occlusion Culling*: https://docs.unity3d.com/Manual/OcclusionCulling.html
 
+### 2.13 Plan de siguiente fase (28/10/2026)
+
+> Anotación de planificación. No se modificó el proyecto en esta sección.
+
+#### 1. Lectura de los datos actuales
+
+- **431–541 draw calls** con sombras y **309–371** sin sombras en el juego completo; **452–817K triángulos**. Los triángulos están dentro del rango de Quest 2/3: el cuello son los draw calls, no la geometría.
+- **Tile solo:** 194–205 con sombras (main ~100–110 + sombras ~94). El resto del juego es ~55–60 % del coste.
+- **Camión:** 71 renderers, 21 materiales, sin LOD.
+- **Camera Rig:** 52 renderers tras el optimizador (280 en total, 87 antes de optimizar).
+- **Interior:** 35 renderers; se carga a 45 m aunque no se vea.
+- **HUD/selector/manguera/marcador:** 23 renderers.
+- **Sombras:** ~167 draw calls. El optimizador apaga las de camión/rig/interior, pero la medición solo baja ~2 draw calls: falta auditar el reparto real entre ciudad estática y objetos dinámicos.
+- **Iluminación:** sin lightmaps (`m_LightingDataAsset: {fileID: 0}` en las tres escenas), sin occlusion bake, niebla desactivada y far clip en **1000**. Cuatro luces puntuales realtime y una directional `Mixed` sin bake.
+- **UV2:** ningún modelo tiene `Generate Lightmap UVs` activado; es un requisito antes de hornear.
+- **Interior:** no tiene luces propias; un bake de la ciudad puede dejarlo plano u oscuro.
+- **Medición:** la cámara de diagnóstico no reproduce la selección de LOD; 431–541 es un techo, no el valor real del juego.
+
+#### 2. Siguiente paso real
+
+El siguiente paso **no es hornear ni HLOD**: es reducir el coste del juego completo que no es el tile (camión, rig, interior y HUD), y en paralelo auditar las sombras. El tile ya está cerca de su límite práctico; el 55–60 % del coste está fuera.
+
+Hornear es la palanca más grande en teoría, pero también la de mayor riesgo (UV2, memoria de lightmaps, escenas aditivas, interior sin luces). Primero conviene quitar renderers, que además abaratan el pase de sombras.
+
+#### 3. Fases
+
+| Fase | Trabajo | Impacto esperado | Riesgo | Gate |
+|---|---|---|---|---|
+| **0. Baseline y auditoría** (0,5–1 día) | Medir con la cámara real; separar main/sombra por grupo (tile, camión, rig, interior, HUD); verificar que el optimizador aplica `shadowCastingMode=Off` antes de medir | Ninguno; da dirección | Bajo | Tabla de draw calls por grupo y pase |
+| **1. Juego completo** (3–5 días) | Camión combinado por material + LOD; rig solo manos/controladores; interior combinado y desactivado fuera; HUD batcheado | −120 a −160 main | Medio | Camión ≤25, rig ≤8, interior ≤10; sin romper input/equipamiento |
+| **2. Sombras** (2–4 días) | Sombras dinámicas off + blob; generar UV2; bake con directional `Mixed` + shadowmask y puntuales `Baked`; fallback sin sombras + AO | −80 a −140 | Medio-alto | Pase de sombras ≤30; lightmaps 8–16 MB; sin artefactos |
+| **3. Tile main** (2–3 días) | Occlusion Culling; far clip 1000 → 150–200; niebla; `layerCullDistances` para pasto/flores/decals; HLOD de edificios lejanos | −20 a −40 en tile | Medio | Tile main ≤90; sin pop-in grave |
+| **4. Multi-tile** (1–2 semanas) | 1 tile cercano completo + 1–2 vecinos en HLOD; carga/descarga por distancia y presupuesto | 3 tiles ~250–330 | Alto | 3 tiles ≤350; hitches <2 ms |
+| **5. Visor** | Quest 2/3, OVR Metrics, Profiler, RenderDoc Meta; FFR/ASW/Dynamic Resolution | Validación real | — | 72 FPS estables; sin throttling |
+
+Detalle de la Fase 1:
+
+- **Camión:** combinar casco estático por material (21 → ~6), mantener ruedas/puertas/escalera/manguera/panel/palanca/GPS separados, LOD1/caja y sombra off o blob. **71 → 15–25.**
+- **Rig:** conservar solo manos/controladores y desactivar el resto de visuales de OVRInteraction en build. **52 → 4–8.**
+- **Interior:** combinar por material, cargar solo al entrar y desactivar renderers al salir (la escena puede seguir cargada para chaleco/extintor). Si se ve la calle por el portón, mantener fachada/HLOD exterior. **35 → 6–10; 0 fuera.**
+- **HUD:** canvas batching y ocultar paneles no usados; no es la prioridad porque parte ya batchea.
+
+#### 4. Presupuesto objetivo
+
+| Métrica | Quest 2 | Quest 3 |
+|---|---:|---:|
+| Draw calls totales | **150–250** | **250–400** |
+| Tile cercano | 80–90 main + 0–10 sombra | 90–110 main + 10–20 sombra |
+| Camión | 15–25 | 15–25 |
+| Rig | 4–8 | 4–8 |
+| Interior | 6–10 (solo dentro) | 6–10 |
+| Triángulos | 750K–1M | 1,3M–1,8M |
+| Sombras | Horneadas/blob | Horneadas + pocas dinámicas |
+
+- **<100 en Quest 2** no es realista con el contenido completo actual; el objetivo defendible es **150–250**.
+- **<200 en Quest 3** sí es alcanzable después de las fases 1–3.
+- **3–5 tiles completos** siguen sin ser viables; solo con 1 cercano + HLOD de vecinos.
+
+#### 5. Qué no hacer ahora
+
+- Migrar a URP: no reduce draw calls y no ataca el cuello actual.
+- Seguir decimando árboles/edificios: los triángulos ya están en rango.
+- Hornear sin auditar UV2 y el reparto de sombras.
+- HLOD multi-tile antes de bajar el juego completo de ~500.
+- Combinar todo en una sola malla: se pierde culling y LOD.
+
+#### 6. Decisiones pendientes
+
+1. Bake de luz o sombras fake (recomendación: auditar primero; bake solo si UV2 y memoria salen bien).
+2. Prioridad Quest 2 o Quest 3.
+3. ¿Se puede desactivar el interior fuera y la ciudad dentro, cuidando la vista por el portón?
+4. ¿El camión puede tener ruedas/puertas/escalera separadas para combinarlo?
+5. ¿Habrá visor pronto para validar en dispositivo?
+
+> Nota: los cambios pendientes en `Persistente.unity` (preset Hombre) y `Estacion_Interior.unity` (objeto movido) son ediciones de escena del usuario, no forman parte de este plan y no se mezclaron con la optimización.
+
 ---
 
 ## 3. Streaming de tiles

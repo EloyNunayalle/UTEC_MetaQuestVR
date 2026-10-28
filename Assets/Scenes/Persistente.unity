@@ -10150,7 +10150,7 @@ MonoBehaviour:
   cargarDeCuenta: 0
   esperaMaxima: 20
   mostrarPiernas: 0
-  generoAvatar: 0
+  presetAvatar: 1
 --- !u!4 &1655380797
 Transform:
   m_ObjectHideFlags: 0
