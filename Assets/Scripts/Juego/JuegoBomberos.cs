@@ -51,8 +51,8 @@ public class JuegoBomberos : MonoBehaviour
 
     [Header("Mision 2 (incendio electrico en la casa)")]
     [Tooltip("Tiempos de referencia de la Mision 2 para la calificacion.")]
-    public float tiempoExcelenteM2 = 150f;
-    public float tiempoBuenoM2 = 270f;
+    public float tiempoExcelenteM2 = 210f;   // incluye el viaje en moto hasta la casa
+    public float tiempoBuenoM2 = 330f;
     [Tooltip("Puntos que se restan por cada error de seguridad en la Mision 2.")]
     public int penalizacionError = 25;
 
@@ -112,6 +112,9 @@ public class JuegoBomberos : MonoBehaviour
 
     float _inicioIntro, _inicioMision, _tiempoFinal, _ultimoProgreso, _proximaCampana, _proximoHud, _bloqueoReinicio;
     int _puntaje, _bono;
+    // Moto para moverse por la ciudad (todos los modos)
+    MotoBomberos _moto;
+    bool _motoIntentada;
     // Mision 2
     Mision2Electrica _m2;
     int _errores, _misionTerminada = 1;
@@ -506,6 +509,7 @@ public class JuegoBomberos : MonoBehaviour
         VigilarPuertas();
         DetectarBloqueo();
         PedirInstrucciones();
+        if (!_motoIntentada && Time.timeSinceLevelLoad > 1.5f) CrearMoto();
 
         // Durante la Mision 2 el edificio de la Mision 1 no arde (se engancha cuando aparece).
         if (_fase == Fase.Mision2 && !_incendioM1Pausado && _edificio != null)
@@ -765,6 +769,7 @@ public class JuegoBomberos : MonoBehaviour
             "- Manguera: en el panel del camión (GRIP y gatillo)\n" +
             "- Chaleco y extintor: agárralos con GRIP\n" +
             "- Camión: párate en el círculo amarillo para manejar\n" +
+            "- Moto: párate en su círculo amarillo (B para bajar)\n" +
             (_edificio != null ? $"- Edificio en llamas (calle del costado): {_edificio.Apagadas}/{_edificio.Total} apagados\n" : "") +
             (_m2 != null ? "- Casa de ladrillo (calle este): incendio eléctrico de práctica\n  " + _m2.EstadoTexto + "\n" : "") +
             "- Válvula del panel del camión: sube la presión del agua",
@@ -928,6 +933,7 @@ public class JuegoBomberos : MonoBehaviour
     bool PuedeSubir()
     {
         if (_fase == Fase.Intro) return false;
+        if (_moto != null && _moto.Montado) return false;
         if (_fase == Fase.Explorar || _fase == Fase.Mision2) return true;
         // Solo cuentan las tareas anteriores a subir al camion (el incendio se apaga despues).
         foreach (var t in _tareas)
@@ -941,6 +947,7 @@ public class JuegoBomberos : MonoBehaviour
     string MotivoNoPuedeSubir()
     {
         if (_fase == Fase.Intro) return "Primero elige un modo";
+        if (_moto != null && _moto.Montado) return "Bájate de la moto primero (B)";
         var pendientes = new List<string>();
         foreach (var t in _tareas)
         {
@@ -1047,11 +1054,10 @@ public class JuegoBomberos : MonoBehaviour
         _errores = 0;
         _proximoHud = 0f;
         if (_edificio != null) { _edificio.Pausar(true); _incendioM1Pausado = true; }
-        _m2.Iniciar(this, false);
-        MoverJugador(_m2.InicioJugador, _m2.InicioAdelante);
+        _m2.Iniciar(this, false); // el jugador se queda donde esta: va hasta la casa (en moto si quiere)
         SonidosVR.Reproducir2D(SonidosVR.Alarma, 0.7f);
         EntradaVR.VibrarAmbas(0.8f, 0.5f, 0.3f);
-        Aviso("¡EMERGENCIA ELÉCTRICA!\n<size=55%>Un equipo se incendia dentro de la casa. Entra con cuidado.</size>", TipoAviso.Error, 4f);
+        Aviso("¡EMERGENCIA ELÉCTRICA!\n<size=55%>Incendio en la casa de ladrillo de la calle este. Sube a la moto y sigue la flecha.</size>", TipoAviso.Error, 4.5f);
         _hud.MostrarPor(8f);
     }
 
@@ -1118,34 +1124,79 @@ public class JuegoBomberos : MonoBehaviour
         _hud.MostrarPor(20f);
     }
 
-    /// <summary>Lleva al jugador a un punto (pies) mirando hacia una direccion, y avisa al locomotor.</summary>
-    void MoverJugador(Vector3 pies, Vector3 adelante)
+    // ------------------------------------------------------------------
+    // Moto (se estaciona junto al punto de inicio del jugador, en un lugar libre)
+    // ------------------------------------------------------------------
+
+    void CrearMoto()
     {
+        _motoIntentada = true;
         var rigT = rig.transform;
-        float alturaRig = rigT.position.y - SueloBajo(_cabeza.position, rigT.position.y);
-        adelante.y = 0f;
-        if (adelante.sqrMagnitude > 0.001f)
+        Vector3 pies = rigT.position;
+        // Mirando hacia el porton principal (la salida) si ya esta, si no hacia donde mira el jugador.
+        Vector3 f = _principal != null ? _principal.PuntoBoton - pies : _cabeza.forward;
+        f.y = 0f;
+        if (f.sqrMagnitude < 0.01f) f = Vector3.forward;
+        f.Normalize();
+        Vector3 r = Vector3.Cross(Vector3.up, f);
+        var rot = Quaternion.LookRotation(f, Vector3.up);
+
+        Vector3[] candidatos =
         {
-            float yaw = Quaternion.LookRotation(adelante.normalized, Vector3.up).eulerAngles.y;
-            rigT.RotateAround(_cabeza.position, Vector3.up, Mathf.DeltaAngle(_cabeza.eulerAngles.y, yaw));
+            r * 1.9f + f * 0.5f, -r * 1.9f + f * 0.5f, r * 2.6f, -r * 2.6f, f * 2.6f + r * 1.2f,
+            f * 2.6f - r * 1.2f, r * 3.4f + f * 1f, -r * 3.4f + f * 1f, -f * 2.4f, r * 1.9f - f * 1.5f
+        };
+        Vector3 elegido = pies + r * 1.9f;
+        foreach (var c in candidatos)
+        {
+            Vector3 p = pies + c;
+            if (!PisoLibre(p, rot, pies.y, out float y)) continue;
+            elegido = new Vector3(p.x, y, p.z);
+            break;
         }
-        Vector3 d = pies - _cabeza.position; d.y = 0f;
-        Vector3 nueva = rigT.position + d;
-        nueva.y = pies.y + alturaRig;
-        rigT.position = nueva;
-        CamionBomberos.TeletransportarLocomotor(new Vector3(pies.x, nueva.y, pies.z), Quaternion.Euler(0f, _cabeza.eulerAngles.y, 0f));
+        _moto = MotoBomberos.Crear(rig, elegido, rot);
+        _moto.puedeSubir = () => _fase != Fase.Intro && !_camion.JugadorSentado;
+        _moto.alSubir += () =>
+        {
+            _hud.alturaRelativa = -0.55f;
+            Aviso("¡En moto!\n<size=55%>Stick adelante: acelerar   -   a los lados: girar   -   B: bajar</size>", TipoAviso.Info, 3.5f);
+        };
+        _moto.alBajar += () => _hud.alturaRelativa = -0.32f;
     }
 
-    /// <summary>Altura del piso bajo un punto (ignora al jugador y la manguera).</summary>
-    float SueloBajo(Vector3 desde, float porDefecto)
+    /// <summary>Hay piso cerca de la altura del jugador y no hay nada encima donde va la moto.</summary>
+    bool PisoLibre(Vector3 p, Quaternion rot, float alturaPies, out float y)
     {
-        float mejor = float.MaxValue, y = porDefecto;
-        foreach (var h in Physics.RaycastAll(desde, Vector3.down, 4f, ~(1 << MangueraBomberos.CapaManguera), QueryTriggerInteraction.Ignore))
+        y = alturaPies;
+        float mejor = float.MaxValue;
+        foreach (var h in Physics.RaycastAll(p + Vector3.up * 1.5f, Vector3.down, 3f, ~(1 << MangueraBomberos.CapaManguera), QueryTriggerInteraction.Ignore))
         {
             if (h.collider.transform.IsChildOf(rig.transform)) continue;
             if (h.distance < mejor) { mejor = h.distance; y = h.point.y; }
         }
-        return y;
+        if (mejor == float.MaxValue || Mathf.Abs(y - alturaPies) > 0.4f) return false;
+        Vector3 centro = new Vector3(p.x, y + 0.75f, p.z);
+        foreach (var c in Physics.OverlapBox(centro, new Vector3(0.5f, 0.55f, 1.2f), rot, ~(1 << MangueraBomberos.CapaManguera), QueryTriggerInteraction.Ignore))
+            if (!c.transform.IsChildOf(rig.transform)) return false;
+        return true;
+    }
+
+    /// <summary>
+    /// Guia de la Mision 2 mientras el jugador esta lejos de la casa: primero el boton del porton
+    /// principal (si esta cerrado) y luego la moto. Devuelve null si no hace falta desviar la flecha.
+    /// </summary>
+    public Vector3? GuiaSalida(Vector3 cabeza, Vector3 destino)
+    {
+        Vector3 d = destino - cabeza; d.y = 0f;
+        if (d.magnitude < 20f) return null;
+        if (_principal != null && !_principal.AbiertoOAbriendo && Vector3.Distance(cabeza, _principal.PuntoBoton) < 30f)
+            return _principal.PuntoBoton + Vector3.up * 0.3f;
+        if (_moto != null && !_moto.Montado && !_camion.JugadorSentado)
+        {
+            Vector3 m = _moto.PuntoSubida - cabeza; m.y = 0f;
+            if (m.magnitude < 25f) return _moto.PuntoSubida + Vector3.up * 1.2f;
+        }
+        return null;
     }
 
     float _ultimoAvisoChoque;
@@ -1160,7 +1211,7 @@ public class JuegoBomberos : MonoBehaviour
 
     void DetectarBloqueo()
     {
-        if (_camion != null && _camion.JugadorSentado) { _tiempoBloqueo = 0f; return; }
+        if ((_camion != null && _camion.JugadorSentado) || (_moto != null && _moto.Montado)) { _tiempoBloqueo = 0f; return; }
         Vector2 stick = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick);
         Vector3 pos = _cabeza.position; pos.y = 0f;
         if (stick.magnitude < 0.6f) { _tiempoBloqueo = 0f; _posBloqueo = pos; return; }

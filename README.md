@@ -86,9 +86,15 @@ Al subir se muestra el **tiempo, el puntaje** (100 por tarea + bono por rapidez)
 - `VolanteInteractivo.cs`: volante agarrable (GRIP/pellizco cerca del aro) con tope ±120° y joystick de respaldo; gira sobre el centro visual (estable, sin parpadeos) y las piezas que van con el volante giran con él; entrega el eje de giro al camión (`ejeGiroManual`).
 - `PalancaCambios.cs`: palanca de cambios agarrable (modelo importado o procedural) que se asienta en la ranura más cercana; soporta ranuras extra (p. ej. L → D), **ilumina la letra activa** y publica la marcha al camión (`marchaManual`).
 
+## Moto (`MotoBomberos.cs`)
+Moto roja de bomberos con baliza azul para moverte rápido por la ciudad, en todos los modos. Aparece estacionada junto a ti al empezar, en un lugar libre y mirando hacia el portón. No hay un modelo de moto en el proyecto, así que está armada con primitivas.
+- **Subir**: párate en el círculo amarillo del costado (se llena) o presiona **A** dentro de él.
+- **Manejar**: stick izquierdo adelante/atrás = acelerar, frenar y reversa; cualquier stick a los lados = girar. Teclado: W/S/A/D.
+- **Bajar**: **B / Y** (quedas parado al costado). La moto frena contra paredes y objetos y sube los cordones de las veredas.
+
 ## Misión 2: incendio eléctrico en la casa (`Assets/Scripts/Juego/Mision2/`)
 
-Se juega en la **casa de ladrillo de la calle este** (la Rowhouse, a la izquierda del edificio de la Misión 1). Al elegir **MISIÓN 2**, apareces en la vereda, frente a la puerta. Entras caminando: la puerta se abre al acercarte o al tocarla.
+Se juega en la **casa de ladrillo de la calle este** (la Rowhouse, a la izquierda del edificio de la Misión 1). Al elegir **MISIÓN 2** te quedas donde estás, sin teletransporte. La flecha te guía: primero al botón verde del portón principal (si está cerrado), luego a la **moto** y después a la casa. Entras caminando: la puerta se abre al acercarte o al tocarla.
 
 **Tareas, en orden** (cada una se cumple solo con la acción correcta):
 1. **Identifica el riesgo eléctrico**: entra y mira el equipo que echa chispas y humo.

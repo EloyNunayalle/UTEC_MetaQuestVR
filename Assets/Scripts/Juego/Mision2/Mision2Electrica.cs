@@ -27,7 +27,7 @@ public class Mision2Electrica : MonoBehaviour
     public ExtintorCO2 extintor;
     public ComprobadorTension comprobador;
     public PuertaCasa puerta;
-    [Tooltip("Donde aparece el jugador al elegir la Mision 2 (afuera, frente a la puerta). Su +Z mira a la casa.")]
+    [Tooltip("Punto de referencia frente a la puerta (afuera). Su +Z mira a la casa. El jugador ya no se teletransporta aqui.")]
     public Transform puntoInicio;
 
     [Header("Zonas (coordenadas locales de este objeto)")]
@@ -193,7 +193,7 @@ public class Mision2Electrica : MonoBehaviour
         var fuego = maquina.Fuego;
 
         Tarea("Identifica el riesgo eléctrico",
-            "Entra a la casa y busca el equipo que echa chispas y humo. ¡No lo toques ni uses agua!",
+            "Ve a la casa de ladrillo de la calle este (sal por el portón principal; la moto está junto a ti). Entra y busca el equipo que echa chispas. ¡No uses agua!",
             () => Guia(maquina.PuntoMirar + Vector3.up * 0.9f),
             () => _riesgoVisto || !panel.Energizado,
             "¡Riesgo eléctrico identificado!");
@@ -441,10 +441,15 @@ public class Mision2Electrica : MonoBehaviour
         return Mathf.Abs(p.x) <= tam.x * 0.5f && Mathf.Abs(p.y) <= tam.y * 0.5f && Mathf.Abs(p.z) <= tam.z * 0.5f;
     }
 
-    /// <summary>Lleva la flecha por la puerta de la casa y por el paso al cuarto antes de llegar al objetivo.</summary>
+    /// <summary>
+    /// Lleva la flecha por el camino: desde la estacion al boton del porton y a la moto (si hace falta),
+    /// luego a la puerta de la casa y al paso del cuarto, y recien despues al objetivo.
+    /// </summary>
     Vector3? Guia(Vector3 objetivo)
     {
         if (_cabeza == null) return objetivo;
+        var salida = _juego != null ? _juego.GuiaSalida(_cabeza.position, puerta != null ? puerta.PuntoEntrada : objetivo) : null;
+        if (salida.HasValue) return salida;
         if (!Dentro(centroCasa, tamanoCasa, _cabeza.position) && puerta != null) return puerta.PuntoEntrada;
         if (Dentro(centroCuarto, tamanoCuarto, objetivo) && !Dentro(centroCuarto, tamanoCuarto, _cabeza.position))
             return transform.TransformPoint(pasoCuarto);
