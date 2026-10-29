@@ -207,7 +207,8 @@ Assets incorporados para la M2, cada uno en su propia carpeta (ver el `ATRIBUCIO
 - **"Ac units - Game Ready" (equipo que se incendia)** — autor: abistar (CGTrader)
   - Fuente: https://www.cgtrader.com/items/5046685
   - Licencia: **CGTrader Royalty-Free** (modelo gratuito). Permite uso dentro del proyecto, pero **prohíbe redistribuir el archivo 3D original**.
-  - **No incluido en el repositorio**: el `.fbx` queda local en `Assets/Models/EquipoIncendio/`. Se versionan el `.meta` y `ATRIBUCION.txt` para re-vincularlo al agregar el archivo con el mismo nombre.
+  - **No incluido en el repositorio**: el `.fbx` y las texturas quedan locales en `Assets/Models/EquipoIncendio/`. Se versionan el `.meta`, el `ATRIBUCION.txt` y los materiales `M_AC1`, `M_AC2`, `M_AC_Detalle`.
+  - Texturas: `Textures.zip` del mismo asset, importadas a 1024 px; los materiales del FBX se remapearon a los materiales externos.
 
 ### Kit de ciudad: "Downtown City MegaKit" (Standard)
 - **Autor**: Quaternius (https://quaternius.com)

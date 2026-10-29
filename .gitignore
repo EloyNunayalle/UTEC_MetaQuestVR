@@ -158,6 +158,12 @@ InitTestScene*.unity*
 !/Assets/Models/EquipoIncendio/**/
 !/Assets/Models/EquipoIncendio/**/*.meta
 !/Assets/Models/EquipoIncendio/ATRIBUCION.txt
+# Los materiales y los .meta de texturas sí se versionan; las texturas
+# originales (PNG) quedan locales por la licencia CGTrader.
+!/Assets/Models/EquipoIncendio/Materials/
+!/Assets/Models/EquipoIncendio/Materials/*.mat
+!/Assets/Models/EquipoIncendio/Textures/
+!/Assets/Models/EquipoIncendio/Textures/**/*.meta
 
 # ============================================================
 # Meta Avatars SDK - Sample Scenes (288 MB, solo referencia/desarrollo)

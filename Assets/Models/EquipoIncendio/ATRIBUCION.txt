@@ -14,3 +14,9 @@ Modificaciones realizadas a este modelo:
 - Ninguna en la malla: se importa tal cual.
 - En el proyecto se usará como equipo/máquina que se incendia en la Misión 2
   (el fuego, chispas y arcos se añadirán por código).
+- Texturas: se descargó Textures.zip del mismo asset (BaseColor, Normal,
+  Metallic, Roughness, Height) y se importaron a 1024 px para Quest. Las
+  texturas quedan locales por la licencia; solo se versionan sus .meta.
+- Materiales: se crearon M_AC1, M_AC2 y M_AC_Detalle en
+  Assets/Models/EquipoIncendio/Materials/ y se remapearon los materiales
+  originales del FBX.
