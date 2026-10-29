@@ -9,7 +9,7 @@ using UnityEngine;
 /// Maquina de estados del incendio:
 ///   ENERGIZADO   -> hay tension, chispas y arcos; el CO2 lo baja un momento pero se reaviva.
 ///   DESCONECTADO -> interruptor principal abajo; sin chispas ni arcos; el fuego sigue; falta medir.
-///   VERIFICADO   -> el comprobador midio SIN TENSION en los bornes: el CO2 ya puede extinguirlo.
+///   VERIFICADO   -> el comprobador toco el tablero y midio SIN TENSION: el CO2 ya puede extinguirlo.
 ///   EXTINGUIDO   -> llamas apagadas, humo residual bajando; falta revisar el area.
 ///   ASEGURADO    -> el jugador reviso el equipo (sin llamas ni chispas): fin de la mision.
 /// Volver a subir el interruptor principal en cualquier momento devuelve a ENERGIZADO (con error).
@@ -91,15 +91,14 @@ public class Mision2Electrica : MonoBehaviour
         CrearCarteles();
 
         // Eventos (se suscriben una sola vez: reiniciar no los duplica).
-        panel.alAccionarSecundario += AlAccionarSecundario;
         maquina.Fuego.alCO2Bloqueado += AlCO2Bloqueado;
         comprobador.alMedir += AlMedir;
-        comprobador.alMedirSinContacto += () => Avisar("contacto", "Sin contacto\n<size=55%>Acerca la punta a los bornes PUNTO DE PRUEBA del tablero</size>", JuegoBomberos.TipoAviso.Info, 2.5f);
+        comprobador.alMedirSinContacto += () => Avisar("contacto", "Toca el tablero\n<size=55%>Apoya la punta del comprobador en el anillo verde del tablero</size>", JuegoBomberos.TipoAviso.Info, 2.5f);
         comprobador.alAgarrar += () =>
         {
             if (_avisoComprobador || EstadoActual == Estado.Inactivo) return;
             _avisoComprobador = true;
-            Avisar("comp", "Comprobador de tensión\n<size=55%>Toca los bornes del tablero con la punta y presiona el gatillo</size>", JuegoBomberos.TipoAviso.Info, 3f);
+            Avisar("comp", "Comprobador de tensión\n<size=55%>Tócalo contra el anillo verde del tablero: mide solo</size>", JuegoBomberos.TipoAviso.Info, 3f);
         };
         extintor.alAgarrar += () =>
         {
@@ -206,13 +205,13 @@ public class Mision2Electrica : MonoBehaviour
             "¡Tablero localizado!");
 
         _tCorte = Tarea("Corta la alimentación eléctrica",
-            "Baja la palanca ROJA del interruptor PRINCIPAL (agárrala con GRIP o empújala hacia abajo). Los breakers C1-C3 son circuitos secundarios.",
+            "Baja la palanca ROJA del tablero: agárrala con GRIP y llévala hacia abajo (o empújala con la mano).",
             () => Guia(panel.PuntoInterruptor + Vector3.up * 0.15f),
             () => !panel.Energizado,
             "¡Alimentación cortada!");
 
         _tComprobar = Tarea("Comprueba que no hay tensión",
-            "Toma el comprobador de la mesa (GRIP), acerca la punta a los bornes PUNTO DE PRUEBA del tablero y presiona el gatillo.",
+            "Toma el comprobador amarillo de la mesa (GRIP) y toca el tablero con la punta, en el anillo verde. Mide solo.",
             () => comprobador.Agarrado ? Guia(panel.PuntoPrueba + Vector3.up * 0.12f) : Guia(comprobador.Centro + Vector3.up * 0.15f),
             () => panel.Verificado && !panel.Energizado,
             "¡SIN TENSIÓN: corte verificado!");
@@ -320,8 +319,8 @@ public class Mision2Electrica : MonoBehaviour
         bool reaviva = EstadoActual == Estado.Extinguido;
         if (reaviva) maquina.Fuego.Encender(); // las chispas del equipo danado vuelven a encenderlo
         string msg = reaviva
-            ? "¡Volviste a energizar el equipo dañado!\n<size=55%>Las chispas reavivaron el fuego. Baja el interruptor PRINCIPAL.</size>"
-            : "¡Volviste a conectar la alimentación!\n<size=55%>Hay tensión otra vez: baja el interruptor PRINCIPAL</size>";
+            ? "¡Volviste a energizar el equipo dañado!\n<size=55%>Las chispas reavivaron el fuego. Baja la palanca roja.</size>"
+            : "¡Volviste a conectar la alimentación!\n<size=55%>Hay tensión otra vez: baja la palanca roja</size>";
         if (Practica) Avisar("reenergizado", msg, JuegoBomberos.TipoAviso.Error, 3.5f);
         else _juego.RegistrarError(msg);
 
@@ -394,14 +393,6 @@ public class Mision2Electrica : MonoBehaviour
     // Eventos de las piezas
     // ------------------------------------------------------------------
 
-    void AlAccionarSecundario(int circuito, bool encendido)
-    {
-        if (EstadoActual == Estado.Inactivo) return;
-        if (!encendido && panel.Energizado)
-            Avisar("secundario", $"Cortaste el circuito C{circuito} (secundario)\n<size=55%>La alimentación general SIGUE ACTIVA: usa el interruptor PRINCIPAL rojo</size>",
-                JuegoBomberos.TipoAviso.Error, 3.5f);
-    }
-
     void AlCO2Bloqueado()
     {
         if (EstadoActual == Estado.Inactivo) return;
@@ -417,14 +408,14 @@ public class Mision2Electrica : MonoBehaviour
             else Avisar("co2", msg, JuegoBomberos.TipoAviso.Error, 3f, 4f);
         }
         else
-            Avisar("co2_verif", "Comprueba que no hay tensión\n<size=55%>Mide en los bornes del tablero antes de usar el CO<sub>2</sub></size>", JuegoBomberos.TipoAviso.Info, 3f, 4f);
+            Avisar("co2_verif", "Comprueba que no hay tensión\n<size=55%>Toca el tablero con el comprobador antes de usar el CO<sub>2</sub></size>", JuegoBomberos.TipoAviso.Info, 3f, 4f);
     }
 
     void AlMedir(bool sinTension)
     {
         if (EstadoActual == Estado.Inactivo) return;
         if (!sinTension)
-            Avisar("medicion", "PELIGRO: CIRCUITO ENERGIZADO\n<size=55%>Hay tensión: baja el interruptor PRINCIPAL antes de seguir</size>", JuegoBomberos.TipoAviso.Error, 3f);
+            Avisar("medicion", "PELIGRO: CIRCUITO ENERGIZADO\n<size=55%>Hay tensión: baja la palanca roja del tablero</size>", JuegoBomberos.TipoAviso.Error, 3f);
         else if (EstadoActual != Estado.Desconectado)
             Avisar("medicion", "SIN TENSIÓN", JuegoBomberos.TipoAviso.Exito, 1.5f);
         // Desconectado + sin tension: el cambio a VERIFICADO lo anuncia Pasar().

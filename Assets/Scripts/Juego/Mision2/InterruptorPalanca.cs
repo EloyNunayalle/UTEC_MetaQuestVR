@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// Palanca de interruptor (Mision 2): el interruptor principal del tablero y los breakers secundarios.
+/// Palanca de interruptor (Mision 2): la palanca roja principal del tablero.
 /// Se mueve con la mano: agarrandola (GRIP) y llevandola arriba/abajo, o empujandola con el dedo / la punta
 /// del control. Arriba = ENCENDIDO, abajo = APAGADO. Al pasar la mitad cambia de estado (clic + vibracion)
 /// y al soltarla se asienta sola en el extremo. El estado es logico (lo lee PanelElectrico), no solo visual.

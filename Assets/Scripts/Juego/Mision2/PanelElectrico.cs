@@ -1,31 +1,26 @@
 using System;
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
 /// <summary>
 /// Tablero electrico principal de la Mision 2 (incendio electrico).
-/// Estado LOGICO de la instalacion: <see cref="Energizado"/> depende SOLO del interruptor principal;
-/// los breakers secundarios cortan circuitos parciales y no la alimentacion general.
-/// <see cref="Verificado"/> se activa solo cuando el comprobador de tension mide sin tension en los bornes.
+/// Tiene un solo interruptor que funciona: la palanca ROJA principal. <see cref="Energizado"/> depende solo de ella.
+/// <see cref="Verificado"/> se activa cuando el comprobador de tension toca el tablero con la alimentacion cortada.
 ///
 /// El modelo del tablero ("VR-Ready Fuse Box") es una sola malla: no se mueve. Encima se construyen por
-/// codigo la palanca principal, tres breakers secundarios, los indicadores, los bornes de prueba, los
-/// rotulos, el zumbido y la luz de emergencia.
+/// codigo la palanca roja, el rotulo, la zona donde se apoya el comprobador (aparece solo mientras lo
+/// tienes en la mano), el resultado grande de la medicion, el zumbido y la luz de emergencia.
 /// Convencion: el origen de este objeto esta en la pared y su +Z apunta hacia la sala (frente del tablero).
 /// </summary>
 public class PanelElectrico : MonoBehaviour
 {
-    [Header("Ubicacion de las piezas sobre el modelo (local, +Z = frente)")]
+    [Header("Ubicacion sobre el modelo (local, +Z = frente)")]
+    [Tooltip("Sobre el interruptor rojo del modelo.")]
     public Vector3 posInterruptorPrincipal = new Vector3(0.17f, 0f, 0.212f);
-    public Vector3[] posBreakers =
-    {
-        new Vector3(-0.15f, 0f, 0.212f), new Vector3(-0.09f, 0f, 0.212f), new Vector3(-0.03f, 0f, 0.212f)
-    };
-    public Vector3 posBornes = new Vector3(-0.04f, -0.13f, 0.18f);
-    public Vector3 posIndicadores = new Vector3(0.15f, -0.13f, 0.18f);
-    [Tooltip("Distancia (m) de la punta del comprobador a los bornes para que la medicion cuente.")]
-    public float radioPrueba = 0.13f;
+    [Tooltip("Centro de la zona donde se apoya el comprobador (frente del tablero).")]
+    public Vector3 posZonaPrueba = new Vector3(-0.06f, 0f, 0.2f);
+    [Tooltip("Medio tamano de la zona de prueba (m): basta con tocar el tablero de frente.")]
+    public Vector3 medioZonaPrueba = new Vector3(0.3f, 0.28f, 0.2f);
 
     [Header("Iluminacion")]
     [Tooltip("Luz del techo del cuarto: se apaga al cortar la alimentacion.")]
@@ -37,16 +32,8 @@ public class PanelElectrico : MonoBehaviour
     public bool Verificado { get; private set; }
     /// <summary>La mision esta en curso (zumbido y luces activos).</summary>
     public bool Activo { get; set; }
-    public bool Tocado
-    {
-        get
-        {
-            if (_principal != null && _principal.Tocada) return true;
-            foreach (var b in _secundarios) if (b != null && b.Tocada) return true;
-            return false;
-        }
-    }
-    public Vector3 PuntoPrueba => _bornes != null ? _bornes.position : transform.TransformPoint(posBornes);
+    public bool Tocado => _principal != null && _principal.Tocada;
+    public Vector3 PuntoPrueba => transform.TransformPoint(posZonaPrueba);
     public Vector3 PuntoInterruptor => _principal != null ? _principal.Punta : transform.TransformPoint(posInterruptorPrincipal);
     public Vector3 Centro => transform.TransformPoint(new Vector3(0f, 0f, 0.15f));
     /// <summary>Salida del cable de alimentacion (arriba del tablero).</summary>
@@ -54,22 +41,15 @@ public class PanelElectrico : MonoBehaviour
 
     /// <summary>true = se conecto, false = se corto la alimentacion general.</summary>
     public event Action<bool> alCambiarAlimentacion;
-    /// <summary>(numero de circuito 1..n, encendido).</summary>
-    public event Action<int, bool> alAccionarSecundario;
 
     InterruptorPalanca _principal;
-    readonly List<InterruptorPalanca> _secundarios = new List<InterruptorPalanca>();
-    Material _matLedTension, _matLedSinTension;
     AudioSource _zumbido;
     Light _luzEmergencia;
-    Material _matEmergencia;
-    Transform _bornes;
-    float _intensidadTecho = 1f;
-    bool _preparado;
-
-    static readonly Color LedRojo = new Color(1f, 0.12f, 0.08f);
-    static readonly Color LedVerde = new Color(0.2f, 1f, 0.35f);
-    static readonly Color LedApagado = new Color(0.15f, 0.15f, 0.15f);
+    Material _matEmergencia, _matObjetivo;
+    Transform _objetivo, _anillo, _resultadoRaiz;
+    TextMeshPro _resultado;
+    float _intensidadTecho = 1f, _finResultado;
+    bool _preparado, _mostrarObjetivo;
 
     /// <summary>Construye las piezas interactivas (una sola vez).</summary>
     public void Preparar()
@@ -79,33 +59,19 @@ public class PanelElectrico : MonoBehaviour
 
         AsegurarModelo();
 
-        _principal = InterruptorPalanca.Crear("Interruptor_Principal", transform, posInterruptorPrincipal, 0.09f, 0.024f,
+        _principal = InterruptorPalanca.Crear("Interruptor_Principal", transform, posInterruptorPrincipal, 0.1f, 0.026f,
             new Color(0.85f, 0.08f, 0.05f), new Color(0.12f, 0.12f, 0.13f));
         _principal.alCambiar += AlCambiarPrincipal;
-        Rotulo("PRINCIPAL", posInterruptorPrincipal + new Vector3(0f, 0.085f, 0.005f), 0.022f, new Vector2(0.14f, 0.04f), Color.white, null);
 
-        for (int i = 0; i < posBreakers.Length; i++)
-        {
-            int circuito = i + 1;
-            var b = InterruptorPalanca.Crear("Breaker_C" + circuito, transform, posBreakers[i], 0.045f, 0.013f,
-                new Color(0.1f, 0.1f, 0.1f), new Color(0.85f, 0.85f, 0.82f));
-            b.radioMano = 0.04f;
-            b.anguloMaximo = 32f;
-            b.Forzar(true);
-            b.alCambiar += v => alAccionarSecundario?.Invoke(circuito, v);
-            _secundarios.Add(b);
-            Rotulo("C" + circuito, posBreakers[i] + new Vector3(0f, 0.06f, 0.005f), 0.016f, new Vector2(0.05f, 0.03f), Color.white, null);
-        }
+        Rotulo("TABLERO GENERAL\n<size=60%>Baja la palanca roja para cortar la luz</size>", new Vector3(0f, 0.31f, 0.03f), 0.03f,
+            new Vector2(0.56f, 0.1f), Color.black, new Color(1f, 0.82f, 0.1f));
 
-        CrearIndicadores();
-        CrearBornes();
-        Rotulo("TABLERO GENERAL\n<size=60%>¡Corte aquí la alimentación!</size>", new Vector3(0f, 0.31f, 0.03f), 0.03f,
-            new Vector2(0.52f, 0.1f), Color.black, new Color(1f, 0.82f, 0.1f));
-
+        CrearObjetivoPrueba();
+        CrearResultado();
         _zumbido = SonidosVR.CrearBucle(transform, SonidosVR.Zumbido, 0.22f, 7f);
         CrearLuzEmergencia();
         if (luzTecho != null) _intensidadTecho = luzTecho.intensity;
-        ActualizarIndicadores();
+        ActualizarLuces();
     }
 
     /// <summary>
@@ -118,42 +84,43 @@ public class PanelElectrico : MonoBehaviour
         var caja = VisualesVR.Primitiva(PrimitiveType.Cube, "Tablero_Reemplazo", transform, VisualesVR.MaterialOpaco(new Color(0.55f, 0.57f, 0.6f)));
         caja.transform.localScale = new Vector3(0.48f, 0.44f, 0.17f);
         caja.transform.localPosition = new Vector3(0f, 0f, 0.09f);
-        var riel = VisualesVR.Primitiva(PrimitiveType.Cube, "Riel", transform, VisualesVR.MaterialOpaco(new Color(0.85f, 0.85f, 0.82f)));
-        riel.transform.localScale = new Vector3(0.42f, 0.09f, 0.02f);
-        riel.transform.localPosition = new Vector3(0f, 0f, 0.18f);
     }
 
-    void CrearIndicadores()
+    /// <summary>Anillo verde que late en el frente del tablero: "apoya aqui el comprobador".</summary>
+    void CrearObjetivoPrueba()
     {
-        var placa = VisualesVR.Primitiva(PrimitiveType.Cube, "Indicadores", transform, VisualesVR.MaterialOpaco(new Color(0.1f, 0.1f, 0.11f)));
-        placa.transform.localPosition = posIndicadores + new Vector3(0f, 0f, -0.006f);
-        placa.transform.localScale = new Vector3(0.12f, 0.06f, 0.01f);
+        _objetivo = new GameObject("Zona_Prueba").transform;
+        _objetivo.SetParent(transform, false);
+        _objetivo.localPosition = posZonaPrueba + new Vector3(0f, 0f, 0.03f);
+        _matObjetivo = VisualesVR.MaterialSinLuz(new Color(0.3f, 1f, 0.4f, 0.8f));
+        _anillo = VisualesVR.ObjetoMalla("Anillo", _objetivo, VisualesVR.Anillo(0.07f, 0.09f), _matObjetivo).transform;
+        _anillo.localRotation = Quaternion.Euler(90f, 0f, 0f); // el anillo (plano XZ) queda de frente a la sala
 
-        _matLedTension = VisualesVR.MaterialSinLuz(LedRojo);
-        _matLedSinTension = VisualesVR.MaterialSinLuz(LedApagado);
-        var rojo = VisualesVR.Primitiva(PrimitiveType.Sphere, "LED_Tension", transform, _matLedTension);
-        rojo.transform.localPosition = posIndicadores + new Vector3(-0.03f, 0.005f, 0f);
-        rojo.transform.localScale = Vector3.one * 0.018f;
-        var verde = VisualesVR.Primitiva(PrimitiveType.Sphere, "LED_SinTension", transform, _matLedSinTension);
-        verde.transform.localPosition = posIndicadores + new Vector3(0.03f, 0.005f, 0f);
-        verde.transform.localScale = Vector3.one * 0.018f;
-        Rotulo("TENSIÓN   SIN T.", posIndicadores + new Vector3(0f, -0.022f, 0.002f), 0.011f, new Vector2(0.12f, 0.02f), Color.white, null);
+        var t = VisualesVR.Texto("Indicacion", _objetivo, 0.022f, new Vector2(0.4f, 0.05f));
+        t.transform.localPosition = new Vector3(0f, -0.13f, 0f);
+        t.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+        t.text = "TOCA AQUÍ CON EL COMPROBADOR";
+        t.color = new Color(0.3f, 1f, 0.4f);
+        t.fontStyle = FontStyles.Bold;
+        t.outlineWidth = 0.2f;
+        t.outlineColor = Color.black;
+        t.enableWordWrapping = false;
+        _objetivo.gameObject.SetActive(false);
     }
 
-    void CrearBornes()
+    /// <summary>Resultado grande de la medicion, flotando sobre el tablero.</summary>
+    void CrearResultado()
     {
-        _bornes = new GameObject("Bornes_Prueba").transform;
-        _bornes.SetParent(transform, false);
-        _bornes.localPosition = posBornes;
-        var laton = VisualesVR.MaterialOpaco(new Color(0.85f, 0.65f, 0.25f));
-        for (int i = 0; i < 2; i++)
-        {
-            var b = VisualesVR.Primitiva(PrimitiveType.Cylinder, "Borne_" + (i == 0 ? "L" : "N"), _bornes, laton);
-            b.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            b.transform.localPosition = new Vector3(i == 0 ? -0.022f : 0.022f, 0f, 0.008f);
-            b.transform.localScale = new Vector3(0.016f, 0.012f, 0.016f);
-        }
-        Rotulo("PUNTO DE PRUEBA", new Vector3(0f, -0.025f, 0.004f), 0.011f, new Vector2(0.1f, 0.02f), Color.white, null, _bornes);
+        _resultadoRaiz = new GameObject("Resultado_Medicion").transform;
+        _resultadoRaiz.SetParent(transform, false);
+        _resultadoRaiz.localPosition = new Vector3(0f, 0.5f, 0.15f);
+        _resultado = VisualesVR.Texto("Texto", _resultadoRaiz, 0.07f, new Vector2(0.9f, 0.2f));
+        _resultado.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+        _resultado.fontStyle = FontStyles.Bold;
+        _resultado.outlineWidth = 0.25f;
+        _resultado.outlineColor = Color.black;
+        _resultado.enableWordWrapping = false;
+        _resultadoRaiz.gameObject.SetActive(false);
     }
 
     void CrearLuzEmergencia()
@@ -182,17 +149,15 @@ public class PanelElectrico : MonoBehaviour
     }
 
     /// <summary>Rotulo de texto (con placa de fondo opcional) pegado al tablero.</summary>
-    void Rotulo(string texto, Vector3 pos, float alturaLetra, Vector2 caja, Color colorTexto, Color? fondo,
-                Transform padre = null)
+    void Rotulo(string texto, Vector3 pos, float alturaLetra, Vector2 caja, Color colorTexto, Color? fondo)
     {
-        if (padre == null) padre = transform;
         if (fondo.HasValue)
         {
-            var placa = VisualesVR.Primitiva(PrimitiveType.Cube, "Placa_" + texto.Split('\n')[0], padre, VisualesVR.MaterialOpaco(fondo.Value));
+            var placa = VisualesVR.Primitiva(PrimitiveType.Cube, "Placa_" + texto.Split('\n')[0], transform, VisualesVR.MaterialOpaco(fondo.Value));
             placa.transform.localPosition = pos + new Vector3(0f, 0f, -0.006f);
             placa.transform.localScale = new Vector3(caja.x + 0.02f, caja.y + 0.02f, 0.008f);
         }
-        var t = VisualesVR.Texto("Rotulo", padre, alturaLetra, caja);
+        var t = VisualesVR.Texto("Rotulo", transform, alturaLetra, caja);
         t.transform.localPosition = pos;
         // El texto de TMP se lee desde su -Z: se gira para que mire hacia la sala (+Z).
         t.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
@@ -208,7 +173,7 @@ public class PanelElectrico : MonoBehaviour
     {
         Energizado = encendido;
         if (encendido) Verificado = false; // si se vuelve a conectar, la verificacion ya no vale
-        ActualizarIndicadores();
+        ActualizarLuces();
         if (Activo)
         {
             if (!encendido) SonidosVR.ReproducirEn(SonidosVR.Chispa, PuntoInterruptor, 0.7f, 10f);
@@ -217,35 +182,45 @@ public class PanelElectrico : MonoBehaviour
         alCambiarAlimentacion?.Invoke(encendido);
     }
 
+    /// <summary>El punto esta tocando el frente del tablero (zona de prueba).</summary>
+    public bool EnZonaPrueba(Vector3 puntoMundo)
+    {
+        Vector3 p = transform.InverseTransformPoint(puntoMundo) - posZonaPrueba;
+        return Mathf.Abs(p.x) <= medioZonaPrueba.x && Mathf.Abs(p.y) <= medioZonaPrueba.y && Mathf.Abs(p.z) <= medioZonaPrueba.z;
+    }
+
     /// <summary>
-    /// Medicion del comprobador de tension: devuelve false si la punta no esta en los bornes.
+    /// Medicion del comprobador: devuelve false si la punta no esta tocando el tablero.
     /// El resultado depende SOLO del estado logico del interruptor principal.
     /// </summary>
     public bool Comprobar(Vector3 punta, out bool sinTension)
     {
         sinTension = !Energizado;
-        if (Vector3.Distance(punta, PuntoPrueba) > radioPrueba) return false;
+        if (!EnZonaPrueba(punta)) return false;
         if (sinTension) Verificado = true;
-        ActualizarIndicadores();
+        _resultado.text = sinTension ? "SIN TENSIÓN\n<size=50%>Es seguro usar el extintor</size>" : "¡HAY TENSIÓN!\n<size=50%>Baja la palanca roja</size>";
+        _resultado.color = sinTension ? new Color(0.3f, 1f, 0.4f) : new Color(1f, 0.25f, 0.2f);
+        _resultadoRaiz.gameObject.SetActive(true);
+        _finResultado = Time.time + 4f;
         return true;
     }
+
+    /// <summary>Muestra/oculta el anillo "toca aqui" (mientras el jugador tiene el comprobador).</summary>
+    public void MostrarObjetivo(bool mostrar) => _mostrarObjetivo = mostrar;
 
     /// <summary>Vuelve todo a ENCENDIDO (reinicio de la mision o de la practica).</summary>
     public void Restablecer()
     {
         Preparar();
         _principal.Forzar(true);
-        foreach (var b in _secundarios) b.Forzar(true);
         Energizado = true;
         Verificado = false;
-        ActualizarIndicadores();
+        _resultadoRaiz.gameObject.SetActive(false);
+        ActualizarLuces();
     }
 
-    void ActualizarIndicadores()
+    void ActualizarLuces()
     {
-        if (_matLedTension != null) _matLedTension.color = Energizado ? LedRojo : LedApagado;
-        if (_matLedSinTension != null) _matLedSinTension.color = Verificado ? LedVerde : LedApagado;
-
         // Sin alimentacion: se apaga la luz del techo y se enciende la de emergencia.
         bool corte = Activo && !Energizado;
         if (luzTecho != null) luzTecho.intensity = corte ? 0f : _intensidadTecho;
@@ -260,11 +235,18 @@ public class PanelElectrico : MonoBehaviour
         if (sonar && !_zumbido.isPlaying) _zumbido.Play();
         else if (!sonar && _zumbido.isPlaying) _zumbido.Stop();
 
-        // El LED rojo parpadea mientras hay tension con la mision en curso (llama la atencion).
-        if (_matLedTension != null && Energizado)
-            _matLedTension.color = Activo && Mathf.Repeat(Time.time, 0.8f) > 0.4f ? LedApagado : LedRojo;
+        bool objetivo = _mostrarObjetivo && Activo;
+        if (_objetivo.gameObject.activeSelf != objetivo) _objetivo.gameObject.SetActive(objetivo);
+        if (objetivo)
+        {
+            float pulso = 0.5f + 0.5f * Mathf.Sin(Time.time * 6f);
+            _anillo.localScale = Vector3.one * (1f + 0.15f * pulso);
+            _matObjetivo.color = new Color(0.3f, 1f, 0.4f, 0.5f + 0.4f * pulso);
+        }
+
+        if (_resultadoRaiz.gameObject.activeSelf && Time.time >= _finResultado) _resultadoRaiz.gameObject.SetActive(false);
     }
 
     /// <summary>Llamar al cambiar Activo para refrescar luces.</summary>
-    public void Refrescar() => ActualizarIndicadores();
+    public void Refrescar() => ActualizarLuces();
 }

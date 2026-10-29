@@ -6,8 +6,8 @@ using UnityEngine;
 /// Comprobador de tension (Mision 2). No habia uno en el proyecto: se arma con primitivas
 /// (cuerpo amarillo, punta metalica, pantalla y LED).
 /// - Agarrar: acerca la mano y presiona GRIP. Se sostiene como un lapiz: la punta apunta hacia adelante.
-/// - Medir: acerca la punta a los bornes "PUNTO DE PRUEBA" del tablero y presiona el gatillo (o A/X).
-///   Teclado (editor): T = medir.
+/// - Medir: SOLO hay que tocar el tablero con la punta (aparece un anillo verde donde apoyarlo).
+///   Mide solo en medio segundo, con pitidos; no hace falta apretar nada. Teclado (editor): T = medir.
 /// - El resultado sale del estado LOGICO del tablero (PanelElectrico.Comprobar), no de lo que se ve:
 ///   verde "SIN TENSION" o rojo "PELIGRO: CIRCUITO ENERGIZADO".
 /// Al soltarlo cae sobre la mesa o el piso.
@@ -21,9 +21,9 @@ public class ComprobadorTension : MonoBehaviour
     public Vector3 Centro => transform.position;
     public Vector3 Punta => _punta != null ? _punta.position : transform.position;
 
-    /// <summary>(sinTension) medicion valida en los bornes del tablero.</summary>
+    /// <summary>(sinTension) medicion valida tocando el tablero.</summary>
     public event Action<bool> alMedir;
-    /// <summary>Se intento medir sin tocar los bornes.</summary>
+    /// <summary>Se intento medir sin tocar el tablero.</summary>
     public event Action alMedirSinContacto;
     public event Action alAgarrar;
 
@@ -36,8 +36,8 @@ public class ComprobadorTension : MonoBehaviour
     Vector3 _posInicial, _caidaDesde, _caidaHasta;
     Quaternion _rotInicial;
     int _mano = -1, _hoverPrev = -1;
-    float _caidaT = 1f, _finResultado;
-    bool _gatilloPrev, _preparado, _peligro;
+    float _caidaT = 1f, _finResultado, _contacto, _proximoPitido;
+    bool _gatilloPrev, _preparado, _peligro, _medidoEnContacto;
 
     static readonly Color Gris = new Color(0.25f, 0.25f, 0.25f);
 
@@ -139,14 +139,42 @@ public class ComprobadorTension : MonoBehaviour
         }
 
         var mano = ManoT(_mano);
-        if (mano == null || !permitido || !EntradaVR.Agarrando(_mano == 0)) { Soltar(); return; }
+        if (mano == null || !permitido || !EntradaVR.Agarrando(_mano == 0))
+        {
+            if (panel != null) panel.MostrarObjetivo(false);
+            Soltar();
+            return;
+        }
 
         // Como un lapiz: un poco delante de la mano, la punta hacia adelante.
         transform.SetPositionAndRotation(mano.TransformPoint(new Vector3(0f, -0.01f, 0.05f)), mano.rotation);
+        if (panel != null) panel.MostrarObjetivo(!panel.Verificado);
 
+        // Medicion automatica: tocar el tablero con la punta durante medio segundo.
+        bool tocando = panel != null && panel.EnZonaPrueba(Punta);
+        if (tocando && !_medidoEnContacto)
+        {
+            _contacto += Time.deltaTime;
+            if (Time.time >= _proximoPitido)
+            {
+                _proximoPitido = Time.time + 0.12f;
+                SonidosVR.ReproducirEn(SonidosVR.Clic, Punta, 0.5f, 4f);
+                EntradaVR.Vibrar(_mano == 0, 0.25f, 0.05f, 0.9f);
+                _pantalla.text = "MIDIENDO...";
+                _pantalla.color = new Color(1f, 0.9f, 0.4f);
+            }
+            if (_contacto >= 0.5f) { _medidoEnContacto = true; Medir(); }
+        }
+        else if (!tocando)
+        {
+            _contacto = 0f;
+            _medidoEnContacto = false; // al despegarlo se puede volver a medir
+        }
+
+        // Tambien se puede medir a mano (gatillo / T), por si acaso.
         var c = _mano == 0 ? OVRInput.Controller.LTouch : OVRInput.Controller.RTouch;
         bool gatillo = OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, c) > 0.6f || Input.GetKey(KeyCode.T);
-        if ((gatillo && !_gatilloPrev) || EntradaVR.ConfirmarDown()) Medir();
+        if (gatillo && !_gatilloPrev) Medir();
         _gatilloPrev = gatillo;
     }
 
@@ -157,7 +185,7 @@ public class ComprobadorTension : MonoBehaviour
         bool enBornes = panel != null && panel.Comprobar(Punta, out sinTension);
         if (!enBornes)
         {
-            _pantalla.text = "SIN\nCONTACTO";
+            _pantalla.text = "TOCA EL\nTABLERO";
             _pantalla.color = new Color(0.8f, 0.8f, 0.8f);
             _matLed.color = Gris;
             _peligro = false;
@@ -178,7 +206,7 @@ public class ComprobadorTension : MonoBehaviour
         }
         else
         {
-            _pantalla.text = "¡PELIGRO!\n<size=70%>230 V</size>";
+            _pantalla.text = "¡TENSIÓN!\n<size=70%>230 V</size>";
             _pantalla.color = new Color(1f, 0.25f, 0.2f);
             _peligro = true;
             SonidosVR.ReproducirEn(SonidosVR.Error, transform.position, 0.9f, 8f);
@@ -235,6 +263,9 @@ public class ComprobadorTension : MonoBehaviour
         _col.enabled = true;
         _caidaT = 1f;
         _finResultado = 0f;
+        _contacto = 0f;
+        _medidoEnContacto = false;
+        if (panel != null) panel.MostrarObjetivo(false);
         transform.SetPositionAndRotation(_posInicial, _rotInicial);
         MostrarReposo();
     }

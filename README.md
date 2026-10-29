@@ -39,10 +39,12 @@ El **edificio gris alto de la calle del costado este** (`Building_Small_1_LOD` e
 - Todo se crea solo. En `JuegoBomberos` puedes desactivarlo (`Incendio En Edificio`) o elegir otro edificio (`Nombre Edificio Fuego`).
 
 ### Elegir modo al empezar
-Al darle Play aparecen frente a ti tres **botones que se presionan tocándolos con la mano** (no se usan teclas):
+Al darle Play aparece un **menú con tres opciones**. Elige con el **joystick** (arriba/abajo, la flecha amarilla marca la opción) y acepta con **A**, el **gatillo** o el **clic del joystick**. Mientras el menú está abierto, el joystick no te mueve.
 - **EXPLORAR** (azul): recorres todo libremente, sin tareas, sin orden y sin tiempo. Los portones, la manguera, el chaleco, el extintor y el camión funcionan directo, y puedes subir a manejar cuando quieras. La casa de la Misión 2 tiene su incendio eléctrico **de práctica**: sin puntaje, y se reinicia solo.
 - **MISIÓN 1** (rojo): la emergencia completa de la estación con todos los pasos en orden, tiempo y puntaje (ver abajo).
 - **MISIÓN 2** (naranja): incendio eléctrico dentro de una casa (ver *Misión 2* más abajo).
+
+**Panel de instrucciones**: ya no está siempre flotando frente a ti. Aparece unos segundos al empezar, al cumplir una tarea y con los recordatorios, y luego se oculta solo. **Presiona el joystick (clic)** para mostrarlo u ocultarlo cuando quieras (en el editor, tecla `I`).
 
 
 Al darle Play aparece un panel de bienvenida con los controles. Presiona **A** (o pellizca) para empezar —o espera 15 s y empieza solo—. Suena la alarma y hay que completar las tareas **lo más rápido posible**:
@@ -91,28 +93,27 @@ Se juega en la **casa de ladrillo de la calle este** (la Rowhouse, a la izquierd
 **Tareas, en orden** (cada una se cumple solo con la acción correcta):
 1. **Identifica el riesgo eléctrico**: entra y mira el equipo que echa chispas y humo.
 2. **Localiza el tablero principal**: está en la pared izquierda del cuarto de servicio, al entrar.
-3. **Corta la alimentación eléctrica**: baja la **palanca ROJA (PRINCIPAL)**. Puedes agarrarla con GRIP o empujarla con el dedo. Los breakers **C1–C3** son circuitos secundarios: no cortan la alimentación general.
-4. **Comprueba que no hay tensión**: toma el **comprobador** de la mesa (GRIP), acerca la punta a los bornes **PUNTO DE PRUEBA** y presiona el gatillo. Verde = **SIN TENSIÓN**. Rojo = **PELIGRO: CIRCUITO ENERGIZADO**.
+3. **Corta la alimentación eléctrica**: baja la **palanca ROJA**, el único interruptor del tablero. Puedes agarrarla con GRIP o empujarla con la mano.
+4. **Comprueba que no hay tensión**: toma el **comprobador amarillo** de la mesa (GRIP) y **toca el tablero con la punta**, donde aparece el anillo verde. Mide solo en medio segundo, sin apretar nada, y el resultado sale en grande sobre el tablero: verde **SIN TENSIÓN** o rojo **¡HAY TENSIÓN!**.
 5. **Extingue el incendio con CO₂**: toma el extintor junto al paso al cuarto (GRIP), retira el **pasador** (A/X, o tócalo con la otra mano y presiona GRIP), apunta con el control (la bocina sigue tu mano) y aprieta el **gatillo**.
 6. **Verifica que el área es segura**: acércate al equipo y míralo unos segundos (sin llamas ni chispas). Al terminar se muestra **ÁREA ASEGURADA** con el tiempo, el puntaje y la calificación.
 
 **Estados del incendio** (`Mision2Electrica`): ENERGIZADO → DESCONECTADO → VERIFICADO → EXTINGUIDO → ASEGURADO.
 - **CO₂ antes de cortar** (ENERGIZADO): el fuego baja un momento y se reaviva. Aparece «Corta la alimentación eléctrica primero» y se cuenta un error de seguridad.
 - **Corte sin comprobar** (DESCONECTADO): el CO₂ todavía no lo apaga del todo. Aparece «Comprueba que no hay tensión».
-- **Breaker secundario**: la alimentación sigue activa, las chispas y los arcos siguen, y el comprobador marca tensión.
-- **Volver a subir el interruptor principal**: vuelve a ENERGIZADO (error). Las tareas de corte y comprobación quedan pendientes otra vez, y si el fuego ya estaba apagado, las chispas lo reavivan.
+- **Volver a subir la palanca roja**: vuelve a ENERGIZADO (error). Las tareas de corte y comprobación quedan pendientes otra vez, y si el fuego ya estaba apagado, las chispas lo reavivan.
 - **Puntaje**: 100 por tarea, más un bono por rapidez, menos 25 por cada error de seguridad. EXCELENTE exige 0 errores.
 
 **Piezas** (todas en el prefab de la casa, con referencias ya asignadas):
-- `PanelElectrico` (estado lógico de la instalación) + `InterruptorPalanca` (palancas que se mueven con la mano). El modelo del tablero es una sola malla, así que la palanca principal, los breakers, los LEDs, los bornes, los rótulos, el zumbido y la luz de emergencia se arman con primitivas encima del modelo.
+- `PanelElectrico` (estado lógico de la instalación) + `InterruptorPalanca` (la palanca roja, que se mueve con la mano). El modelo del tablero es una sola malla, así que la palanca roja, el rótulo, el anillo donde se apoya el comprobador, el resultado de la medición, el zumbido y la luz de emergencia se arman encima del modelo.
 - `MaquinaElectrica`: usa el FBX "Ac units" y deja visible solo la unidad `Ac3` (el FBX trae 4). Arma la caja de conexión, el cable al tablero, las chispas (Particle System), los arcos (LineRenderer), el zumbido y el chamuscado (tinte, sin tocar el asset).
 - `FuegoElectrico`: llamas, humo negro, luz y crepitar. Es independiente de `ZonaFuego`: se apaga con CO₂, no con agua.
 - `ExtintorCO2`: usa las piezas del modelo (bocina, palanca y pasador). La nube de CO₂ es un Particle System, y el impacto se calcula con un cono de alcance y un raycast de obstáculos.
-- `ComprobadorTension`: no había uno en el proyecto, así que se arma con primitivas. El resultado sale de `PanelElectrico.Comprobar`, no de lo que se ve.
+- `ComprobadorTension`: no había uno en el proyecto, así que se arma con primitivas. Mide solo al tocar el tablero, y el resultado sale de `PanelElectrico.Comprobar`, no de lo que se ve.
 - `PuertaCasa`: la hoja original de la puerta, separada de la fachada, con bisagra.
 - `Assets/Editor/Mision2VincularModelos.cs`: el extintor CO₂ es un archivo local (no va al repositorio por su licencia). Al abrir Unity, este script lo instancia solo dentro del prefab de la casa; también se puede correr con *UTEC → Mision 2 → Vincular modelos de la casa*. Si falta el archivo, se usa un extintor simple de reemplazo.
 
-Teclado (editor/simulador): `F` = descargar CO₂, `P` = pasador, `T` = medir con el comprobador.
+Teclado (editor/simulador): `F` = descargar CO₂, `P` = pasador, `T` = medir con el comprobador, `I` = instrucciones.
 
 ### Casa explorable (`EDF_A2_Paleta_Rowhouse_Marron_Explorable.prefab`)
 - El prefab original (`A2/Paleta/EDF_A2_Paleta_Rowhouse_Marron.prefab`) **no se modificó**. La versión nueva está en `Assets/Prefabs/Ciudad/Edificios/A2/Explorable/` y reemplaza a la casa en `Ciudad_Tile_00_Estacion` con la misma posición, los mismos overrides y los mismos fileID internos.
@@ -237,7 +238,7 @@ Assets incorporados para la M2, cada uno en su propia carpeta (ver el `ATRIBUCIO
   - Fuente: https://sketchfab.com/3d-models/vr-ready-fuse-box-e7ffc35358af4ae0b981f4bd2eadb38a
   - Licencia: **CC BY 4.0** — https://creativecommons.org/licenses/by/4.0/
   - **Incluido en el repositorio** en `Assets/Models/TableroElectrico/`, con atribución.
-  - Modificaciones: ninguna en la malla. Es el tablero principal de la M2: está escalado ×2 y lleva encima (por código) la palanca principal, los breakers, los indicadores y los bornes de prueba.
+  - Modificaciones: ninguna en la malla. Es el tablero principal de la M2: está escalado ×2 y lleva encima (por código) la palanca roja y la zona donde se apoya el comprobador.
 
 - **"CO2 FIRE EXTINGUISHER LOW POLY" (extintor CO₂)** — autor: TheAppXR team / Oobe-Xr Srl (Fab)
   - Fuente: https://www.fab.com/listings/871bfbbd-90a2-48dd-8e9c-02541572cc57

@@ -505,6 +505,7 @@ public class JuegoBomberos : MonoBehaviour
 
         VigilarPuertas();
         DetectarBloqueo();
+        PedirInstrucciones();
 
         // Durante la Mision 2 el edificio de la Mision 1 no arde (se engancha cuando aparece).
         if (_fase == Fase.Mision2 && !_incendioM1Pausado && _edificio != null)
@@ -556,46 +557,110 @@ public class JuegoBomberos : MonoBehaviour
     }
 
     // ------------------------------------------------------------------
-    // Selector de modo (botones tactiles frente al jugador)
+    // Menu de modo: se elige con el joystick (arriba/abajo) y se acepta con A / gatillo / clic del stick
     // ------------------------------------------------------------------
 
-    Transform _selector;
+    Transform _selector, _barraSel;
+    TextMeshPro _flechaSel, _descripcionSel;
+    readonly List<TextMeshPro> _opcionesSel = new List<TextMeshPro>();
     float _inicioSelector;
+    int _indiceSel;
+    bool _stickListo;
+    readonly List<GameObject> _locomocionMenu = new List<GameObject>();
+
+    static readonly string[] OpcionesMenu = { "EXPLORAR", "MISIÓN 1", "MISIÓN 2" };
+    static readonly string[] DescripcionesMenu =
+    {
+        "Recorre todo libremente, sin tareas ni tiempo",
+        "Emergencia en la estación: portones, equipo, camión y edificio en llamas",
+        "Incendio eléctrico en una casa: corta la luz, comprueba y apaga con CO<sub>2</sub>"
+    };
+    static readonly Color[] ColoresMenu = { new Color(0.35f, 0.65f, 1f), new Color(1f, 0.4f, 0.32f), new Color(1f, 0.7f, 0.15f) };
+    const float AltoFila = 0.11f;
 
     void CrearSelector()
     {
         _selector = new GameObject("Selector_Modo").transform;
         _inicioSelector = Time.time;
+        _indiceSel = 0;
+        _stickListo = false;
 
-        var fondo = VisualesVR.Primitiva(PrimitiveType.Cube, "Fondo", _selector, VisualesVR.MaterialOpaco(new Color(0.12f, 0.12f, 0.15f)));
-        fondo.transform.localPosition = new Vector3(0f, 0.08f, 0.03f);
-        fondo.transform.localScale = new Vector3(1.02f, 0.52f, 0.02f);
+        var fondo = VisualesVR.Primitiva(PrimitiveType.Quad, "Fondo", _selector, VisualesVR.MaterialSinLuz(new Color(0.05f, 0.05f, 0.08f, 0.85f)));
+        fondo.transform.localPosition = new Vector3(0f, 0.02f, 0.02f);
+        fondo.transform.localScale = new Vector3(0.95f, 0.66f, 1f);
 
-        var titulo = VisualesVR.Texto("Titulo", _selector, 0.05f, new Vector2(1f, 0.1f));
-        titulo.transform.localPosition = new Vector3(0f, 0.38f, -0.01f);
+        var titulo = VisualesVR.Texto("Titulo", _selector, 0.05f, new Vector2(0.9f, 0.08f));
+        titulo.transform.localPosition = new Vector3(0f, 0.27f, 0f);
         titulo.fontStyle = FontStyles.Bold;
-        titulo.outlineWidth = 0.2f;
-        titulo.outlineColor = Color.black;
-        titulo.text = "ELIGE UN MODO\n<size=55%>Toca un botón con la mano</size>";
+        titulo.text = "ELIGE UN MODO";
 
-        BotonTactil.Crear("Explorar", _selector, new Vector3(-0.31f, 0f, 0f), new Color(0.15f, 0.5f, 0.95f),
-            "EXPLORAR\n<size=60%>Libre, sin tareas</size>", rig, ElegirExplorar);
-        BotonTactil.Crear("Mision", _selector, new Vector3(0f, 0f, 0f), new Color(0.85f, 0.12f, 0.08f),
-            "MISIÓN 1\n<size=60%>Estación y edificio</size>", rig, ElegirMision);
-        BotonTactil.Crear("Mision2", _selector, new Vector3(0.31f, 0f, 0f), new Color(0.95f, 0.6f, 0.05f),
-            "MISIÓN 2\n<size=60%>Incendio eléctrico</size>", rig, ElegirMision2);
+        _barraSel = VisualesVR.Primitiva(PrimitiveType.Quad, "Seleccion", _selector, VisualesVR.MaterialSinLuz(new Color(1f, 1f, 1f, 0.15f))).transform;
+        _barraSel.localScale = new Vector3(0.78f, AltoFila * 0.9f, 1f);
 
+        for (int i = 0; i < OpcionesMenu.Length; i++)
+        {
+            var t = VisualesVR.Texto("Opcion_" + i, _selector, 0.045f, new Vector2(0.7f, AltoFila), TextAlignmentOptions.Left);
+            t.transform.localPosition = new Vector3(0.04f, FilaY(i), 0f);
+            t.fontStyle = FontStyles.Bold;
+            t.text = OpcionesMenu[i];
+            _opcionesSel.Add(t);
+        }
+
+        _flechaSel = VisualesVR.Texto("Flecha", _selector, 0.05f, new Vector2(0.08f, AltoFila));
+        _flechaSel.fontStyle = FontStyles.Bold;
+        _flechaSel.text = ">";
+        _flechaSel.color = new Color(1f, 0.85f, 0.25f);
+
+        _descripcionSel = VisualesVR.Texto("Descripcion", _selector, 0.026f, new Vector2(0.88f, 0.08f));
+        _descripcionSel.transform.localPosition = new Vector3(0f, -0.2f, 0f);
+        _descripcionSel.color = new Color(0.85f, 0.85f, 0.85f);
+
+        var ayuda = VisualesVR.Texto("Ayuda", _selector, 0.022f, new Vector2(0.88f, 0.05f));
+        ayuda.transform.localPosition = new Vector3(0f, -0.27f, 0f);
+        ayuda.color = new Color(1f, 0.85f, 0.3f);
+        ayuda.text = "Joystick arriba / abajo: elegir     A, gatillo o clic del joystick: aceptar";
+
+        // Mientras el menu esta abierto el joystick elige opciones: no mueve al jugador.
+        _locomocionMenu.Clear();
+        foreach (var t in FindObjectsOfType<Transform>())
+        {
+            if (!t.name.StartsWith("Locomot") || !t.gameObject.activeSelf) continue;
+            if (_cabeza.IsChildOf(t)) continue;
+            _locomocionMenu.Add(t.gameObject);
+        }
+        foreach (var go in _locomocionMenu) go.SetActive(false);
+
+        ActualizarMenu(false);
         ColocarSelector();
     }
 
-    /// <summary>Frente al jugador, a 0.55 m y a la altura del pecho, mirandolo.</summary>
+    static float FilaY(int i) => 0.13f - i * AltoFila;
+
+    void ActualizarMenu(bool conSonido)
+    {
+        for (int i = 0; i < _opcionesSel.Count; i++)
+        {
+            bool sel = i == _indiceSel;
+            _opcionesSel[i].color = sel ? ColoresMenu[i] : new Color(0.6f, 0.6f, 0.6f);
+            _opcionesSel[i].fontSize = (sel ? 0.05f : 0.042f) * 10f;
+        }
+        _barraSel.localPosition = new Vector3(0f, FilaY(_indiceSel), 0.01f);
+        _flechaSel.transform.localPosition = new Vector3(-0.38f, FilaY(_indiceSel), 0f);
+        _descripcionSel.text = DescripcionesMenu[_indiceSel];
+        if (conSonido)
+        {
+            SonidosVR.Reproducir2D(SonidosVR.Clic, 0.8f);
+            EntradaVR.VibrarAmbas(0.25f, 0.04f, 0.8f);
+        }
+    }
+
+    /// <summary>Frente al jugador, a 0.9 m y un poco debajo de la vista, mirandolo.</summary>
     void ColocarSelector()
     {
         Vector3 f = _cabeza.forward; f.y = 0f;
         if (f.sqrMagnitude < 0.001f) f = Vector3.forward;
         f.Normalize();
-        Vector3 pos = _cabeza.position + f * 0.55f;
-        pos.y = Mathf.Max(rig.transform.position.y + 0.8f, _cabeza.position.y - 0.45f);
+        Vector3 pos = _cabeza.position + f * 0.9f + Vector3.up * -0.12f;
         _selector.SetPositionAndRotation(pos, Quaternion.LookRotation(f, Vector3.up)); // +Z lejos del jugador
     }
 
@@ -606,14 +671,57 @@ public class JuegoBomberos : MonoBehaviour
         // Despues, solo si el jugador se aleja o deja de mirarlo.
         Vector3 a = _selector.position - _cabeza.position; a.y = 0f;
         Vector3 f = _cabeza.forward; f.y = 0f;
-        if (Time.time - _inicioSelector < 2f || a.magnitude > 2f || Vector3.Angle(a, f) > 75f)
+        if (Time.time - _inicioSelector < 2f || a.magnitude > 2f || Vector3.Angle(a, f) > 60f)
             ColocarSelector();
+
+        // Joystick (cualquiera de los dos) o flechas del teclado: una opcion por movimiento.
+        float y = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, OVRInput.Controller.LTouch).y +
+                  OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, OVRInput.Controller.RTouch).y;
+        if (Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.W)) y = 1f;
+        if (Input.GetKey(KeyCode.DownArrow) || Input.GetKey(KeyCode.S)) y = -1f;
+        if (Mathf.Abs(y) < 0.3f) _stickListo = true;
+        if (_stickListo && Mathf.Abs(y) > 0.65f)
+        {
+            _stickListo = false;
+            _indiceSel = (_indiceSel + (y > 0f ? -1 : 1) + OpcionesMenu.Length) % OpcionesMenu.Length;
+            ActualizarMenu(true);
+        }
+
+        // La flecha late para que se note cual esta elegida.
+        _flechaSel.transform.localPosition = new Vector3(-0.38f + 0.012f * Mathf.Sin(Time.time * 6f), FilaY(_indiceSel), 0f);
+
+        if (Time.time - _inicioSelector < 0.6f) return; // evita aceptar sin querer al empezar
+        bool aceptar = EntradaVR.ConfirmarDown() ||
+                       OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger, OVRInput.Controller.LTouch) ||
+                       OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger, OVRInput.Controller.RTouch) ||
+                       OVRInput.GetDown(OVRInput.Button.PrimaryThumbstick, OVRInput.Controller.LTouch) ||
+                       OVRInput.GetDown(OVRInput.Button.PrimaryThumbstick, OVRInput.Controller.RTouch);
+        if (!aceptar) return;
+        if (_indiceSel == 0) ElegirExplorar();
+        else if (_indiceSel == 1) ElegirMision();
+        else ElegirMision2();
     }
 
     void CerrarSelector()
     {
         if (_selector != null) Destroy(_selector.gameObject);
         _selector = null;
+        _opcionesSel.Clear();
+        foreach (var go in _locomocionMenu) if (go != null) go.SetActive(true);
+        _locomocionMenu.Clear();
+    }
+
+    /// <summary>Clic de cualquier joystick (o tecla I): muestra u oculta las instrucciones.</summary>
+    void PedirInstrucciones()
+    {
+        if (_fase == Fase.Intro) return;
+        bool clic = OVRInput.GetDown(OVRInput.Button.PrimaryThumbstick, OVRInput.Controller.LTouch) ||
+                    OVRInput.GetDown(OVRInput.Button.PrimaryThumbstick, OVRInput.Controller.RTouch) ||
+                    Input.GetKeyDown(KeyCode.I);
+        if (!clic) return;
+        _proximoHud = 0f;
+        if (_hud.Visible) _hud.Ocultar();
+        else _hud.MostrarPor(10f);
     }
 
     void ElegirExplorar()
@@ -624,7 +732,8 @@ public class JuegoBomberos : MonoBehaviour
         _marcador.Ocultar();
         _proximoHud = 0f;
         SonidosVR.Reproducir2D(SonidosVR.Exito, 0.9f);
-        Aviso("MODO EXPLORAR\n<size=55%>Recorre todo libremente</size>", TipoAviso.Info, 3f);
+        Aviso("MODO EXPLORAR\n<size=55%>Presiona el joystick para ver qué puedes probar</size>", TipoAviso.Info, 3f);
+        _hud.MostrarPor(8f);
         // La casa de la Mision 2 queda con su incendio electrico para practicar (sin tareas ni puntaje).
         if (BuscarMision2()) _m2.Iniciar(this, true);
     }
@@ -665,7 +774,7 @@ public class JuegoBomberos : MonoBehaviour
     void MostrarIntro()
     {
         _hud.Mostrar("ESTACIÓN DE BOMBEROS VR",
-            "<b>Elige un modo tocando un botón con la mano:</b>\n" +
+            "<b>Elige un modo con el joystick y acepta con A o el gatillo:</b>\n" +
             "- <color=#5AA9FF>EXPLORAR</color>: recorre todo libremente, sin tareas.\n" +
             "- <color=#FF6B5A>MISIÓN 1</color>: ¡emergencia! Portón principal, cochera, chaleco,\n  extintor, sal en el camión y apaga el edificio en llamas.\n" +
             "- <color=#FFB020>MISIÓN 2</color>: incendio eléctrico en una casa: corta la corriente,\n  comprueba que no hay tensión y apaga el fuego con CO<sub>2</sub>.\n\n" +
@@ -689,6 +798,7 @@ public class JuegoBomberos : MonoBehaviour
         SonidosVR.Reproducir2D(SonidosVR.Alarma, 0.7f);
         EntradaVR.VibrarAmbas(0.8f, 0.5f, 0.3f);
         Aviso("¡EMERGENCIA!\n<size=55%>Equípate y sube al camión</size>", TipoAviso.Error, 3f);
+        _hud.MostrarPor(8f);
         // Si el porton ya estaba abierto, cuenta como hecho.
         if (_tPrincipal != null && _principal != null && _principal.AbiertoOAbriendo) CompletarTarea(_tPrincipal, "¡Portón principal abierto!");
         if (_tPorton != null && PortonAbierto()) CompletarTarea(_tPorton, "¡Portón abierto!");
@@ -724,6 +834,7 @@ public class JuegoBomberos : MonoBehaviour
             _ultimoProgreso = Time.time;
             Aviso(actual.titulo + "\n<size=55%>" + actual.pista + "</size>", TipoAviso.Info, 4f);
             EntradaVR.VibrarAmbas(0.3f, 0.1f);
+            _hud.MostrarPor(6f);
         }
 
         if (Time.time >= _proximoHud)
@@ -794,6 +905,7 @@ public class JuegoBomberos : MonoBehaviour
         t.puntuada = true;
         _ultimoProgreso = Time.time;
         _proximoHud = 0f;
+        _hud.MostrarPor(6f); // la siguiente tarea se ve un momento
         SonidosVR.Reproducir2D(SonidosVR.Exito, 0.9f);
         EntradaVR.VibrarAmbas(0.6f, 0.2f, 0.7f);
 
@@ -844,6 +956,7 @@ public class JuegoBomberos : MonoBehaviour
         {
             _hud.alturaRelativa = -0.55f;
             _proximoHud = 0f;
+            _hud.MostrarPor(6f);
             Aviso("¡A manejar!", TipoAviso.Exito, 2f);
             return;
         }
@@ -875,6 +988,7 @@ public class JuegoBomberos : MonoBehaviour
         SonidosVR.Reproducir2D(SonidosVR.Victoria, 0.9f);
         Aviso("¡MISIÓN CUMPLIDA!\n<size=55%>" + _calificacion + "</size>", TipoAviso.Exito, 4f);
         MostrarResultado();
+        _hud.MostrarPor(20f);
     }
 
     void AlBajarCamion()
@@ -882,7 +996,7 @@ public class JuegoBomberos : MonoBehaviour
         _bloqueoReinicio = Time.time + 1f;
         _hud.alturaRelativa = -0.32f;
         _proximoHud = 0f;
-        if (_fase == Fase.Completado) MostrarResultado();
+        if (_fase == Fase.Completado) { MostrarResultado(); _hud.MostrarPor(10f); }
     }
 
     void MostrarResultado()
@@ -896,7 +1010,7 @@ public class JuegoBomberos : MonoBehaviour
             (sentado ? "<b>¡A manejar!</b>  Stick izquierdo: avanzar / retroceder\n" +
                        "Stick a los lados: girar   -   B: bajar\n" +
                        "A: sirena   -   X: luces"
-                     : "- A / pellizco: jugar de nuevo\n- Puedes volver a subir al camión para manejar"),
+                     : "- A / pellizco: jugar de nuevo\n- Puedes volver a subir al camión para manejar\n- Clic del joystick: mostrar / ocultar este panel"),
             sentado ? $"Velocidad {Mathf.RoundToInt(_camion.VelocidadKmh)} km/h     " +
                       $"Sirena {(_camion.SirenaEncendida ? "ON" : "OFF")}     Luces {(_camion.LucesEncendidas ? "ON" : "OFF")}"
                     : "Jugar de nuevo: A");
@@ -938,6 +1052,7 @@ public class JuegoBomberos : MonoBehaviour
         SonidosVR.Reproducir2D(SonidosVR.Alarma, 0.7f);
         EntradaVR.VibrarAmbas(0.8f, 0.5f, 0.3f);
         Aviso("¡EMERGENCIA ELÉCTRICA!\n<size=55%>Un equipo se incendia dentro de la casa. Entra con cuidado.</size>", TipoAviso.Error, 4f);
+        _hud.MostrarPor(8f);
     }
 
     void ActualizarMision2()
@@ -954,6 +1069,7 @@ public class JuegoBomberos : MonoBehaviour
             _ultimoProgreso = Time.time;
             Aviso(actual.titulo + "\n<size=55%>" + actual.pista + "</size>", TipoAviso.Info, 4f);
             EntradaVR.VibrarAmbas(0.3f, 0.1f);
+            _hud.MostrarPor(6f);
         }
 
         if (Time.time >= _proximoHud)
@@ -999,6 +1115,7 @@ public class JuegoBomberos : MonoBehaviour
         SonidosVR.Reproducir2D(SonidosVR.Victoria, 0.9f);
         Aviso("¡ÁREA ASEGURADA!\n<size=55%>Misión 2 cumplida - " + _calificacion + "</size>", TipoAviso.Exito, 4f);
         MostrarResultado();
+        _hud.MostrarPor(20f);
     }
 
     /// <summary>Lleva al jugador a un punto (pies) mirando hacia una direccion, y avisa al locomotor.</summary>

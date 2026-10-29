@@ -4,12 +4,19 @@ using UnityEngine;
 /// <summary>
 /// HUD del juego en el mundo (VR): un panel que sigue suavemente la mirada
 /// (con objetivo, lista de tareas, tiempo y puntaje) y avisos grandes temporales.
+/// El panel NO esta siempre a la vista (cansa y marea): aparece unos segundos con
+/// <see cref="MostrarPor"/> (instrucciones nuevas, recordatorios o al pedirlo con el joystick)
+/// y se desvanece solo. El contenido se puede actualizar aunque este oculto.
 /// </summary>
 public class HudBomberos : MonoBehaviour
 {
     public float distancia = 1.3f;
     public float alturaRelativa = -0.32f;
     public float anguloParaSeguir = 28f;
+    [Tooltip("true = el panel queda siempre visible (como antes).")]
+    public bool siempreVisible = false;
+
+    public bool Visible => siempreVisible || Time.time < _visibleHasta;
 
     Transform _cabeza;
     Transform _panel;
@@ -18,6 +25,7 @@ public class HudBomberos : MonoBehaviour
     Material _matFondo;
     bool _siguiendo = true;
     Vector3 _dirPanel;
+    float _visibleHasta, _escala;
 
     Transform _avisoRaiz;
     TextMeshPro _aviso;
@@ -60,8 +68,20 @@ public class HudBomberos : MonoBehaviour
         _aviso.text = "";
 
         ColocarPanel(1f);
+        _panel.gameObject.SetActive(false);
         _avisoRaiz.gameObject.SetActive(false);
     }
+
+    /// <summary>Muestra el panel durante unos segundos frente a la vista (luego se oculta solo).</summary>
+    public void MostrarPor(float segundos)
+    {
+        if (_panel == null) return;
+        if (!Visible) ColocarPanel(1f); // aparece justo frente a la mirada
+        _visibleHasta = Mathf.Max(_visibleHasta, Time.time + segundos);
+    }
+
+    /// <summary>Oculta el panel ya.</summary>
+    public void Ocultar() => _visibleHasta = 0f;
 
     public void Mostrar(string titulo, string cuerpo, string pie)
     {
@@ -91,7 +111,18 @@ public class HudBomberos : MonoBehaviour
     void LateUpdate()
     {
         if (_cabeza == null) return;
-        ColocarPanel(Time.deltaTime);
+
+        // Aparece y desaparece con una escala suave (sin parpadeos).
+        bool visible = Visible;
+        _escala = Mathf.MoveTowards(_escala, visible ? 1f : 0f, Time.deltaTime * 5f);
+        bool activo = _escala > 0.001f;
+        if (_panel.gameObject.activeSelf != activo) _panel.gameObject.SetActive(activo);
+        if (activo)
+        {
+            _panel.localScale = Vector3.one * Mathf.SmoothStep(0.85f, 1f, _escala);
+            _matFondo.color = new Color(0.05f, 0.05f, 0.08f, 0.78f * _escala);
+            ColocarPanel(Time.deltaTime);
+        }
 
         if (_avisoRaiz.gameObject.activeSelf)
         {
