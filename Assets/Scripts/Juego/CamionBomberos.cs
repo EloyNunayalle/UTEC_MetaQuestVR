@@ -643,8 +643,9 @@ public class CamionBomberos : MonoBehaviour
     /// Avisa al locomotor del Interaction SDK que el jugador se movio (como un teletransporte),
     /// para que no lo devuelva a donde estaba antes de subir. Se hace por reflexion para no
     /// depender de la version exacta del SDK; si no se encuentra, no pasa nada.
+    /// Tambien lo usa la Mision 2 para llevar al jugador frente a la casa.
     /// </summary>
-    void TeletransportarLocomotor(Vector3 pies, Quaternion rotacion)
+    public static void TeletransportarLocomotor(Vector3 pies, Quaternion rotacion)
     {
         try
         {

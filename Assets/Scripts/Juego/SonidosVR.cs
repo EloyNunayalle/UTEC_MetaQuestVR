@@ -10,6 +10,7 @@ public static class SonidosVR
     const int Hz = 22050;
 
     static AudioClip _alarma, _exito, _error, _clic, _agarrar, _sirena, _motor, _puerta, _victoria, _campana, _agua, _fuego;
+    static AudioClip _zumbido, _chispa, _descarga, _pitido;
 
     public static AudioClip Alarma => Obtener(ref _alarma, "Alarma", 2.4f, Alarma_);
     public static AudioClip Campana => Obtener(ref _campana, "Campana", 1.2f, Campana_);
@@ -23,6 +24,11 @@ public static class SonidosVR
     public static AudioClip Victoria => Obtener(ref _victoria, "Victoria", 1.8f, Victoria_);
     public static AudioClip Agua => Obtener(ref _agua, "Agua", 2f, Agua_);
     public static AudioClip Fuego => Obtener(ref _fuego, "Fuego", 3f, Fuego_);
+    // Mision 2 (incendio electrico)
+    public static AudioClip Zumbido => Obtener(ref _zumbido, "Zumbido", 2f, Zumbido_);
+    public static AudioClip Chispa => Obtener(ref _chispa, "Chispa", 0.25f, Chispa_);
+    public static AudioClip Descarga => Obtener(ref _descarga, "Descarga", 2f, Descarga_);
+    public static AudioClip Pitido => Obtener(ref _pitido, "Pitido", 0.14f, Pitido_);
 
     static AudioSource _fuente2D;
 
@@ -194,6 +200,40 @@ public static class SonidosVR
         float rumor = (Mathf.PerlinNoise(t * 600f, 0.7f) - 0.5f) * 2f;
         float silbido = (Mathf.PerlinNoise(t * 4000f, 3.1f) - 0.5f) * 2f;
         return 0.18f * blanco + 0.3f * rumor + 0.25f * silbido;
+    }
+
+    static float Zumbido_(float t, float d)
+    {
+        // Zumbido de red electrica: 100 Hz + armonicos y un "buzz" de 50 Hz (frecuencias enteras -> loop limpio).
+        float v = 0.55f * Seno(100f, t) + 0.25f * Seno(150f, t) + 0.12f * Seno(300f, t) + 0.1f * Cuadrada(50f, t);
+        v *= 0.85f + 0.15f * Seno(4f, t);
+        return 0.3f * v;
+    }
+
+    static float Chispa_(float t, float d)
+    {
+        // Chasquido electrico: ruido seco con caida rapida y un pico agudo.
+        float ruido = Hash01(t * Hz * 1.7f) * 2f - 1f;
+        float chas = ruido * Mathf.Exp(-t * 30f);
+        float pico = Seno(2400f, t) * Mathf.Exp(-t * 60f) * 0.4f;
+        float k = Mathf.Floor(t * 90f);
+        float rafaga = Hash01(k + 3.1f) > 0.55f ? ruido * 0.5f * Mathf.Exp(-t * 12f) : 0f;
+        return 0.6f * (chas + pico + rafaga) * Envolvente(t, d, 0.001f, 0.03f);
+    }
+
+    static float Descarga_(float t, float d)
+    {
+        // Descarga de CO2: siseo fuerte (ruido blanco) con un rumor grave de fondo.
+        float blanco = Mathf.Sin((t * Hz) * 78.233f) * 43758.5453f;
+        blanco = (blanco - Mathf.Floor(blanco)) * 2f - 1f;
+        float rumor = (Mathf.PerlinNoise(t * 300f, 2.3f) - 0.5f) * 2f;
+        float silbido = (Mathf.PerlinNoise(t * 5200f, 7.9f) - 0.5f) * 2f;
+        return 0.3f * blanco + 0.18f * rumor + 0.22f * silbido;
+    }
+
+    static float Pitido_(float t, float d)
+    {
+        return 0.4f * Seno(2200f, t) * Envolvente(t, d, 0.005f, 0.03f);
     }
 
     static float Puerta_(float t, float d)

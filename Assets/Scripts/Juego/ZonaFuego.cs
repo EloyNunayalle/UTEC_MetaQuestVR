@@ -126,7 +126,8 @@ public class ZonaFuego : MonoBehaviour
     void OnEnable() { if (!_activas.Contains(this)) _activas.Add(this); }
     void OnDisable() { _activas.Remove(this); }
 
-    static Material MaterialParticula()
+    /// <summary>Particula circular suave (llamas, humo); tambien la usan el fuego electrico y el CO2 de la Mision 2.</summary>
+    public static Material MaterialParticula()
     {
         if (_matParticula != null) return _matParticula;
         const int n = 32;

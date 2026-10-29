@@ -91,6 +91,12 @@ public class EdificioEnLlamas : MonoBehaviour
         Apagadas = 0;
     }
 
+    /// <summary>Oculta (o vuelve a mostrar) todos los focos sin cambiar su estado (lo usa la Mision 2).</summary>
+    public void Pausar(bool pausar)
+    {
+        if (_raiz != null) _raiz.gameObject.SetActive(!pausar);
+    }
+
     /// <summary>Foco encendido mas cercano a un punto (para guiar al jugador).</summary>
     public ZonaFuego ZonaActivaMasCercana(Vector3 desde)
     {

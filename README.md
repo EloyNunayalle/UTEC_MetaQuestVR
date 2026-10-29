@@ -39,9 +39,10 @@ El **edificio gris alto de la calle del costado este** (`Building_Small_1_LOD` e
 - Todo se crea solo. En `JuegoBomberos` puedes desactivarlo (`Incendio En Edificio`) o elegir otro edificio (`Nombre Edificio Fuego`).
 
 ### Elegir modo al empezar
-Al darle Play aparecen frente a ti dos **botones que se presionan tocándolos con la mano** (no se usan teclas):
-- **EXPLORAR** (azul): recorres todo libremente, sin tareas, sin orden y sin tiempo. Los portones, la manguera, el chaleco, el extintor y el camión funcionan directo, y puedes subir a manejar cuando quieras.
-- **MISIÓN** (rojo): la emergencia completa con todos los pasos en orden, tiempo y puntaje (ver abajo).
+Al darle Play aparecen frente a ti tres **botones que se presionan tocándolos con la mano** (no se usan teclas):
+- **EXPLORAR** (azul): recorres todo libremente, sin tareas, sin orden y sin tiempo. Los portones, la manguera, el chaleco, el extintor y el camión funcionan directo, y puedes subir a manejar cuando quieras. La casa de la Misión 2 tiene su incendio eléctrico **de práctica**: sin puntaje, y se reinicia solo.
+- **MISIÓN 1** (rojo): la emergencia completa de la estación con todos los pasos en orden, tiempo y puntaje (ver abajo).
+- **MISIÓN 2** (naranja): incendio eléctrico dentro de una casa (ver *Misión 2* más abajo).
 
 
 Al darle Play aparece un panel de bienvenida con los controles. Presiona **A** (o pellizca) para empezar —o espera 15 s y empieza solo—. Suena la alarma y hay que completar las tareas **lo más rápido posible**:
@@ -82,6 +83,45 @@ Al subir se muestra el **tiempo, el puntaje** (100 por tarea + bono por rapidez)
 - `InteriorCamion.cs`: interior del camión. Con el panel importado activo (`usarPanelMercedes`) usa el **panel Mercedes-Benz** real (tablero/agujas/volante del modelo) y solo construye por código la **luz de cabina** y — si no está la palanca importada — la **palanca procedural**; sin el panel, genera el interior completo por código (volante, tablero, cluster, pantalla GPS). Se crea solo al dar Play (y preview en el editor); ajustes finos en el Inspector.
 - `VolanteInteractivo.cs`: volante agarrable (GRIP/pellizco cerca del aro) con tope ±120° y joystick de respaldo; gira sobre el centro visual (estable, sin parpadeos) y las piezas que van con el volante giran con él; entrega el eje de giro al camión (`ejeGiroManual`).
 - `PalancaCambios.cs`: palanca de cambios agarrable (modelo importado o procedural) que se asienta en la ranura más cercana; soporta ranuras extra (p. ej. L → D), **ilumina la letra activa** y publica la marcha al camión (`marchaManual`).
+
+## Misión 2: incendio eléctrico en la casa (`Assets/Scripts/Juego/Mision2/`)
+
+Se juega en la **casa de ladrillo de la calle este** (la Rowhouse, a la izquierda del edificio de la Misión 1). Al elegir **MISIÓN 2**, apareces en la vereda, frente a la puerta. Entras caminando: la puerta se abre al acercarte o al tocarla.
+
+**Tareas, en orden** (cada una se cumple solo con la acción correcta):
+1. **Identifica el riesgo eléctrico**: entra y mira el equipo que echa chispas y humo.
+2. **Localiza el tablero principal**: está en la pared izquierda del cuarto de servicio, al entrar.
+3. **Corta la alimentación eléctrica**: baja la **palanca ROJA (PRINCIPAL)**. Puedes agarrarla con GRIP o empujarla con el dedo. Los breakers **C1–C3** son circuitos secundarios: no cortan la alimentación general.
+4. **Comprueba que no hay tensión**: toma el **comprobador** de la mesa (GRIP), acerca la punta a los bornes **PUNTO DE PRUEBA** y presiona el gatillo. Verde = **SIN TENSIÓN**. Rojo = **PELIGRO: CIRCUITO ENERGIZADO**.
+5. **Extingue el incendio con CO₂**: toma el extintor junto al paso al cuarto (GRIP), retira el **pasador** (A/X, o tócalo con la otra mano y presiona GRIP), apunta con el control (la bocina sigue tu mano) y aprieta el **gatillo**.
+6. **Verifica que el área es segura**: acércate al equipo y míralo unos segundos (sin llamas ni chispas). Al terminar se muestra **ÁREA ASEGURADA** con el tiempo, el puntaje y la calificación.
+
+**Estados del incendio** (`Mision2Electrica`): ENERGIZADO → DESCONECTADO → VERIFICADO → EXTINGUIDO → ASEGURADO.
+- **CO₂ antes de cortar** (ENERGIZADO): el fuego baja un momento y se reaviva. Aparece «Corta la alimentación eléctrica primero» y se cuenta un error de seguridad.
+- **Corte sin comprobar** (DESCONECTADO): el CO₂ todavía no lo apaga del todo. Aparece «Comprueba que no hay tensión».
+- **Breaker secundario**: la alimentación sigue activa, las chispas y los arcos siguen, y el comprobador marca tensión.
+- **Volver a subir el interruptor principal**: vuelve a ENERGIZADO (error). Las tareas de corte y comprobación quedan pendientes otra vez, y si el fuego ya estaba apagado, las chispas lo reavivan.
+- **Puntaje**: 100 por tarea, más un bono por rapidez, menos 25 por cada error de seguridad. EXCELENTE exige 0 errores.
+
+**Piezas** (todas en el prefab de la casa, con referencias ya asignadas):
+- `PanelElectrico` (estado lógico de la instalación) + `InterruptorPalanca` (palancas que se mueven con la mano). El modelo del tablero es una sola malla, así que la palanca principal, los breakers, los LEDs, los bornes, los rótulos, el zumbido y la luz de emergencia se arman con primitivas encima del modelo.
+- `MaquinaElectrica`: usa el FBX "Ac units" y deja visible solo la unidad `Ac3` (el FBX trae 4). Arma la caja de conexión, el cable al tablero, las chispas (Particle System), los arcos (LineRenderer), el zumbido y el chamuscado (tinte, sin tocar el asset).
+- `FuegoElectrico`: llamas, humo negro, luz y crepitar. Es independiente de `ZonaFuego`: se apaga con CO₂, no con agua.
+- `ExtintorCO2`: usa las piezas del modelo (bocina, palanca y pasador). La nube de CO₂ es un Particle System, y el impacto se calcula con un cono de alcance y un raycast de obstáculos.
+- `ComprobadorTension`: no había uno en el proyecto, así que se arma con primitivas. El resultado sale de `PanelElectrico.Comprobar`, no de lo que se ve.
+- `PuertaCasa`: la hoja original de la puerta, separada de la fachada, con bisagra.
+- `Assets/Editor/Mision2VincularModelos.cs`: el extintor CO₂ es un archivo local (no va al repositorio por su licencia). Al abrir Unity, este script lo instancia solo dentro del prefab de la casa; también se puede correr con *UTEC → Mision 2 → Vincular modelos de la casa*. Si falta el archivo, se usa un extintor simple de reemplazo.
+
+Teclado (editor/simulador): `F` = descargar CO₂, `P` = pasador, `T` = medir con el comprobador.
+
+### Casa explorable (`EDF_A2_Paleta_Rowhouse_Marron_Explorable.prefab`)
+- El prefab original (`A2/Paleta/EDF_A2_Paleta_Rowhouse_Marron.prefab`) **no se modificó**. La versión nueva está en `Assets/Prefabs/Ciudad/Edificios/A2/Explorable/` y reemplaza a la casa en `Ciudad_Tile_00_Estacion` con la misma posición, los mismos overrides y los mismos fileID internos.
+- **LODs conservados**: el mismo `LODGroup` (LOD0 0.25 / LOD1 0.12 / caja 0.05 / culling 0.02), con los mismos materiales y texturas. LOD0 y LOD1 usan copias de la malla (`Assets/Models/CiudadNueva/Explorable/`) en las que solo se anularon los triángulos de la puerta (186 en LOD0 y 34 en LOD1). Los vértices y los UV no cambian.
+- **Puerta**: esos mismos triángulos se separaron en `EDF_A2_Paleta_Rowhouse_Marron_Puerta.asset`, con el pivote en la bisagra, así la puerta se ve igual que la original.
+- **Colliders**: se quitó la caja única que tapaba toda la casa (8 × 11 × 14 m). En su lugar hay cajas simples para las paredes exteriores, la fachada con el vano de la puerta, el piso de la planta baja (a 1.02 m), el techo, el descanso y una rampa invisible sobre la escalera de entrada.
+- **Interior**: la planta baja (7.6 × 11.6 m) se dividió con un tabique y un paso:
+  - **Sala**: escritorio, silla y TV, el mismo rincón de oficina de la estación.
+  - **Cuarto de servicio**: tablero, equipo AC, banco de trabajo (`Mesa.prefab`), taburete, estantería metálica con cajas, cajas apiladas, lámparas de techo con luz sin sombras y carteles de seguridad.
 
 ## Portón, manguera y agua
 
@@ -197,7 +237,7 @@ Assets incorporados para la M2, cada uno en su propia carpeta (ver el `ATRIBUCIO
   - Fuente: https://sketchfab.com/3d-models/vr-ready-fuse-box-e7ffc35358af4ae0b981f4bd2eadb38a
   - Licencia: **CC BY 4.0** — https://creativecommons.org/licenses/by/4.0/
   - **Incluido en el repositorio** en `Assets/Models/TableroElectrico/`, con atribución.
-  - Modificaciones: ninguna en la malla; se usará como tablero principal de la M2.
+  - Modificaciones: ninguna en la malla. Es el tablero principal de la M2: está escalado ×2 y lleva encima (por código) la palanca principal, los breakers, los indicadores y los bornes de prueba.
 
 - **"CO2 FIRE EXTINGUISHER LOW POLY" (extintor CO₂)** — autor: TheAppXR team / Oobe-Xr Srl (Fab)
   - Fuente: https://www.fab.com/listings/871bfbbd-90a2-48dd-8e9c-02541572cc57
