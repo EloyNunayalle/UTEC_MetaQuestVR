@@ -773,7 +773,7 @@ public class JuegoBomberos : MonoBehaviour
         Vector3 f = _cabeza.forward; f.y = 0f;
         if (f.sqrMagnitude < 0.001f) f = Vector3.forward;
         f.Normalize();
-        Vector3 pos = _cabeza.position + f * 0.65f + Vector3.up * 0.0f;
+        Vector3 pos = _cabeza.position + f * 0.9f + Vector3.up * -0.12f;
         _selector.SetPositionAndRotation(pos, Quaternion.LookRotation(f, Vector3.up)); // +Z lejos del jugador
     }
 
