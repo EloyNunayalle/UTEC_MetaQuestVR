@@ -38,6 +38,8 @@ public class InteriorCamion : MonoBehaviour
     public bool luzCabina = true;
     [Tooltip("Usar el panel+volante Mercedes del modelo (desactiva los procedurales).")]
     public bool usarPanelMercedes = true;
+    [Tooltip("Factor X aplicado al ancho visual del camion; la luz de cabina se mueve con la cabina.")]
+    public float factorAnchoVisual = 1f;
     public string nombreRuta = "Almacen Central";
     public Vector3 puntoDestino = new Vector3(-5.19f, 0f, -1f);
     public float velocidadMinimaEta = 3f;
@@ -509,7 +511,7 @@ public class InteriorCamion : MonoBehaviour
     {
         var go = new GameObject("Interior_Luz");
         go.transform.SetParent(raiz, false);
-        go.transform.position = raiz.TransformPoint(new Vector3(-0.25f, 2.28f, 3.1f));
+        go.transform.position = raiz.TransformPoint(new Vector3(-0.25f * factorAnchoVisual, 2.28f, 3.1f));
         var l = go.AddComponent<Light>();
         l.type = LightType.Point;
         l.range = 3.6f;
