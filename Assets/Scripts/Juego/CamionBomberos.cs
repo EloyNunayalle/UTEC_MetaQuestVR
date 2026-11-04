@@ -412,7 +412,8 @@ public class CamionBomberos : MonoBehaviour
         float dt = Time.deltaTime;
         if (dt <= 0f) return;
 
-        // Entrada: stick izquierdo (adelante/atras + giro), stick derecho tambien gira; teclado flechas/WASD.
+        // Entrada: stick izquierdo (adelante/atras), stick derecho/izquierdo para girar
+        // solo en modo Joystick. En modo Volante el giro lo manda exclusivamente el volante.
         Vector2 izq = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick);
         Vector2 der = OVRInput.Get(OVRInput.Axis2D.SecondaryThumbstick);
         float acel = izq.y;
@@ -423,8 +424,12 @@ public class CamionBomberos : MonoBehaviour
         acel = Mathf.Abs(acel) < zonaMuerta ? 0f : acel;
         giro = Mathf.Abs(giro) < zonaMuerta ? 0f : giro;
 
-        // Volante y palanca fisicos (si estan instalados).
-        if (ejeGiroManual != null) giro = Mathf.Clamp(ejeGiroManual(), -1f, 1f);
+        if (ConfiguracionConduccion.Modo == ModoConduccion.Volante)
+        {
+            // Joystick solo acelera/frena; el volante es la unica entrada de giro.
+            giro = ejeGiroManual != null ? Mathf.Clamp(ejeGiroManual(), -1f, 1f) : 0f;
+        }
+        // En modo Joystick se ignora ejeGiroManual: el volante es solo visual.
         bool marchaBaja = false;
         if (marchaManual != null)
         {

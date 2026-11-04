@@ -1,9 +1,9 @@
 using UnityEngine;
 
 /// <summary>
-/// Volante del camion agarrable: gira con la mano (GRIP o pellizco cerca del aro) o con
-/// el joystick como respaldo. Tiene tope (gradosMaximos) y se queda donde lo dejas.
-/// Le entrega el eje de giro (-1..1) al camion por CamionBomberos.ejeGiroManual.
+/// Volante del camion. En modo Volante se agarra con la mano (GRIP o pellizco cerca
+/// del aro) y entrega el eje a CamionBomberos.ejeGiroManual. En modo Joystick es solo
+/// visual: sigue al stick y vuelve al centro, pero no se puede agarrar.
 /// - Gira sobre el CENTRO visual del volante (no sobre el pivote del nodo).
 /// - Todo se calcula en LOCAL / con el marco base actual: sigue al camion cuando se mueve
 ///   (nada se queda atras y el agarre funciona siempre).
@@ -79,6 +79,8 @@ public class VolanteInteractivo : MonoBehaviour
         float dt = Time.deltaTime;
         if (dt <= 0f) return;
 
+        bool modoVolante = ConfiguracionConduccion.Modo == ModoConduccion.Volante;
+
         if (!_init)
         {
             _init = true;
@@ -124,6 +126,9 @@ public class VolanteInteractivo : MonoBehaviour
             }
         }
 
+        // En modo Joystick el volante es solo visual: no se puede agarrar.
+        if (_mano >= 0 && !modoVolante) Soltar();
+
         if (_mano >= 0)
         {
             var m = Mano(_mano);
@@ -139,31 +144,39 @@ public class VolanteInteractivo : MonoBehaviour
         }
         else
         {
-            // Respaldo: joystick o teclado empujan el angulo (al soltar queda donde esta).
-            Vector2 izq = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick);
-            Vector2 der = OVRInput.Get(OVRInput.Axis2D.SecondaryThumbstick);
-            float h = Mathf.Abs(der.x) > Mathf.Abs(izq.x) ? der.x : izq.x;
-            float th = Input.GetAxisRaw("Horizontal");
-            if (Mathf.Abs(th) > Mathf.Abs(h)) h = th;
-            if (Mathf.Abs(h) < zonaMuerta) h = 0f;
-            if (h != 0f) _angulo = Mathf.Clamp(_angulo + h * velocidadStick * dt, -gradosMaximos, gradosMaximos);
-
-            // Agarre por proximidad al aro (desde el centro actual: funciona aunque el camion se mueva).
-            for (int i = 0; i < 2; i++)
+            // Modo Joystick: el volante sigue al stick (solo visual; el camion gira
+            // directamente con ese mismo stick). En modo Volante esta entrada se ignora.
+            if (!modoVolante)
             {
-                var m = Mano(i);
-                if (m == null || !m.gameObject.activeInHierarchy) continue;
-                Vector3 rel = (m.position - CentroMundo()) / _escalaMundo;
-                float distAro = Mathf.Abs(rel.magnitude - radio);
-                if (distAro > 0.13f || Mathf.Abs(Vector3.Dot(rel, BaseMundoRot() * Vector3.forward)) > 0.13f) continue;
-                if (EntradaVR.AgarreDown(i == 0))
+                Vector2 izq = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick);
+                Vector2 der = OVRInput.Get(OVRInput.Axis2D.SecondaryThumbstick);
+                float h = Mathf.Abs(der.x) > Mathf.Abs(izq.x) ? der.x : izq.x;
+                float th = Input.GetAxisRaw("Horizontal");
+                if (Mathf.Abs(th) > Mathf.Abs(h)) h = th;
+                if (Mathf.Abs(h) < zonaMuerta) h = 0f;
+                // En modo Joystick el volante refleja la posicion del stick y
+                // vuelve al centro al soltarlo (no se queda girado).
+                _angulo = Mathf.MoveTowards(_angulo, h * gradosMaximos, velocidadStick * dt);
+            }
+            else
+            {
+                // Agarre por proximidad al aro, solo en modo Volante.
+                for (int i = 0; i < 2; i++)
                 {
-                    _mano = i;
-                    _manoIni = AnguloMano(m);
-                    _volanteIni = _angulo;
-                    EntradaVR.Vibrar(i == 0, 0.4f, 0.08f, 0.6f);
-                    SonidosVR.ReproducirEn(SonidosVR.Agarrar, transform.position, 0.6f);
-                    break;
+                    var m = Mano(i);
+                    if (m == null || !m.gameObject.activeInHierarchy) continue;
+                    Vector3 rel = (m.position - CentroMundo()) / _escalaMundo;
+                    float distAro = Mathf.Abs(rel.magnitude - radio);
+                    if (distAro > 0.13f || Mathf.Abs(Vector3.Dot(rel, BaseMundoRot() * Vector3.forward)) > 0.13f) continue;
+                    if (EntradaVR.AgarreDown(i == 0))
+                    {
+                        _mano = i;
+                        _manoIni = AnguloMano(m);
+                        _volanteIni = _angulo;
+                        EntradaVR.Vibrar(i == 0, 0.4f, 0.08f, 0.6f);
+                        SonidosVR.ReproducirEn(SonidosVR.Agarrar, transform.position, 0.6f);
+                        break;
+                    }
                 }
             }
         }

@@ -570,17 +570,44 @@ public class JuegoBomberos : MonoBehaviour
     float _inicioSelector;
     int _indiceSel;
     bool _stickListo;
+    bool _enConfiguracion;
     readonly List<GameObject> _locomocionMenu = new List<GameObject>();
 
-    static readonly string[] OpcionesMenu = { "EXPLORAR", "MISIÓN 1", "MISIÓN 2" };
+    const int CapaSelector = 31;
+    Camera _camaraSelector;
+    int _mascaraCamara;
+    bool _mascaraGuardada;
+
+    static readonly string[] OpcionesMenu = { "EXPLORAR", "MISIÓN 1", "MISIÓN 2", "CONFIGURACIÓN" };
     static readonly string[] DescripcionesMenu =
     {
         "Recorre todo libremente, sin tareas ni tiempo",
         "Emergencia en la estación: portones, equipo, camión y edificio en llamas",
-        "Incendio eléctrico en una casa: corta la luz, comprueba y apaga con CO<sub>2</sub>"
+        "Incendio eléctrico en una casa: corta la luz, comprueba y apaga con CO<sub>2</sub>",
+        "Elige cómo conducir el camión"
     };
-    static readonly Color[] ColoresMenu = { new Color(0.35f, 0.65f, 1f), new Color(1f, 0.4f, 0.32f), new Color(1f, 0.7f, 0.15f) };
-    const float AltoFila = 0.11f;
+    static readonly Color[] ColoresMenu =
+    {
+        new Color(0.35f, 0.65f, 1f), new Color(1f, 0.4f, 0.32f),
+        new Color(1f, 0.7f, 0.15f), new Color(0.75f, 0.75f, 0.82f)
+    };
+
+    static readonly string[] OpcionesConfig = { "JOYSTICK", "VOLANTE", "VOLVER" };
+    static readonly string[] DescripcionesConfig =
+    {
+        "Joystick: avanzar/retroceder y girar. El volante solo se mueve visualmente.",
+        "Joystick: solo avanzar/retroceder. Agarra el volante con GRIP para girar.",
+        "Volver a elegir Explorar / Misión"
+    };
+    static readonly Color[] ColoresConfig =
+    {
+        new Color(0.4f, 0.8f, 1f), new Color(1f, 0.7f, 0.2f), new Color(0.7f, 0.7f, 0.7f)
+    };
+
+    const float AltoFila = 0.09f;
+    string[] OpcionesActuales => _enConfiguracion ? OpcionesConfig : OpcionesMenu;
+    string[] DescripcionesActuales => _enConfiguracion ? DescripcionesConfig : DescripcionesMenu;
+    Color[] ColoresActuales => _enConfiguracion ? ColoresConfig : ColoresMenu;
 
     void CrearSelector()
     {
@@ -588,42 +615,52 @@ public class JuegoBomberos : MonoBehaviour
         _inicioSelector = Time.time;
         _indiceSel = 0;
         _stickListo = false;
+        _enConfiguracion = false;
+        DesactivarLocomocionMenu();
+        AsegurarCamaraSelector();
+        ConstruirPanelSelector();
+        ColocarSelector();
+    }
 
-        var fondo = VisualesVR.Primitiva(PrimitiveType.Quad, "Fondo", _selector, VisualesVR.MaterialSinLuz(new Color(0.05f, 0.05f, 0.08f, 0.85f)));
-        fondo.transform.localPosition = new Vector3(0f, 0.02f, 0.02f);
-        fondo.transform.localScale = new Vector3(0.95f, 0.66f, 1f);
+    void AsegurarCamaraSelector()
+    {
+        if (_camaraSelector != null || _cabeza == null) return;
 
-        var titulo = VisualesVR.Texto("Titulo", _selector, 0.05f, new Vector2(0.9f, 0.08f));
-        titulo.transform.localPosition = new Vector3(0f, 0.27f, 0f);
-        titulo.fontStyle = FontStyles.Bold;
-        titulo.text = "ELIGE UN MODO";
+        var camaraPrincipal = _cabeza.GetComponent<Camera>();
+        var go = new GameObject("Selector_OverlayCam");
+        go.transform.SetParent(_cabeza, false);
+        go.transform.localPosition = Vector3.zero;
+        go.transform.localRotation = Quaternion.identity;
 
-        _barraSel = VisualesVR.Primitiva(PrimitiveType.Quad, "Seleccion", _selector, VisualesVR.MaterialSinLuz(new Color(1f, 1f, 1f, 0.15f))).transform;
-        _barraSel.localScale = new Vector3(0.78f, AltoFila * 0.9f, 1f);
+        var cam = go.AddComponent<Camera>();
+        cam.clearFlags = CameraClearFlags.Depth;
+        cam.cullingMask = 1 << CapaSelector;
+        cam.depth = (camaraPrincipal != null ? camaraPrincipal.depth : 0f) + 1f;
+        cam.fieldOfView = camaraPrincipal != null ? camaraPrincipal.fieldOfView : 60f;
+        cam.nearClipPlane = 0.01f;
+        cam.farClipPlane = 10f;
+        cam.allowHDR = false;
+        cam.allowMSAA = false;
+        cam.useOcclusionCulling = false;
+        _camaraSelector = cam;
 
-        for (int i = 0; i < OpcionesMenu.Length; i++)
+        if (camaraPrincipal != null)
         {
-            var t = VisualesVR.Texto("Opcion_" + i, _selector, 0.045f, new Vector2(0.7f, AltoFila), TextAlignmentOptions.Left);
-            t.transform.localPosition = new Vector3(0.04f, FilaY(i), 0f);
-            t.fontStyle = FontStyles.Bold;
-            t.text = OpcionesMenu[i];
-            _opcionesSel.Add(t);
+            _mascaraCamara = camaraPrincipal.cullingMask;
+            _mascaraGuardada = true;
+            camaraPrincipal.cullingMask &= ~(1 << CapaSelector);
         }
+    }
 
-        _flechaSel = VisualesVR.Texto("Flecha", _selector, 0.05f, new Vector2(0.08f, AltoFila));
-        _flechaSel.fontStyle = FontStyles.Bold;
-        _flechaSel.text = ">";
-        _flechaSel.color = new Color(1f, 0.85f, 0.25f);
+    void PonerEnCapaSelector()
+    {
+        if (_selector == null) return;
+        foreach (var t in _selector.GetComponentsInChildren<Transform>(true))
+            t.gameObject.layer = CapaSelector;
+    }
 
-        _descripcionSel = VisualesVR.Texto("Descripcion", _selector, 0.026f, new Vector2(0.88f, 0.08f));
-        _descripcionSel.transform.localPosition = new Vector3(0f, -0.2f, 0f);
-        _descripcionSel.color = new Color(0.85f, 0.85f, 0.85f);
-
-        var ayuda = VisualesVR.Texto("Ayuda", _selector, 0.022f, new Vector2(0.88f, 0.05f));
-        ayuda.transform.localPosition = new Vector3(0f, -0.27f, 0f);
-        ayuda.color = new Color(1f, 0.85f, 0.3f);
-        ayuda.text = "Joystick arriba / abajo: elegir     A, gatillo o clic del joystick: aceptar";
-
+    void DesactivarLocomocionMenu()
+    {
         // Mientras el menu esta abierto el joystick elige opciones: no mueve al jugador.
         _locomocionMenu.Clear();
         foreach (var t in FindObjectsOfType<Transform>())
@@ -633,29 +670,101 @@ public class JuegoBomberos : MonoBehaviour
             _locomocionMenu.Add(t.gameObject);
         }
         foreach (var go in _locomocionMenu) go.SetActive(false);
-
-        ActualizarMenu(false);
-        ColocarSelector();
     }
 
-    static float FilaY(int i) => 0.13f - i * AltoFila;
+    void ConstruirPanelSelector()
+    {
+        _opcionesSel.Clear();
+
+        var fondo = VisualesVR.Primitiva(PrimitiveType.Quad, "Fondo", _selector, VisualesVR.MaterialSinLuz(new Color(0.05f, 0.05f, 0.08f, 0.85f)));
+        fondo.transform.localPosition = new Vector3(0f, 0f, 0.02f);
+        fondo.transform.localScale = new Vector3(0.80f, 0.60f, 1f);
+
+        var titulo = VisualesVR.Texto("Titulo", _selector, 0.05f, new Vector2(0.76f, 0.08f));
+        titulo.transform.localPosition = new Vector3(0f, 0.25f, 0f);
+        titulo.fontStyle = FontStyles.Bold;
+        titulo.text = _enConfiguracion ? "CONFIGURACIÓN" : "ELIGE UN MODO";
+
+        _barraSel = VisualesVR.Primitiva(PrimitiveType.Quad, "Seleccion", _selector, VisualesVR.MaterialSinLuz(new Color(1f, 1f, 1f, 0.15f))).transform;
+        _barraSel.localScale = new Vector3(0.66f, AltoFila * 0.9f, 1f);
+
+        var opciones = OpcionesActuales;
+        for (int i = 0; i < opciones.Length; i++)
+        {
+            var t = VisualesVR.Texto("Opcion_" + i, _selector, 0.045f, new Vector2(0.62f, AltoFila), TextAlignmentOptions.Left);
+            t.transform.localPosition = new Vector3(0.03f, FilaY(i), 0f);
+            t.fontStyle = FontStyles.Bold;
+            t.text = opciones[i];
+            _opcionesSel.Add(t);
+        }
+
+        _flechaSel = VisualesVR.Texto("Flecha", _selector, 0.05f, new Vector2(0.08f, AltoFila));
+        _flechaSel.fontStyle = FontStyles.Bold;
+        _flechaSel.text = ">";
+        _flechaSel.color = new Color(1f, 0.85f, 0.25f);
+
+        _descripcionSel = VisualesVR.Texto("Descripcion", _selector, 0.025f, new Vector2(0.74f, 0.10f));
+        _descripcionSel.transform.localPosition = new Vector3(0f, -0.21f, 0f);
+        _descripcionSel.color = new Color(0.85f, 0.85f, 0.85f);
+
+        var ayuda = VisualesVR.Texto("Ayuda", _selector, 0.021f, new Vector2(0.74f, 0.05f));
+        ayuda.transform.localPosition = new Vector3(0f, -0.27f, 0f);
+        ayuda.color = new Color(1f, 0.85f, 0.3f);
+        ayuda.text = _enConfiguracion
+            ? "A, gatillo o clic: elegir     B: volver"
+            : "Joystick arriba / abajo: elegir     A, gatillo o clic: aceptar";
+
+        PonerEnCapaSelector();
+        ActualizarMenu(false);
+    }
+
+    static float FilaY(int i) => 0.12f - i * 0.09f;
+
+    void ReconstruirPanel(bool configuracion)
+    {
+        if (_selector == null) return;
+        Vector3 pos = _selector.position;
+        Quaternion rot = _selector.rotation;
+        Destroy(_selector.gameObject);
+
+        _selector = new GameObject("Selector_Modo").transform;
+        _selector.SetPositionAndRotation(pos, rot);
+        _inicioSelector = Time.time;
+        _indiceSel = 0;
+        _stickListo = false;
+        _enConfiguracion = configuracion;
+        ConstruirPanelSelector();
+    }
 
     void ActualizarMenu(bool conSonido)
     {
+        var colores = ColoresActuales;
         for (int i = 0; i < _opcionesSel.Count; i++)
         {
             bool sel = i == _indiceSel;
-            _opcionesSel[i].color = sel ? ColoresMenu[i] : new Color(0.6f, 0.6f, 0.6f);
+            _opcionesSel[i].color = sel ? colores[i] : new Color(0.6f, 0.6f, 0.6f);
             _opcionesSel[i].fontSize = (sel ? 0.05f : 0.042f) * 10f;
         }
         _barraSel.localPosition = new Vector3(0f, FilaY(_indiceSel), 0.01f);
-        _flechaSel.transform.localPosition = new Vector3(-0.38f, FilaY(_indiceSel), 0f);
-        _descripcionSel.text = DescripcionesMenu[_indiceSel];
+        _flechaSel.transform.localPosition = new Vector3(-0.32f, FilaY(_indiceSel), 0f);
+
+        string texto = DescripcionesActuales[_indiceSel];
+        if (_enConfiguracion)
+            texto += "\n<size=80%>Modo actual: <b>" + ConfiguracionConduccion.Nombre + "</b></size>";
+        _descripcionSel.text = texto;
+
         if (conSonido)
         {
             SonidosVR.Reproducir2D(SonidosVR.Clic, 0.8f);
             EntradaVR.VibrarAmbas(0.25f, 0.04f, 0.8f);
         }
+    }
+
+    void ConfirmarConfiguracion()
+    {
+        SonidosVR.Reproducir2D(SonidosVR.Exito, 0.7f);
+        EntradaVR.VibrarAmbas(0.3f, 0.08f, 0.8f);
+        ActualizarMenu(false);
     }
 
     /// <summary>Frente al jugador, a 0.9 m y un poco debajo de la vista, mirandolo.</summary>
@@ -664,7 +773,7 @@ public class JuegoBomberos : MonoBehaviour
         Vector3 f = _cabeza.forward; f.y = 0f;
         if (f.sqrMagnitude < 0.001f) f = Vector3.forward;
         f.Normalize();
-        Vector3 pos = _cabeza.position + f * 0.9f + Vector3.up * -0.12f;
+        Vector3 pos = _cabeza.position + f * 0.65f + Vector3.up * 0.0f;
         _selector.SetPositionAndRotation(pos, Quaternion.LookRotation(f, Vector3.up)); // +Z lejos del jugador
     }
 
@@ -687,12 +796,19 @@ public class JuegoBomberos : MonoBehaviour
         if (_stickListo && Mathf.Abs(y) > 0.65f)
         {
             _stickListo = false;
-            _indiceSel = (_indiceSel + (y > 0f ? -1 : 1) + OpcionesMenu.Length) % OpcionesMenu.Length;
+            int total = OpcionesActuales.Length;
+            _indiceSel = (_indiceSel + (y > 0f ? -1 : 1) + total) % total;
             ActualizarMenu(true);
         }
 
         // La flecha late para que se note cual esta elegida.
-        _flechaSel.transform.localPosition = new Vector3(-0.38f + 0.012f * Mathf.Sin(Time.time * 6f), FilaY(_indiceSel), 0f);
+        _flechaSel.transform.localPosition = new Vector3(-0.32f + 0.012f * Mathf.Sin(Time.time * 6f), FilaY(_indiceSel), 0f);
+
+        if (_enConfiguracion && EntradaVR.CancelarDown())
+        {
+            ReconstruirPanel(false);
+            return;
+        }
 
         if (Time.time - _inicioSelector < 0.6f) return; // evita aceptar sin querer al empezar
         bool aceptar = EntradaVR.ConfirmarDown() ||
@@ -701,9 +817,30 @@ public class JuegoBomberos : MonoBehaviour
                        OVRInput.GetDown(OVRInput.Button.PrimaryThumbstick, OVRInput.Controller.LTouch) ||
                        OVRInput.GetDown(OVRInput.Button.PrimaryThumbstick, OVRInput.Controller.RTouch);
         if (!aceptar) return;
+
+        if (_enConfiguracion)
+        {
+            if (_indiceSel == 0)
+            {
+                ConfiguracionConduccion.Modo = ModoConduccion.Joystick;
+                ConfirmarConfiguracion();
+            }
+            else if (_indiceSel == 1)
+            {
+                ConfiguracionConduccion.Modo = ModoConduccion.Volante;
+                ConfirmarConfiguracion();
+            }
+            else
+            {
+                ReconstruirPanel(false);
+            }
+            return;
+        }
+
         if (_indiceSel == 0) ElegirExplorar();
         else if (_indiceSel == 1) ElegirMision();
-        else ElegirMision2();
+        else if (_indiceSel == 2) ElegirMision2();
+        else ReconstruirPanel(true);
     }
 
     void CerrarSelector()
@@ -711,6 +848,20 @@ public class JuegoBomberos : MonoBehaviour
         if (_selector != null) Destroy(_selector.gameObject);
         _selector = null;
         _opcionesSel.Clear();
+        _enConfiguracion = false;
+
+        if (_camaraSelector != null)
+        {
+            Destroy(_camaraSelector.gameObject);
+            _camaraSelector = null;
+        }
+        if (_mascaraGuardada && _cabeza != null)
+        {
+            var camaraPrincipal = _cabeza.GetComponent<Camera>();
+            if (camaraPrincipal != null) camaraPrincipal.cullingMask = _mascaraCamara;
+            _mascaraGuardada = false;
+        }
+
         foreach (var go in _locomocionMenu) if (go != null) go.SetActive(true);
         _locomocionMenu.Clear();
     }
@@ -749,13 +900,20 @@ public class JuegoBomberos : MonoBehaviour
         IniciarMision();
     }
 
+    static string TextoControlGiro()
+    {
+        return ConfiguracionConduccion.Modo == ModoConduccion.Joystick
+            ? "Stick: avanzar/retroceder y girar   -   B: bajar"
+            : "Stick: avanzar/retroceder   -   Volante: girar (GRIP)   -   B: bajar";
+    }
+
     void MostrarExplorar()
     {
         if (_camion.JugadorSentado)
         {
             _hud.Mostrar("MODO EXPLORAR - CONDUCIENDO",
-                "<b>¡A manejar!</b>  Stick izquierdo: avanzar / retroceder\n" +
-                "Stick a los lados: girar   -   B: bajar\n" +
+                "<b>¡A manejar!</b>\n" +
+                TextoControlGiro() + "\n" +
                 "A: sirena   -   X: luces",
                 $"Velocidad {Mathf.RoundToInt(_camion.VelocidadKmh)} km/h     " +
                 $"Sirena {(_camion.SirenaEncendida ? "ON" : "OFF")}     Luces {(_camion.LucesEncendidas ? "ON" : "OFF")}");
@@ -782,12 +940,13 @@ public class JuegoBomberos : MonoBehaviour
             "<b>Elige un modo con el joystick y acepta con A o el gatillo:</b>\n" +
             "- <color=#5AA9FF>EXPLORAR</color>: recorre todo libremente, sin tareas.\n" +
             "- <color=#FF6B5A>MISIÓN 1</color>: ¡emergencia! Portón principal, cochera, chaleco,\n  extintor, sal en el camión y apaga el edificio en llamas.\n" +
-            "- <color=#FFB020>MISIÓN 2</color>: incendio eléctrico en una casa: corta la corriente,\n  comprueba que no hay tensión y apaga el fuego con CO<sub>2</sub>.\n\n" +
+            "- <color=#FFB020>MISIÓN 2</color>: incendio eléctrico en una casa: corta la corriente,\n  comprueba que no hay tensión y apaga el fuego con CO<sub>2</sub>.\n" +
+            "- <color=#C8C8D2>CONFIGURACIÓN</color>: elige joystick o volante para conducir.\n\n" +
             "<color=#FFD54A>Controles</color>\n" +
             "- Moverse: joystick o teletransporte\n" +
             "- Agarrar: GRIP / gatillo (o pellizco con la mano)\n" +
             "- Botones: tócalos con el dedo\n" +
-            "- Camión: joystick para manejar (B para bajar)\n" +
+            "- Camión: conducción configurable (joystick o volante) en el menú inicial\n" +
             "- Camión: A sirena, X luces (independientes)\n" +
             "- Manguera: GRIP para tomar, gatillo para el agua; presión con la válvula del panel",
             "");
@@ -1014,8 +1173,8 @@ public class JuegoBomberos : MonoBehaviour
             $"Puntaje: <b>{_puntaje}</b>  <size=80%>(bono por rapidez +{_bono})</size>\n" +
             (_misionTerminada == 2 ? $"Errores de seguridad: <b>{_errores}</b>  <size=80%>(-{penalizacionError} c/u)</size>\n" : "") +
             $"Calificación: <color=#FFD54A><b>{_calificacion}</b></color>\n\n" +
-            (sentado ? "<b>¡A manejar!</b>  Stick izquierdo: avanzar / retroceder\n" +
-                       "Stick a los lados: girar   -   B: bajar\n" +
+            (sentado ? "<b>¡A manejar!</b>\n" +
+                       TextoControlGiro() + "\n" +
                        "A: sirena   -   X: luces"
                      : "- A / pellizco: jugar de nuevo\n- Puedes volver a subir al camión para manejar\n- Clic del joystick: mostrar / ocultar este panel"),
             sentado ? $"Velocidad {Mathf.RoundToInt(_camion.VelocidadKmh)} km/h     " +
