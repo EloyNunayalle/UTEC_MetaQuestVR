@@ -194,3 +194,6 @@ InitTestScene*.unity*
 /Assets/StreamingAssets/PresetAvatars_Rift_Light.zip.meta
 /Assets/StreamingAssets/PresetAvatars_Quest_Light.zip
 /Assets/StreamingAssets/PresetAvatars_Quest_Light.zip.meta
+
+# Copia de referencia del Meta Avatars SDK (1.1 GB): no se versiona
+/MetaAvatars_UTEC_MetaQuestVR/

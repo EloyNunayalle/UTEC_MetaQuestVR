@@ -136,21 +136,25 @@ Empieza en la estación y usa el **camión que ya existe**: no se crea otro ni h
 
 **Tareas, en orden**
 1. **Recoge la herramienta**: la barra Halligan está en un soporte rojo junto al camión (GRIP).
-2. **Cárgala en la maletera**: ve atrás del camión, abre la maletera con la otra mano (tirador, GRIP) y suelta la barra adentro. Mientras la llevas se ve su silueta en el punto de carga. Si la vuelves a sacar antes de salir, hay que cargarla otra vez.
+2. **Carga la barra y el extintor CO2 en la maletera**: ve atrás del camión, abre la maletera con la otra mano (tirador, GRIP) y suelta cada uno adentro. Mientras los llevas se ve su silueta en el punto de carga. Si sacas alguno antes de salir, hay que cargarlo otra vez.
 3. **Abre el portón principal y el de la cochera** con sus botones.
 4. **Aborda el camión**: no deja subir hasta tener todo lo anterior listo.
 5. **Conduce hasta la emergencia**: sal por el portón, gira a la izquierda y estaciona en el círculo amarillo, frente a la casa de ladrillo gris.
-6. **Recupera la barra de la maletera**: bájate (B), abre la maletera y agárrala. Con el camión en marcha no se puede sacar.
-7. **Busca a la persona y localiza la puerta bloqueada**: entra por la puerta principal y guíate por los gritos y golpes. Si tardas más de 20 s adentro, aparece la flecha.
-8. **Fuerza la puerta**: con la barra en la mano aparece un anillo junto a la cerradura. Acerca la **punta** al anillo (se engancha) y **jala la barra hacia ti** varias veces; solo cuenta jalar. La puerta cruje, cede y se abre. Sin la barra no se abre. Alternativa: mantener el **gatillo** con la barra enganchada (teclado: `G`).
-9. **Acompaña a la persona**: al acercarte se levanta y te sigue. Si te alejas más de 11 m, se detiene y pide que la esperes.
-10. **Zona segura**: cuando llega al círculo verde de la calle se muestra **PERSONA RESCATADA**, luego **ÁREA ASEGURADA**, con tiempo, puntaje y calificación. Con **A** vuelves a la estación.
+6. **Saca el extintor y la barra**: bájate (B), abre la maletera y agárralos, uno en cada mano. Con el camión en marcha no se pueden sacar.
+7. **Apaga el incendio**: al entrar hay fuego en el pasillo y en la sala. Retira el pasador (A/X), apunta a la base de las llamas y aprieta el gatillo. El fuego del pasillo corta el paso, y la puerta no se puede forzar hasta apagar los dos focos.
+8. **Localiza la puerta bloqueada**: guíate por los gritos, golpes y tos. Si tardas más de 20 s, aparece la flecha.
+9. **Fuerza la puerta**: con la barra en la mano aparece un anillo junto a la cerradura. Acerca la **punta** al anillo (se engancha) y **jala la barra hacia ti** varias veces; solo cuenta jalar. La puerta cruje, cede y se abre. Sin la barra no se abre. Alternativa: mantener el **gatillo** con la barra enganchada (teclado: `G`).
+10. **Acompaña a la persona**: al acercarte se levanta y te sigue. Si te alejas más de 11 m, se detiene y pide que la esperes.
+11. **Zona segura**: cuando llega al círculo verde de la calle se muestra **PERSONA RESCATADA**, luego **ÁREA ASEGURADA**, con tiempo, puntaje y calificación. Con **A** vuelves a la estación.
 
 **Piezas**
 - `Mision3Controller`: secuencia, estados y progreso. Lo crea `JuegoBomberos` en la escena persistente, así el progreso no se pierde si el interior se descarga.
-- `HerramientaRescate`, `ZonaCargaHerramienta`: barra (armada con primitivas, no hay un modelo en el proyecto) y punto de carga dentro del compartimento de `InteriorMaletera`.
+- `HerramientaRescate`, `ZonaCargaHerramienta`: barra (armada con primitivas, no hay un modelo en el proyecto) y puntos de carga dentro del compartimento de `InteriorMaletera`. El extintor es `ExtintorCO2` con su prefab en `Assets/Resources/Extintor_CO2_Mision3.prefab`.
+- `IncendioCasa`: focos (`FuegoElectrico` sin aporte eléctrico), bloqueo del pasillo, capa de humo bajo el techo, niebla oscura al estar adentro, luces atenuadas, hollín, escombros, chispas, alarma de humo y calor en los controles. Al apagarlo, el humo se disipa poco a poco. La columna de humo sobre la casa la crea `Mision3Controller`.
 - `PuertaAtascada`, `EscenarioMision3`, `ZonaSeguraRescate`.
-- `PersonaRescatadaNPC`: personaje independiente del jugador, armado con primitivas y animado por código. Sigue el recorrido que hizo el jugador (migas de pan), así que no atraviesa paredes y no necesita un NavMesh horneado. **No usa el Meta Avatar**: el SDK maneja los avatares con datos de seguimiento y sus presets son archivos locales que no van al repositorio.
+- `PersonaRescatadaNPC`: personaje independiente del jugador. Sigue el recorrido que hizo el jugador (migas de pan), así que no atraviesa paredes y no necesita un NavMesh horneado.
+- `AvatarRescatado`, `AvatarEntradaNPC`: Meta Avatar de esa persona, con un preset distinto al del jugador y las animaciones del SDK (`OvrAvatarAnimationBehavior`, `MecanimLegsAnimationController`). **Requiere importar las Sample Scenes del Meta Avatars SDK** y tener los presets en `StreamingAssets`. Esos archivos no van al repositorio; sin ellos el proyecto compila igual y la persona se ve con el cuerpo de primitivas de reemplazo.
+- `MetaAvatars_UTEC_MetaQuestVR/` es una copia local de referencia del SDK: está ignorada en git y no se usa en el build.
 - Los gritos y golpes son sonidos sintetizados en `SonidosVR` (no hay grabaciones de voz); lo que dice la persona se lee en un globo de texto.
 
 **Casa** (`EDF_A2_Paleta_Small_Gris_Explorable.prefab`): la variante de ladrillo gris oscuro en (−39.11, 27.96). Usa las mismas mallas, materiales y `LODGroup` del prefab original, que no se modificó. El modelo era un cascarón hueco con el vano de la puerta libre, así que se agregaron: puerta, cielorraso a 2.9 m, tabiques, pasillo, sala, comedor, estudio, dormitorio, escalera decorativa (los pisos altos no se visitan), muebles y colliders simples.

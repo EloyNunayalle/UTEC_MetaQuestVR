@@ -60,8 +60,8 @@ public class JuegoBomberos : MonoBehaviour
 
     [Header("Mision 3 (rescate)")]
     [Tooltip("Tiempos de referencia de la Mision 3 para la calificacion (incluye preparacion y viaje).")]
-    public float tiempoExcelenteM3 = 330f;
-    public float tiempoBuenoM3 = 540f;
+    public float tiempoExcelenteM3 = 420f;
+    public float tiempoBuenoM3 = 660f;
 
     [Header("Reglas")]
     public bool exigirPorton = true;

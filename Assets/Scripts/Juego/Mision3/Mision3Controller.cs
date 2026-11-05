@@ -4,9 +4,9 @@ using UnityEngine;
 
 /// <summary>
 /// Mision 3 - Rescate de una persona atrapada. Controla la secuencia completa:
-/// HUB -> tomar la barra -> cargarla en la maletera del camion EXISTENTE -> abrir portones -> abordar ->
-/// conducir hasta la casa -> bajar y sacar la barra -> entrar y encontrar la puerta -> forzarla ->
-/// acompanar a la persona hasta la zona segura -> fin (vuelve al HUB con el flujo de siempre).
+/// HUB -> cargar la barra y el extintor CO2 en la maletera del camion EXISTENTE -> abrir portones -> abordar ->
+/// conducir hasta la casa -> bajar y sacar el equipo -> entrar y apagar el incendio -> encontrar la puerta ->
+/// forzarla -> acompanar a la persona hasta la zona segura -> fin (vuelve al HUB con el flujo de siempre).
 ///
 /// Lo crea JuegoBomberos al elegir la mision: vive en la escena persistente, porque el interior de la
 /// casa (Casa_M3_Interior) se carga y descarga por proximidad. El progreso se guarda aqui, y cada vez
@@ -18,7 +18,7 @@ public class Mision3Controller : MonoBehaviour
     public enum Estado
     {
         HerramientaPendiente, HerramientaCargada, CamionListo, Traslado, Llegada, PersonaPendiente,
-        PersonaLocalizada, AccesoBloqueado, PuertaLiberada, PersonaSiguiendo, PersonaEnZonaSegura, Completada
+        IncendioActivo, PersonaLocalizada, AccesoBloqueado, PuertaLiberada, PersonaSiguiendo, PersonaEnZonaSegura, Completada
     }
 
     public static Mision3Controller Instancia { get; private set; }
@@ -32,6 +32,8 @@ public class Mision3Controller : MonoBehaviour
     [Tooltip("Centro de la zona segura, en la vereda frente a la casa.")]
     public Vector3 zonaSegura = new Vector3(-34.2f, 0f, 21.9f);
     public float radioZonaSegura = 2.6f;
+    [Tooltip("Base de la columna de humo, sobre el techo de la casa.")]
+    public Vector3 columnaHumo = new Vector3(-40.11f, 17f, 33.96f);
 
     public Estado EstadoActual { get; private set; } = Estado.HerramientaPendiente;
     public HerramientaRescate Herramienta => _herramienta;
@@ -67,6 +69,8 @@ public class Mision3Controller : MonoBehaviour
     Transform _cabeza;
     CamionBomberos _camion;
     HerramientaRescate _herramienta;
+    ExtintorCO2 _extintor;
+    ParticleSystem _columnaHumo;
     ZonaCargaHerramienta _zonaCarga;
     ZonaSeguraRescate _zonaSegura;
     EscenarioMision3 _escenario;
@@ -75,9 +79,9 @@ public class Mision3Controller : MonoBehaviour
     readonly List<JuegoBomberos.Tarea> _tareas = new List<JuegoBomberos.Tarea>();
     readonly List<System.Func<bool>> _condiciones = new List<System.Func<bool>>();
     readonly List<string> _mensajes = new List<string>();
-    JuegoBomberos.Tarea _tCarga, _tAbordar;
+    JuegoBomberos.Tarea _tCarga, _tCargaExtintor, _tFuego, _tAbordar;
 
-    bool _llegado, _entro, _localizada, _puertaForzada, _personaSegura, _finalAvisado;
+    bool _llegado, _entro, _incendioApagado, _localizada, _puertaForzada, _personaSegura, _finalAvisado;
     float _tiempoDentro, _finRescate;
 
     void Awake() => Instancia = this;
@@ -96,6 +100,8 @@ public class Mision3Controller : MonoBehaviour
 
         _zonaCarga = ZonaCargaHerramienta.Crear(camion);
         CrearHerramienta();
+        CrearExtintor();
+        CrearColumnaHumo();
         CrearTareas();
     }
 
@@ -136,12 +142,86 @@ public class Mision3Controller : MonoBehaviour
         cartel.fontStyle = FontStyles.Bold;
         cartel.outlineWidth = 0.2f;
         cartel.outlineColor = Color.black;
-        cartel.text = "BARRA DE RESCATE";
+        cartel.text = "EQUIPO DE RESCATE";
         cartel.gameObject.AddComponent<MirarAlJugador>().objetivo = _cabeza;
 
         _herramienta = HerramientaRescate.Crear(_rig, pos + Vector3.up * 1.05f, Quaternion.LookRotation(_camion.transform.forward, Vector3.up));
         _herramienta.zona = _zonaCarga;
         _zonaCarga.herramienta = _herramienta;
+    }
+
+    /// <summary>El extintor queda parado en el piso, al lado del soporte de la barra.</summary>
+    void CrearExtintor()
+    {
+        var prefab = Resources.Load<GameObject>("Extintor_CO2_Mision3");
+        Vector3 piso = _soporte.transform.position + _camion.transform.forward * 0.33f;
+        var go = prefab != null ? Instantiate(prefab, piso, Quaternion.identity) : new GameObject("Extintor_CO2_Mision3");
+        go.transform.position = piso;
+        _extintor = go.GetComponent<ExtintorCO2>();
+        if (_extintor == null) _extintor = go.AddComponent<ExtintorCO2>();
+        _extintor.Preparar();
+        go.transform.rotation = Quaternion.LookRotation(_camion.transform.right, Vector3.up);
+        if (VisualesVR.Limites(go.transform, out var b)) go.transform.position += Vector3.up * (piso.y - b.min.y);
+        _extintor.FijarOrigen();
+
+        _zonaCarga.extintor = _extintor;
+        _extintor.puedeAgarrarse = () => !_extintor.EnMaletera || _zonaCarga.SePuedeSacar;
+        // En la maletera estan juntos: una mano agarra solo uno de los dos.
+        _extintor.manoLibre = i => !_herramienta.Agarrada || _herramienta.Mano != i;
+        _herramienta.manoLibre = i => !_extintor.Agarrado || _extintor.Mano != i;
+        _extintor.alSoltarEn = () =>
+        {
+            if (_zonaCarga.PuedeRecibir(_extintor.Centro))
+            {
+                _zonaCarga.CargarExtintor(_extintor);
+                return true;
+            }
+            if (_zonaCarga.Cerca(_extintor.Centro)) _zonaCarga.AvisarPuertaCerrada();
+            return false;
+        };
+        _extintor.alGatilloConPasador += () => _juego.Aviso("Primero retira el pasador\n<size=55%>Presiona A/X con el extintor en la mano</size>", JuegoBomberos.TipoAviso.Error, 3f);
+        _extintor.alRetirarPasador += () => _juego.Aviso("Pasador retirado\n<size=55%>Apunta a la base del fuego y aprieta el gatillo</size>", JuegoBomberos.TipoAviso.Info, 3f);
+    }
+
+    /// <summary>Columna de humo sobre la casa: se ve de lejos y orienta el viaje desde la estacion.</summary>
+    void CrearColumnaHumo()
+    {
+        var go = new GameObject("Columna_Humo");
+        go.transform.position = columnaHumo;
+        _columnaHumo = go.AddComponent<ParticleSystem>();
+        _columnaHumo.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        var r = go.GetComponent<ParticleSystemRenderer>();
+        r.sharedMaterial = ZonaFuego.MaterialParticula();
+        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        r.receiveShadows = false;
+
+        var main = _columnaHumo.main;
+        main.loop = true;
+        main.playOnAwake = false;
+        main.startLifetime = new ParticleSystem.MinMaxCurve(9f, 14f);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(1.2f, 2.2f);
+        main.startSize = new ParticleSystem.MinMaxCurve(3f, 5.5f);
+        main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+        main.startColor = new Color(0.1f, 0.095f, 0.09f, 0.55f);
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.maxParticles = 70;
+        main.prewarm = true;
+        var em = _columnaHumo.emission;
+        em.rateOverTime = 6f;
+        var forma = _columnaHumo.shape;
+        forma.shapeType = ParticleSystemShapeType.Box;
+        forma.scale = new Vector3(4f, 4f, 0.5f);
+        forma.rotation = new Vector3(-90f, 0f, 0f); // emite hacia arriba
+        var col = _columnaHumo.colorOverLifetime;
+        col.enabled = true;
+        var g = new Gradient();
+        g.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                  new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.15f), new GradientAlphaKey(0f, 1f) });
+        col.color = g;
+        var tam = _columnaHumo.sizeOverLifetime;
+        tam.enabled = true;
+        tam.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.8f, 1f, 2.2f));
+        _columnaHumo.Play();
     }
 
     bool EspacioLibre(Vector3 p, float alturaBase, out float y)
@@ -173,6 +253,12 @@ public class Mision3Controller : MonoBehaviour
             () => _herramienta.EnMaletera,
             "¡Herramienta cargada en la maletera!");
 
+        _tCargaExtintor = Tarea("Carga el extintor CO2 en la maletera",
+            "Agarra el extintor rojo junto al soporte (GRIP) y suéltalo dentro de la maletera abierta. Lo vas a necesitar: hay fuego en la casa.",
+            () => _extintor.Agarrado ? _zonaCarga.PuntoMaletera : _extintor.Centro + Vector3.up * 0.55f,
+            () => _extintor.EnMaletera,
+            "¡Extintor cargado en la maletera!");
+
         Tarea("Abre el portón principal",
             "Toca el botón verde del poste, junto al portón del patio.",
             () => _juego.PuntoBotonPrincipal,
@@ -197,17 +283,28 @@ public class Mision3Controller : MonoBehaviour
             () => _llegado,
             "¡Llegaste a la emergencia!");
 
-        Tarea("Recupera la herramienta de la maletera",
-            "Bájate del camión (B), abre la maletera y agarra la barra.",
+        Tarea("Saca el extintor y la barra de la maletera",
+            "Bájate del camión (B), abre la maletera y agarra el extintor con una mano y la barra con la otra.",
             () => _zonaCarga.PuntoMaletera,
-            () => _llegado && _herramienta.Agarrada && !_camion.JugadorSentado,
-            "¡Herramienta lista!");
+            () => _llegado && !_camion.JugadorSentado && !_extintor.EnMaletera && !_herramienta.EnMaletera,
+            "¡Equipo listo!");
 
         Tarea("Busca a la persona atrapada",
             "Se oyen gritos desde adentro: entra a la casa por la puerta principal.",
             () => puertaCasa,
             () => _entro,
-            "Hay alguien adentro... ¡sigue los gritos!");
+            "¡Hay fuego adentro! Apágalo antes de seguir");
+
+        _tFuego = Tarea("Apaga el incendio con el extintor CO2",
+            "Retira el pasador (A/X), apunta a la base de las llamas y aprieta el gatillo. Hay fuego en el pasillo y en la sala.",
+            () =>
+            {
+                if (!_extintor.Agarrado) return _extintor.Centro + Vector3.up * 0.55f;
+                var foco = _escenario != null && _escenario.Incendio != null ? _escenario.Incendio.FocoActivoMasCercano(_cabeza.position) : null;
+                return foco != null ? foco.Centro + Vector3.up * 0.9f : (Vector3?)null;
+            },
+            () => _incendioApagado,
+            "¡Incendio apagado! Sigue los gritos");
 
         Tarea("Localiza la puerta bloqueada",
             "Recorre la casa guiándote por los gritos y los golpes.",
@@ -252,12 +349,39 @@ public class Mision3Controller : MonoBehaviour
     public void EngancharEscenario(EscenarioMision3 e)
     {
         _escenario = e;
+        if (e.Incendio != null)
+        {
+            e.Incendio.alApagarFoco += ActualizarTituloFuego;
+            e.Incendio.alApagarTodo += AlApagarIncendio;
+            e.Incendio.Iniciar(_cabeza, e, _incendioApagado);
+        }
         if (e.puerta == null) return;
         e.puerta.alForzar += AlForzarPuerta;
+        e.puerta.accesoLibre = () => _incendioApagado;
         if (_puertaForzada)
         {
             e.puerta.DejarForzada();
             if (e.persona != null) e.persona.Liberar();
+        }
+    }
+
+    void ActualizarTituloFuego()
+    {
+        if (_escenario == null || _escenario.Incendio == null) return;
+        _tFuego.titulo = $"Apaga el incendio con el extintor CO2 ({_escenario.Incendio.Apagados}/{_escenario.Incendio.Total})";
+        SonidosVR.Reproducir2D(SonidosVR.Exito, 0.5f);
+    }
+
+    void AlApagarIncendio()
+    {
+        _incendioApagado = true;
+        _tiempoDentro = 0f; // la flecha a la puerta espera: primero hay que buscar por los gritos
+        if (_columnaHumo != null)
+        {
+            var em = _columnaHumo.emission;
+            em.rateOverTime = 0f;
+            Destroy(_columnaHumo.gameObject, 16f);
+            _columnaHumo = null;
         }
     }
 
@@ -290,8 +414,9 @@ public class Mision3Controller : MonoBehaviour
             return;
         }
 
-        // La barra se saco de la maletera antes de salir: hay que volver a cargarla.
+        // El equipo se saco de la maletera antes de salir: hay que volver a cargarlo.
         if (!_llegado && _tCarga.hecha && !_herramienta.EnMaletera) _tCarga.hecha = false;
+        if (!_llegado && _tCargaExtintor.hecha && !_extintor.EnMaletera) _tCargaExtintor.hecha = false;
 
         ActualizarLlegada();
         ActualizarCasa();
@@ -359,7 +484,7 @@ public class Mision3Controller : MonoBehaviour
         bool dentro = _escenario.Dentro(_cabeza.position);
         if (dentro) { _entro = _entro || _llegado; _tiempoDentro += Time.deltaTime; }
 
-        if (!_localizada && _entro && _escenario.puerta != null)
+        if (!_localizada && _entro && _incendioApagado && _escenario.puerta != null)
         {
             Vector3 d = _escenario.puerta.PuntoPalanca - _cabeza.position;
             if (d.magnitude < 3.2f && Vector3.Angle(_cabeza.forward, d) < 55f) _localizada = true;
@@ -379,10 +504,11 @@ public class Mision3Controller : MonoBehaviour
         else if (_puertaForzada)
             EstadoActual = p != null && (p.EstadoActual == PersonaRescatadaNPC.Estado.Siguiendo || p.EstadoActual == PersonaRescatadaNPC.Estado.Esperando)
                 ? Estado.PersonaSiguiendo : Estado.PuertaLiberada;
+        else if (_entro && !_incendioApagado) EstadoActual = Estado.IncendioActivo;
         else if (_localizada) EstadoActual = _escenario != null && _escenario.puerta.Enganchada ? Estado.AccesoBloqueado : Estado.PersonaLocalizada;
-        else if (_llegado) EstadoActual = _herramienta.EnMaletera ? Estado.Llegada : Estado.PersonaPendiente;
+        else if (_llegado) EstadoActual = _herramienta.EnMaletera || _extintor.EnMaletera ? Estado.Llegada : Estado.PersonaPendiente;
         else if (_camion.JugadorSentado) EstadoActual = Estado.Traslado;
-        else if (_herramienta.EnMaletera) EstadoActual = PuedeAbordar ? Estado.CamionListo : Estado.HerramientaCargada;
+        else if (_herramienta.EnMaletera && _extintor.EnMaletera) EstadoActual = PuedeAbordar ? Estado.CamionListo : Estado.HerramientaCargada;
         else EstadoActual = Estado.HerramientaPendiente;
     }
 
@@ -392,11 +518,12 @@ public class Mision3Controller : MonoBehaviour
         {
             switch (EstadoActual)
             {
-                case Estado.HerramientaPendiente: return "<color=#FFD54A>PREPARACIÓN</color>: falta cargar la herramienta";
-                case Estado.HerramientaCargada: return "<color=#6BFF7A>HERRAMIENTA CARGADA</color>: abre los portones";
+                case Estado.HerramientaPendiente: return "<color=#FFD54A>PREPARACIÓN</color>: falta cargar la barra y el extintor";
+                case Estado.HerramientaCargada: return "<color=#6BFF7A>EQUIPO CARGADO</color>: abre los portones";
                 case Estado.CamionListo: return "<color=#6BFF7A>CAMIÓN LISTO</color>: sube y sal";
                 case Estado.Traslado: return $"<color=#9AD0FF>EN TRASLADO</color>: {Mathf.RoundToInt(_camion.VelocidadKmh)} km/h";
-                case Estado.Llegada: return "<color=#FFD54A>EN LA ESCENA</color>: saca la herramienta";
+                case Estado.Llegada: return "<color=#FFD54A>EN LA ESCENA</color>: saca el equipo";
+                case Estado.IncendioActivo: return "<color=#FF6B5A>INCENDIO ACTIVO</color>: apágalo con el extintor";
                 case Estado.PersonaPendiente: return "<color=#FF6B5A>PERSONA SIN LOCALIZAR</color>: escucha los gritos";
                 case Estado.PersonaLocalizada: return "<color=#FF6B5A>ACCESO BLOQUEADO</color>: usa la barra";
                 case Estado.AccesoBloqueado: return "<color=#FFD54A>HACIENDO PALANCA</color>: jala la barra";

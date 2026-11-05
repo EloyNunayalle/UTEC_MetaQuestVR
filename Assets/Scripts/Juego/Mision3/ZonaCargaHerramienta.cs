@@ -1,18 +1,26 @@
 using UnityEngine;
 
 /// <summary>
-/// Punto de carga de la barra en la maletera del camion EXISTENTE. Se cuelga del camion
-/// (sigue al camion en el viaje) y se ubica dentro del compartimento de InteriorMaletera.
-/// Muestra una silueta de la barra mientras la llevas en la mano. Si la maletera esta cerrada
-/// no recibe la herramienta; con el camion en marcha no se puede sacar.
+/// Puntos de carga en la maletera del camion EXISTENTE: la barra de rescate y el extintor CO2.
+/// Se cuelga del camion (sigue al camion en el viaje) y se ubica dentro del compartimento de
+/// InteriorMaletera. Muestra una silueta de lo que llevas en la mano. Si la maletera esta cerrada
+/// no recibe nada; con el camion en marcha no se puede sacar nada.
 /// </summary>
 public class ZonaCargaHerramienta : MonoBehaviour
 {
-    [Tooltip("Distancia (m) de la barra al punto de carga para que cuente.")]
+    [Tooltip("Distancia (m) del objeto al punto de carga para que cuente.")]
     public float radioDeteccion = 0.95f;
 
     public HerramientaRescate herramienta;
+    public ExtintorCO2 extintor;
+
+    // Puntos dentro del compartimento (el eje Z de esta zona va a lo ancho del camion).
+    static readonly Vector3 PuntoBarra = new Vector3(0.16f, 0f, 0f);
+    static readonly Vector3 PuntoExtintor = new Vector3(-0.13f, -0.03f, 0f);
+    static readonly Quaternion RotExtintor = Quaternion.Euler(90f, 0f, 0f); // acostado a lo ancho
+
     public bool Cargada => herramienta != null && herramienta.EnMaletera;
+    public bool ExtintorCargado => extintor != null && extintor.EnMaletera;
     public Vector3 Punto => transform.position;
     /// <summary>Punto para la flecha: en la parte de atras del camion, sobre la maletera.</summary>
     public Vector3 PuntoMaletera => transform.position + Vector3.up * 1f - _camion.transform.forward * 0.3f;
@@ -30,8 +38,8 @@ public class ZonaCargaHerramienta : MonoBehaviour
 
     CamionBomberos _camion;
     PuertaMaletera[] _puertas;
-    Transform _silueta;
-    Material _matSilueta;
+    Transform _siluetaBarra, _siluetaExtintor;
+    Material _matBarra, _matExtintor;
     float _proximoAviso;
 
     public static ZonaCargaHerramienta Crear(CamionBomberos camion)
@@ -44,23 +52,25 @@ public class ZonaCargaHerramienta : MonoBehaviour
         var go = new GameObject("Zona_Carga_Herramienta");
         go.transform.SetParent(camion.transform, false);
         go.transform.localPosition = centro;
-        go.transform.localRotation = Quaternion.Euler(0f, 90f, 0f); // la barra queda atravesada en la maletera
+        go.transform.localRotation = Quaternion.Euler(0f, 90f, 0f); // a lo ancho de la maletera
         var z = go.AddComponent<ZonaCargaHerramienta>();
         z._camion = camion;
         z._puertas = camion.GetComponentsInChildren<PuertaMaletera>(true);
-        z.CrearSilueta();
+        z._matBarra = VisualesVR.MaterialSinLuz(new Color(1f, 0.85f, 0.1f, 0.45f));
+        z._matExtintor = VisualesVR.MaterialSinLuz(new Color(1f, 0.85f, 0.1f, 0.45f));
+        z._siluetaBarra = z.CrearSilueta("Silueta_Barra", PuntoBarra, new Vector3(0.05f, 0.38f, 0.05f), z._matBarra);
+        z._siluetaExtintor = z.CrearSilueta("Silueta_Extintor", PuntoExtintor, new Vector3(0.15f, 0.38f, 0.15f), z._matExtintor);
         return z;
     }
 
-    void CrearSilueta()
+    Transform CrearSilueta(string nombre, Vector3 pos, Vector3 escala, Material mat)
     {
-        _silueta = new GameObject("Silueta").transform;
-        _silueta.SetParent(transform, false);
-        _matSilueta = VisualesVR.MaterialSinLuz(new Color(1f, 0.85f, 0.1f, 0.45f));
-        var barra = VisualesVR.Primitiva(PrimitiveType.Cylinder, "Barra", _silueta, _matSilueta);
-        barra.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-        barra.transform.localScale = new Vector3(0.05f, 0.38f, 0.05f);
-        _silueta.gameObject.SetActive(false);
+        var s = VisualesVR.Primitiva(PrimitiveType.Cylinder, nombre, transform, mat);
+        s.transform.localPosition = pos;
+        s.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        s.transform.localScale = escala;
+        s.SetActive(false);
+        return s.transform;
     }
 
     public bool Cerca(Vector3 p) => Vector3.Distance(p, transform.position) <= radioDeteccion;
@@ -69,8 +79,20 @@ public class ZonaCargaHerramienta : MonoBehaviour
     public void Cargar(HerramientaRescate h)
     {
         herramienta = h;
-        h.GuardarEn(transform, Vector3.zero, Quaternion.identity);
-        SonidosVR.ReproducirEn(SonidosVR.Metal, transform.position, 0.9f, 12f);
+        h.GuardarEn(transform, PuntoBarra, Quaternion.identity);
+        Confirmar(SonidosVR.Metal);
+    }
+
+    public void CargarExtintor(ExtintorCO2 e)
+    {
+        extintor = e;
+        e.GuardarEn(transform, PuntoExtintor, RotExtintor);
+        Confirmar(SonidosVR.Puerta);
+    }
+
+    void Confirmar(AudioClip golpe)
+    {
+        SonidosVR.ReproducirEn(golpe, transform.position, 0.9f, 12f);
         SonidosVR.Reproducir2D(SonidosVR.Exito, 0.7f);
         EntradaVR.VibrarAmbas(0.6f, 0.15f, 0.7f);
     }
@@ -85,12 +107,15 @@ public class ZonaCargaHerramienta : MonoBehaviour
 
     void Update()
     {
-        if (herramienta == null) return;
-        bool mostrar = herramienta.Agarrada && !herramienta.EnMaletera;
-        if (_silueta.gameObject.activeSelf != mostrar) _silueta.gameObject.SetActive(mostrar);
-        if (!mostrar) return;
-        bool lista = PuedeRecibir(herramienta.Centro);
         float pulso = 0.5f + 0.5f * Mathf.Sin(Time.time * 6f);
-        _matSilueta.color = lista ? new Color(0.3f, 1f, 0.4f, 0.4f + 0.4f * pulso) : new Color(1f, 0.85f, 0.1f, 0.25f + 0.25f * pulso);
+        if (herramienta != null) Silueta(_siluetaBarra, _matBarra, herramienta.Agarrada && !herramienta.EnMaletera, herramienta.Centro, pulso);
+        if (extintor != null) Silueta(_siluetaExtintor, _matExtintor, extintor.Agarrado && !extintor.EnMaletera, extintor.Centro, pulso);
+    }
+
+    void Silueta(Transform silueta, Material mat, bool mostrar, Vector3 objeto, float pulso)
+    {
+        if (silueta.gameObject.activeSelf != mostrar) silueta.gameObject.SetActive(mostrar);
+        if (!mostrar) return;
+        mat.color = PuedeRecibir(objeto) ? new Color(0.3f, 1f, 0.4f, 0.4f + 0.4f * pulso) : new Color(1f, 0.85f, 0.1f, 0.25f + 0.25f * pulso);
     }
 }

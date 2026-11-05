@@ -11,7 +11,7 @@ public static class SonidosVR
 
     static AudioClip _alarma, _exito, _error, _clic, _agarrar, _sirena, _motor, _puerta, _victoria, _campana, _agua, _fuego;
     static AudioClip _zumbido, _chispa, _descarga, _pitido;
-    static AudioClip _auxilio, _golpes, _metal, _madera;
+    static AudioClip _auxilio, _golpes, _metal, _madera, _tos;
 
     public static AudioClip Alarma => Obtener(ref _alarma, "Alarma", 2.4f, Alarma_);
     public static AudioClip Campana => Obtener(ref _campana, "Campana", 1.2f, Campana_);
@@ -35,6 +35,7 @@ public static class SonidosVR
     public static AudioClip Golpes => Obtener(ref _golpes, "Golpes", 0.95f, Golpes_);
     public static AudioClip Metal => Obtener(ref _metal, "Metal", 0.4f, Metal_);
     public static AudioClip Madera => Obtener(ref _madera, "Madera", 0.6f, Madera_);
+    public static AudioClip Tos => Obtener(ref _tos, "Tos", 0.8f, Tos_);
 
     static AudioSource _fuente2D;
 
@@ -301,6 +302,15 @@ public static class SonidosVR
         float chasquido = Hash01(k + 7.3f) > 0.55f ? (Hash01(t * Hz * 1.3f) * 2f - 1f) * Mathf.Exp(-local * 9f) : 0f;
         float golpe = Seno(110f, t) * Mathf.Exp(-t * 14f);
         return (0.5f * chasquido * Mathf.Exp(-t * 3f) + 0.45f * golpe) * Envolvente(t, d, 0.001f, 0.08f);
+    }
+
+    static float Tos_(float t, float d)
+    {
+        // Dos golpes de tos: rafagas de ruido con caida rapida y un fondo grave de garganta.
+        float l = t < 0.38f ? t : t - 0.38f;
+        float ruido = Hash01(t * Hz * 2.1f) * 2f - 1f;
+        float garganta = Seno(170f, t) + 0.5f * Seno(340f, t);
+        return (0.32f * ruido + 0.18f * garganta) * Mathf.Exp(-l * 11f) * Envolvente(t, d, 0.004f, 0.05f);
     }
 
     static float Puerta_(float t, float d)

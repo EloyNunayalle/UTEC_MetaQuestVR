@@ -25,6 +25,14 @@ public class ExtintorCO2 : MonoBehaviour
     public bool Agarrado => _mano >= 0;
     public int Mano => _mano;
     public bool PasadorRetirado { get; private set; }
+    /// <summary>Guardado en la maletera del camion (Mision 3).</summary>
+    public bool EnMaletera { get; private set; }
+    /// <summary>Opcional: si devuelve false no se puede agarrar (p. ej. maletera cerrada).</summary>
+    public Func<bool> puedeAgarrarse;
+    /// <summary>Opcional: si devuelve false esa mano ya lleva otra cosa (0 = izquierda, 1 = derecha).</summary>
+    public Func<int, bool> manoLibre;
+    /// <summary>Opcional: se consulta al soltarlo; si devuelve true ya quedo guardado y no cae al piso.</summary>
+    public Func<bool> alSoltarEn;
     public float Caudal { get; private set; }
     public bool Descargando => Caudal > 0.05f;
     public Vector3 Centro => VisualesVR.Limites(transform, out var b) ? b.center : transform.position;
@@ -211,11 +219,12 @@ public class ExtintorCO2 : MonoBehaviour
             Descargar(0f);
 
             int hover = -1;
-            if (permitido)
+            if (permitido && (puedeAgarrarse == null || puedeAgarrarse()))
                 for (int i = 0; i < 2; i++)
                 {
                     var m = ManoT(i);
                     if (m == null || Distancia(m.position) > radioAgarre) continue;
+                    if (manoLibre != null && !manoLibre(i)) continue;
                     hover = i;
                     if (EntradaVR.AgarreDown(i == 0)) { Agarrar(i); return; }
                 }
@@ -272,6 +281,11 @@ public class ExtintorCO2 : MonoBehaviour
         _mano = i;
         _hoverPrev = -1;
         _caidaT = 1f;
+        if (EnMaletera)
+        {
+            EnMaletera = false;
+            transform.SetParent(null, true);
+        }
         _gatilloPrev = true; // el gatillo que se uso para agarrar no cuenta como disparo
         VisualesVR.Tenir(_renders, Color.white, 0f);
         EntradaVR.Vibrar(i == 0, 0.7f, 0.12f, 0.6f);
@@ -284,6 +298,7 @@ public class ExtintorCO2 : MonoBehaviour
         if (_mano >= 0) EntradaVR.Vibrar(_mano == 0, 0.3f, 0.05f);
         _mano = -1;
         Descargar(0f);
+        if (alSoltarEn != null && alSoltarEn()) return;
         // Cae parado al piso que tenga debajo; si no hay piso, vuelve a su soporte.
         transform.rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
         _caidaDesde = transform.position;
@@ -415,6 +430,26 @@ public class ExtintorCO2 : MonoBehaviour
             return true;
         }
         return false;
+    }
+
+    /// <summary>La posicion actual pasa a ser su lugar de origen (si no hay piso al soltarlo, vuelve aqui).</summary>
+    public void FijarOrigen()
+    {
+        _posInicial = transform.position;
+        _rotInicial = transform.rotation;
+    }
+
+    /// <summary>Lo deja guardado en la maletera, acostado, con su centro en el punto indicado.</summary>
+    public void GuardarEn(Transform padre, Vector3 posLocal, Quaternion rotLocal)
+    {
+        _mano = -1;
+        _caidaT = 1f;
+        EnMaletera = true;
+        transform.SetParent(padre, false);
+        transform.localRotation = rotLocal;
+        transform.localPosition = posLocal;
+        if (VisualesVR.Limites(transform, out var b)) transform.position += padre.TransformPoint(posLocal) - b.center;
+        VisualesVR.Tenir(_renders, Color.white, 0f);
     }
 
     /// <summary>Vuelve a su soporte en la pared, con el pasador puesto (reinicio).</summary>

@@ -28,6 +28,8 @@ public class HerramientaRescate : MonoBehaviour
 
     /// <summary>Zona de carga del camion (la asigna Mision3Controller).</summary>
     public ZonaCargaHerramienta zona;
+    /// <summary>Opcional: si devuelve false esa mano ya lleva otra cosa (0 = izquierda, 1 = derecha).</summary>
+    public Func<int, bool> manoLibre;
     public event Action alAgarrar;
 
     Transform _punta;
@@ -112,6 +114,7 @@ public class HerramientaRescate : MonoBehaviour
                 {
                     var m = ManoT(i);
                     if (m == null || DistanciaBarra(m.position) > radioAgarre) continue;
+                    if (manoLibre != null && !manoLibre(i)) continue;
                     hover = i;
                     if (EntradaVR.AgarreDown(i == 0)) { Agarrar(i); return; }
                 }

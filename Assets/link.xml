@@ -1,0 +1,4 @@
+<linker>
+  <!-- La persona rescatada (Mision 3) usa por reflexion las clases de animacion de los samples del Meta Avatars SDK. -->
+  <assembly fullname="Oculus.AvatarSDK2.Samples" preserve="all" ignoreIfMissing="1" />
+</linker>

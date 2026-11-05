@@ -2,9 +2,10 @@ using TMPro;
 using UnityEngine;
 
 /// <summary>
-/// Persona atrapada de la Mision 3. Es un personaje independiente del jugador: no usa el rig,
-/// ni el seguimiento de manos, ni el Meta Avatar del jugador (cuerpo armado con primitivas y
-/// animado por codigo, con las proporciones de una persona de 1.70 m).
+/// Persona atrapada de la Mision 3. Es un personaje independiente del jugador: no usa el rig, ni el
+/// seguimiento de manos, ni la instancia del Meta Avatar del jugador. Se ve con su propio Meta Avatar
+/// (AvatarRescatado); mientras carga, o si no se puede cargar, se usa un cuerpo armado con primitivas
+/// y animado por codigo, con las proporciones de una persona de 1.70 m. La mision no depende del avatar.
 /// Estados: Atrapada (sentada en el piso, pide ayuda) -> Reaccionando (se abrio la puerta) ->
 /// Levantandose (cuando te acercas) -> Siguiendo / Esperando -> Segura.
 ///
@@ -36,7 +37,9 @@ public class PersonaRescatadaNPC : MonoBehaviour
     OVRCameraRig _rig;
     readonly System.Collections.Generic.List<Vector3> _camino = new System.Collections.Generic.List<Vector3>();
     float _kParado, _kMarcha, _faseMarcha, _proximoGrito, _finGlobo, _atascado, _kSaludo;
-    bool _golpesToca;
+    int _turnoAviso;
+    AvatarRescatado _avatar;
+    bool _cuerpoOculto;
 
     struct Pose
     {
@@ -57,6 +60,33 @@ public class PersonaRescatadaNPC : MonoBehaviour
         Construir();
         _proximoGrito = Time.time + Random.Range(1f, 3f);
         Aplicar(Sentada, Parada, 0f, 0f, 0f);
+    }
+
+    void Start()
+    {
+        // Distinto preset que el jugador: la persona no debe verse igual que el.
+        var jugador = FindObjectOfType<AvatarJugador>();
+        _avatar = AvatarRescatado.Crear(transform, jugador != null && jugador.presetAvatar == 0 ? 1 : 0);
+    }
+
+    /// <summary>Pasa del cuerpo de reemplazo al Meta Avatar en cuanto esta listo y le envia su estado.</summary>
+    void ActualizarAvatar()
+    {
+        if (_avatar == null) return;
+        if (_avatar.Fallo)
+        {
+            Destroy(_avatar.gameObject);
+            _avatar = null;
+            return;
+        }
+        if (!_avatar.Listo) return;
+        if (!_cuerpoOculto)
+        {
+            _cuerpoOculto = true;
+            // Solo los renderers: la voz vive en este mismo cuerpo y debe seguir sonando.
+            foreach (var r in _raiz.GetComponentsInChildren<Renderer>()) r.enabled = false;
+        }
+        _avatar.Animar(_kParado, _kMarcha > 0.05f ? velocidad * _kMarcha : 0f);
     }
 
     // ------------------------------------------------------------------
@@ -283,21 +313,24 @@ public class PersonaRescatadaNPC : MonoBehaviour
         _kMarcha = Mathf.MoveTowards(_kMarcha, objetivoMarcha, dt * 4f);
         _kSaludo = Mathf.MoveTowards(_kSaludo, saludo, dt * 3f);
         Aplicar(Sentada, Parada, _kParado, _kMarcha, _kSaludo);
+        ActualizarAvatar();
         ActualizarGlobo();
     }
 
-    /// <summary>Atrapada: alterna gritos y golpes en la pared para que se la pueda encontrar por sonido.</summary>
+    /// <summary>Atrapada: alterna golpes en la pared, gritos y tos por el humo, para que se la pueda encontrar por sonido.</summary>
     float PedirAyuda()
     {
         if (Time.time >= _proximoGrito)
         {
             _proximoGrito = Time.time + Random.Range(5f, 8f);
-            _golpesToca = !_golpesToca;
-            if (_golpesToca) _voz.PlayOneShot(SonidosVR.Golpes, 1f);
-            else Gritar(Random.Range(0.97f, 1.08f));
-            if (DistanciaAlJugador() < 9f) Decir(_golpesToca ? "*golpes*" : "¡Ayuda! ¡Estoy aquí adentro!", 2.5f);
+            _turnoAviso = (_turnoAviso + 1) % 3;
+            if (_turnoAviso == 0) _voz.PlayOneShot(SonidosVR.Golpes, 1f);
+            else if (_turnoAviso == 1) Gritar(Random.Range(0.97f, 1.08f));
+            else _voz.PlayOneShot(SonidosVR.Tos, 1f);
+            string texto = _turnoAviso == 0 ? "*golpes*" : _turnoAviso == 1 ? "¡Ayuda! ¡Estoy aquí adentro!" : "*tose* ¡Hay mucho humo!";
+            if (DistanciaAlJugador() < 9f) Decir(texto, 2.5f);
         }
-        return Time.time < _finGlobo && !_golpesToca ? 1f : 0f;
+        return Time.time < _finGlobo && _turnoAviso == 1 ? 1f : 0f;
     }
 
     float DistanciaAlJugador()

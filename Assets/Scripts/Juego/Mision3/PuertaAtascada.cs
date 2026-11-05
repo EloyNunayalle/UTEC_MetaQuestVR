@@ -30,6 +30,8 @@ public class PuertaAtascada : MonoBehaviour
     public Vector3 PuntoPalanca => _puntoPalanca;
 
     public event Action alForzar;
+    /// <summary>Si devuelve false no se puede hacer palanca (el incendio bloquea el acceso).</summary>
+    public Func<bool> accesoLibre;
 
     Vector3 _puntoPalanca, _normal;
     Quaternion _rotCerrada;
@@ -138,7 +140,16 @@ public class PuertaAtascada : MonoBehaviour
 
         if (!Enganchada)
         {
-            if (enMano && Vector3.Distance(h.Punta, _puntoPalanca) <= radioEnganche) Enganchar(h);
+            if (enMano && Vector3.Distance(h.Punta, _puntoPalanca) <= radioEnganche)
+            {
+                if (accesoLibre == null || accesoLibre()) Enganchar(h);
+                else if (Time.time >= _proximoAviso)
+                {
+                    _proximoAviso = Time.time + 3.5f;
+                    SonidosVR.ReproducirEn(SonidosVR.Metal, _puntoPalanca, 0.5f, 10f);
+                    JuegoBomberos.Instancia?.Aviso("¡Primero apaga el fuego!\n<size=55%>Forzar la puerta con fuego cerca alimentaría las llamas</size>", JuegoBomberos.TipoAviso.Error, 3f);
+                }
+            }
             else RevisarManoVacia(enMano);
         }
         else if (!enMano || Vector3.Distance(h.PosicionMano, _puntoPalanca) > distanciaMaximaMano) Desenganchar(h);

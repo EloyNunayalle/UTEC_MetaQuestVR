@@ -12,6 +12,15 @@ public class EscenarioMision3 : MonoBehaviour
     public Vector3 centroCasa = new Vector3(1f, 2.5f, -6f);
     public Vector3 tamanoCasa = new Vector3(11.6f, 3.4f, 11.6f);
 
+    /// <summary>Incendio dentro de la casa (se crea solo).</summary>
+    public IncendioCasa Incendio { get; private set; }
+
+    void Awake()
+    {
+        Incendio = GetComponent<IncendioCasa>();
+        if (Incendio == null) Incendio = gameObject.AddComponent<IncendioCasa>();
+    }
+
     public bool Dentro(Vector3 puntoMundo)
     {
         Vector3 p = transform.InverseTransformPoint(puntoMundo) - centroCasa;

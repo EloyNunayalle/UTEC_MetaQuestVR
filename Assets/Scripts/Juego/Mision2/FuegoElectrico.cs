@@ -20,6 +20,8 @@ public class FuegoElectrico : MonoBehaviour
     [Tooltip("Radio (m) del foco: el chorro de CO2 cuenta si apunta dentro de este radio.")]
     public float radio = 0.55f;
     public float anchoFoco = 0.9f;
+    [Tooltip("Tamano de las llamas y del humo (1 = equipo de la Mision 2; mas grande para un incendio en una habitacion).")]
+    public float escala = 1f;
 
     /// <summary>La instalacion sigue alimentando el fuego (se reaviva rapido).</summary>
     public bool aporteElectrico = true;
@@ -91,8 +93,8 @@ public class FuegoElectrico : MonoBehaviour
         main.loop = true;
         main.playOnAwake = false;
         main.startLifetime = new ParticleSystem.MinMaxCurve(0.45f, 0.9f);
-        main.startSpeed = new ParticleSystem.MinMaxCurve(0.6f, 1.4f);
-        main.startSize = new ParticleSystem.MinMaxCurve(0.25f, 0.55f);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(0.6f * escala, 1.4f * escala);
+        main.startSize = new ParticleSystem.MinMaxCurve(0.25f * escala, 0.55f * escala);
         main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
         main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.82f, 0.3f), new Color(1f, 0.4f, 0.06f));
         main.gravityModifier = -0.15f;
@@ -252,7 +254,7 @@ public class FuegoElectrico : MonoBehaviour
         var em = _llamas.emission;
         em.rateOverTime = 70f * v;
         var main = _llamas.main;
-        float f = Mathf.Lerp(0.5f, 1f, Vida);
+        float f = Mathf.Lerp(0.5f, 1f, Vida) * escala;
         main.startSize = new ParticleSystem.MinMaxCurve(0.25f * f, 0.55f * f);
 
         var emH = _humo.emission;
