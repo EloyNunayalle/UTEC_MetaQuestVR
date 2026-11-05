@@ -177,6 +177,11 @@ public class CamionBomberos : MonoBehaviour
 
         // Balizas independientes de la sirena: pueden quedar encendidas sin sonido.
         EncenderLuces(lucesEncendidasAlIniciar);
+
+        // Maletera: enlaza las puertas traseras con este camion.
+        foreach (var puerta in GetComponentsInChildren<PuertaMaletera>(true))
+            puerta.camion = this;
+
         Debug.Log($"[CamionBomberos] Balizas {frecuenciaBalizas:0.0} Hz " +
                   $"({frecuenciaBalizas * 60f:0} destellos/min); sirena independiente.");
 

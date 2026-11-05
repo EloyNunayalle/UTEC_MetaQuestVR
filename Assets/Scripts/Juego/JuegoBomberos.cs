@@ -948,6 +948,7 @@ public class JuegoBomberos : MonoBehaviour
             "- Botones: tócalos con el dedo\n" +
             "- Camión: conducción configurable (joystick o volante) en el menú inicial\n" +
             "- Camión: A sirena, X luces (independientes)\n" +
+            "- Maletera: agarra el tirador trasero con GRIP para abrir / cerrar\n" +
             "- Manguera: GRIP para tomar, gatillo para el agua; presión con la válvula del panel",
             "");
     }
