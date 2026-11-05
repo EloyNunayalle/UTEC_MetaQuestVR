@@ -10,6 +10,9 @@ using UnityEngine.SceneManagement;
 /// - Carga/descarga "Estacion_Interior" (decoración, chaleco, extintor, marcas de
 ///   piso) según la distancia del jugador a la estación, con histéresis para evitar
 ///   cargas/descargas continuas.
+/// - Carga/descarga los interiores de las misiones ("Casa_M2_Interior", "Casa_M3_Interior")
+///   por proximidad y SOLO durante su mision: en Explorar y en las demas misiones la ciudad
+///   queda con los edificios exteriores (sellados).
 /// - Sobrevive a las recargas de escena (DontDestroyOnLoad): si "Reiniciar" recarga
 ///   el mundo en modo Single y se lleva la Persistente, este gestor la repone.
 ///
@@ -20,6 +23,22 @@ public class GestorEscenas : MonoBehaviour
     public const string EscenaPersistente = "Persistente";
     public const string EscenaMundo = "Ciudad_Tile_00_Estacion";
     public const string EscenaEstacionInterior = "Estacion_Interior";
+    public const string EscenaInteriorM2 = "Casa_M2_Interior";
+    public const string EscenaInteriorM3 = "Casa_M3_Interior";
+
+    /// <summary>Interior de una mision: su escena, el centro del edificio y la mision que lo usa.</summary>
+    struct InteriorMision
+    {
+        public string escena;
+        public Vector3 centro;
+        public int mision;
+    }
+
+    static readonly InteriorMision[] InterioresMision =
+    {
+        new InteriorMision { escena = EscenaInteriorM2, centro = new Vector3(17.65f, 0f, -14f), mision = 2 },
+        new InteriorMision { escena = EscenaInteriorM3, centro = new Vector3(-40.11f, 0f, 33.96f), mision = 3 }
+    };
 
     [Header("Estación interior (carga por proximidad)")]
     [Tooltip("Centro del edificio de la estación (coordenadas del mundo).")]
@@ -28,6 +47,12 @@ public class GestorEscenas : MonoBehaviour
     public float radioCarga = 45f;
     [Tooltip("Distancia a la que se descarga el interior (debe ser mayor que radioCarga).")]
     public float radioDescarga = 60f;
+
+    [Header("Interiores de mision (carga por proximidad)")]
+    [Tooltip("Distancia al edificio a la que se carga su interior durante la mision.")]
+    public float radioCargaMision = 30f;
+    [Tooltip("Distancia al edificio a la que se descarga su interior (debe ser mayor que la de carga).")]
+    public float radioDescargaMision = 42f;
 
     static GestorEscenas _instancia;
 
@@ -96,6 +121,36 @@ public class GestorEscenas : MonoBehaviour
         else if (cargado && distancia > radioDescarga && PuedeDescargarInterior())
         {
             StartCoroutine(Descargar(EscenaEstacionInterior));
+        }
+
+        if (!_cargando) ActualizarInterioresMision(jugador);
+    }
+
+    /// <summary>
+    /// Mismo sistema que el interior de la estacion, con una condicion mas: solo se carga durante su
+    /// mision. Al terminar la mision o alejarse, se descarga y el edificio exterior vuelve (VarianteEdificio).
+    /// </summary>
+    void ActualizarInterioresMision(Transform jugador)
+    {
+        var juego = JuegoBomberos.Instancia;
+        int mision = juego != null ? juego.MisionActiva : 0;
+        foreach (var interior in InterioresMision)
+        {
+            bool cargado = SceneManager.GetSceneByName(interior.escena).isLoaded;
+            bool corresponde = mision == interior.mision;
+            float distancia = DistanciaHorizontal(jugador.position, interior.centro);
+
+            if (!cargado && corresponde && distancia <= radioCargaMision)
+            {
+                StartCoroutine(CargarAditivo(interior.escena));
+                return;
+            }
+            if (cargado && distancia > radioDescargaMision &&
+                (!corresponde || juego == null || juego.PermiteDescargarInterior(interior.mision)))
+            {
+                StartCoroutine(Descargar(interior.escena));
+                return;
+            }
         }
     }
 

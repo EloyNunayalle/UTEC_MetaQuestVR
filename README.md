@@ -33,16 +33,16 @@ El **edificio gris alto de la calle del costado este** (`Building_Small_1_LOD` e
 - El chorro, con el **Collision Module en modo World**, dispara `OnParticleCollision`. Cada gota que choca cerca de un foco le resta vida según la **presión**. Así cada foco se apaga **por separado**, con vapor y siseo.
 - Si dejas de mojar un foco antes de apagarlo, **se reaviva**. Los pisos altos necesitan más agua y más presión para llegar.
 - Si el edificio no tiene collider, cada foco crea un panel de impacto invisible sobre la fachada para que el agua choque.
-- **Misión**: después de subir al camión, la última tarea es **"Apaga el incendio (x/9)"**. La flecha marca el foco encendido más cercano y la misión termina al apagar todos.
+- **Misión 1**: después de subir al camión, la última tarea es **"Apaga el incendio (x/9)"**. La flecha marca el foco encendido más cercano y la misión termina al apagar todos. **El fuego solo se enciende al iniciar la Misión 1**: en Explorar y en las otras misiones el edificio está normal.
 - Se elige por posición (`Posicion Edificio Fuego` en `JuegoBomberos`), porque hay varios edificios con el mismo nombre.
-- **Explorar**: el edificio también arde. Al apagarlo entero, se vuelve a encender a los 30 s para practicar.
 - Todo se crea solo. En `JuegoBomberos` puedes desactivarlo (`Incendio En Edificio`) o elegir otro edificio (`Nombre Edificio Fuego`).
 
 ### Elegir modo al empezar
-Al darle Play aparece un **menú con tres opciones**. Elige con el **joystick** (arriba/abajo, la flecha amarilla marca la opción) y acepta con **A**, el **gatillo** o el **clic del joystick**. Mientras el menú está abierto, el joystick no te mueve.
-- **EXPLORAR** (azul): recorres todo libremente, sin tareas, sin orden y sin tiempo. Los portones, la manguera, el chaleco, el extintor y el camión funcionan directo, y puedes subir a manejar cuando quieras. La casa de la Misión 2 tiene su incendio eléctrico **de práctica**: sin puntaje, y se reinicia solo.
+Al darle Play aparece un **menú de modos**. Elige con el **joystick** (arriba/abajo, la flecha amarilla marca la opción) y acepta con **A**, el **gatillo** o el **clic del joystick**. Mientras el menú está abierto, el joystick no te mueve.
+- **EXPLORAR** (azul): recorres la estación y la ciudad por fuera, sin tareas, tiempo ni incendios. Los edificios se ven solo por fuera: sus interiores son de las misiones.
 - **MISIÓN 1** (rojo): la emergencia completa de la estación con todos los pasos en orden, tiempo y puntaje (ver abajo).
 - **MISIÓN 2** (naranja): incendio eléctrico dentro de una casa (ver *Misión 2* más abajo).
+- **MISIÓN 3** (verde): rescate de una persona atrapada (ver *Misión 3* más abajo).
 
 **Panel de instrucciones**: ya no está siempre flotando frente a ti. Aparece unos segundos al empezar, al cumplir una tarea y con los recordatorios, y luego se oculta solo. **Presiona el joystick (clic)** para mostrarlo u ocultarlo cuando quieras (en el editor, tecla `I`).
 
@@ -94,7 +94,7 @@ Moto roja de bomberos con baliza azul para moverte rápido por la ciudad, en tod
 
 ## Misión 2: incendio eléctrico en la casa (`Assets/Scripts/Juego/Mision2/`)
 
-Se juega en la **casa de ladrillo de la calle este** (la Rowhouse, a la izquierda del edificio de la Misión 1). Al elegir **MISIÓN 2** te quedas donde estás, sin teletransporte. La flecha te guía: primero al botón verde del portón principal (si está cerrado), luego a la **moto** y después a la casa. Entras caminando: la puerta se abre al acercarte o al tocarla.
+Se juega en la **casa de ladrillo de la calle este** (la Rowhouse, a la izquierda del edificio de la Misión 1). Al elegir **MISIÓN 2** te quedas donde estás, sin teletransporte, y su interior se carga al acercarte. La flecha te guía: primero al botón verde del portón principal (si está cerrado), luego a la **moto** y después a la casa. Entras caminando: la puerta se abre al acercarte o al tocarla.
 
 **Tareas, en orden** (cada una se cumple solo con la acción correcta):
 1. **Identifica el riesgo eléctrico**: entra y mira el equipo que echa chispas y humo.
@@ -122,13 +122,52 @@ Se juega en la **casa de ladrillo de la calle este** (la Rowhouse, a la izquierd
 Teclado (editor/simulador): `F` = descargar CO₂, `P` = pasador, `T` = medir con el comprobador, `I` = instrucciones.
 
 ### Casa explorable (`EDF_A2_Paleta_Rowhouse_Marron_Explorable.prefab`)
-- El prefab original (`A2/Paleta/EDF_A2_Paleta_Rowhouse_Marron.prefab`) **no se modificó**. La versión nueva está en `Assets/Prefabs/Ciudad/Edificios/A2/Explorable/` y reemplaza a la casa en `Ciudad_Tile_00_Estacion` con la misma posición, los mismos overrides y los mismos fileID internos.
+- El prefab original (`A2/Paleta/EDF_A2_Paleta_Rowhouse_Marron.prefab`) **no se modificó** y es el exterior sellado que queda en `Ciudad_Tile_00_Estacion`. La versión explorable está en `Assets/Prefabs/Ciudad/Edificios/A2/Explorable/` y vive en la escena `Casa_M2_Interior` (ver *Escenas y variantes*).
 - **LODs conservados**: el mismo `LODGroup` (LOD0 0.25 / LOD1 0.12 / caja 0.05 / culling 0.02), con los mismos materiales y texturas. LOD0 y LOD1 usan copias de la malla (`Assets/Models/CiudadNueva/Explorable/`) en las que solo se anularon los triángulos de la puerta (186 en LOD0 y 34 en LOD1). Los vértices y los UV no cambian.
 - **Puerta**: esos mismos triángulos se separaron en `EDF_A2_Paleta_Rowhouse_Marron_Puerta.asset`, con el pivote en la bisagra, así la puerta se ve igual que la original.
 - **Colliders**: se quitó la caja única que tapaba toda la casa (8 × 11 × 14 m). En su lugar hay cajas simples para las paredes exteriores, la fachada con el vano de la puerta, el piso de la planta baja (a 1.02 m), el techo, el descanso y una rampa invisible sobre la escalera de entrada.
 - **Interior**: la planta baja (7.6 × 11.6 m) se dividió con un tabique y un paso:
   - **Sala**: escritorio, silla y TV, el mismo rincón de oficina de la estación.
   - **Cuarto de servicio**: tablero, equipo AC, banco de trabajo (`Mesa.prefab`), taburete, estantería metálica con cajas, cajas apiladas, lámparas de techo con luz sin sombras y carteles de seguridad.
+
+## Misión 3: rescate de una persona atrapada (`Assets/Scripts/Juego/Mision3/`)
+
+Empieza en la estación y usa el **camión que ya existe**: no se crea otro ni hay teletransporte. La moto no está disponible en esta misión.
+
+**Tareas, en orden**
+1. **Recoge la herramienta**: la barra Halligan está en un soporte rojo junto al camión (GRIP).
+2. **Cárgala en la maletera**: ve atrás del camión, abre la maletera con la otra mano (tirador, GRIP) y suelta la barra adentro. Mientras la llevas se ve su silueta en el punto de carga. Si la vuelves a sacar antes de salir, hay que cargarla otra vez.
+3. **Abre el portón principal y el de la cochera** con sus botones.
+4. **Aborda el camión**: no deja subir hasta tener todo lo anterior listo.
+5. **Conduce hasta la emergencia**: sal por el portón, gira a la izquierda y estaciona en el círculo amarillo, frente a la casa de ladrillo gris.
+6. **Recupera la barra de la maletera**: bájate (B), abre la maletera y agárrala. Con el camión en marcha no se puede sacar.
+7. **Busca a la persona y localiza la puerta bloqueada**: entra por la puerta principal y guíate por los gritos y golpes. Si tardas más de 20 s adentro, aparece la flecha.
+8. **Fuerza la puerta**: con la barra en la mano aparece un anillo junto a la cerradura. Acerca la **punta** al anillo (se engancha) y **jala la barra hacia ti** varias veces; solo cuenta jalar. La puerta cruje, cede y se abre. Sin la barra no se abre. Alternativa: mantener el **gatillo** con la barra enganchada (teclado: `G`).
+9. **Acompaña a la persona**: al acercarte se levanta y te sigue. Si te alejas más de 11 m, se detiene y pide que la esperes.
+10. **Zona segura**: cuando llega al círculo verde de la calle se muestra **PERSONA RESCATADA**, luego **ÁREA ASEGURADA**, con tiempo, puntaje y calificación. Con **A** vuelves a la estación.
+
+**Piezas**
+- `Mision3Controller`: secuencia, estados y progreso. Lo crea `JuegoBomberos` en la escena persistente, así el progreso no se pierde si el interior se descarga.
+- `HerramientaRescate`, `ZonaCargaHerramienta`: barra (armada con primitivas, no hay un modelo en el proyecto) y punto de carga dentro del compartimento de `InteriorMaletera`.
+- `PuertaAtascada`, `EscenarioMision3`, `ZonaSeguraRescate`.
+- `PersonaRescatadaNPC`: personaje independiente del jugador, armado con primitivas y animado por código. Sigue el recorrido que hizo el jugador (migas de pan), así que no atraviesa paredes y no necesita un NavMesh horneado. **No usa el Meta Avatar**: el SDK maneja los avatares con datos de seguimiento y sus presets son archivos locales que no van al repositorio.
+- Los gritos y golpes son sonidos sintetizados en `SonidosVR` (no hay grabaciones de voz); lo que dice la persona se lee en un globo de texto.
+
+**Casa** (`EDF_A2_Paleta_Small_Gris_Explorable.prefab`): la variante de ladrillo gris oscuro en (−39.11, 27.96). Usa las mismas mallas, materiales y `LODGroup` del prefab original, que no se modificó. El modelo era un cascarón hueco con el vano de la puerta libre, así que se agregaron: puerta, cielorraso a 2.9 m, tabiques, pasillo, sala, comedor, estudio, dormitorio, escalera decorativa (los pisos altos no se visitan), muebles y colliders simples.
+
+## Escenas y variantes por misión
+
+| Modo | Edificio incendiado | Casa M2 (Rowhouse) | Casa M3 (ladrillo gris) |
+|---|---|---|---|
+| Explorar | Normal | Exterior sellado | Exterior sellado |
+| Misión 1 | **Con fuego** | Exterior sellado | Exterior sellado |
+| Misión 2 | Normal | **Explorable** (al acercarse) | Exterior sellado |
+| Misión 3 | Normal | Exterior sellado | **Explorable** (al acercarse) |
+
+- La ciudad (`Ciudad_Tile_00_Estacion`) solo tiene los exteriores. Las versiones explorables están en `Casa_M2_Interior` y `Casa_M3_Interior`.
+- `GestorEscenas` las carga de forma aditiva por proximidad (a 30 m) y solo durante su misión, y las descarga a más de 42 m o cuando la misión terminó. Es el mismo sistema del interior de la estación.
+- `VarianteEdificio` oculta el exterior de la ciudad mientras la variante está cargada, y lo vuelve a mostrar al descargarla.
+- **Límite de la Misión 2**: su estado (tablero, extintor, fuego) vive en su escena. Si ya hay avance, la casa no se descarga hasta terminar la misión aunque te alejes. La Misión 3 sí puede descargarse: al volver, la puerta sigue forzada y la persona espera en la habitación.
 
 ## Portón, manguera y agua
 

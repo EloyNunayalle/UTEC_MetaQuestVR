@@ -11,6 +11,7 @@ public static class SonidosVR
 
     static AudioClip _alarma, _exito, _error, _clic, _agarrar, _sirena, _motor, _puerta, _victoria, _campana, _agua, _fuego;
     static AudioClip _zumbido, _chispa, _descarga, _pitido;
+    static AudioClip _auxilio, _golpes, _metal, _madera;
 
     public static AudioClip Alarma => Obtener(ref _alarma, "Alarma", 2.4f, Alarma_);
     public static AudioClip Campana => Obtener(ref _campana, "Campana", 1.2f, Campana_);
@@ -29,6 +30,11 @@ public static class SonidosVR
     public static AudioClip Chispa => Obtener(ref _chispa, "Chispa", 0.25f, Chispa_);
     public static AudioClip Descarga => Obtener(ref _descarga, "Descarga", 2f, Descarga_);
     public static AudioClip Pitido => Obtener(ref _pitido, "Pitido", 0.14f, Pitido_);
+    // Mision 3 (rescate)
+    public static AudioClip Auxilio => Obtener(ref _auxilio, "Auxilio", 1.2f, Auxilio_);
+    public static AudioClip Golpes => Obtener(ref _golpes, "Golpes", 0.95f, Golpes_);
+    public static AudioClip Metal => Obtener(ref _metal, "Metal", 0.4f, Metal_);
+    public static AudioClip Madera => Obtener(ref _madera, "Madera", 0.6f, Madera_);
 
     static AudioSource _fuente2D;
 
@@ -234,6 +240,67 @@ public static class SonidosVR
     static float Pitido_(float t, float d)
     {
         return 0.4f * Seno(2200f, t) * Envolvente(t, d, 0.005f, 0.03f);
+    }
+
+    static float Gauss(float x, float centro, float ancho)
+    {
+        float k = (x - centro) / ancho;
+        return Mathf.Exp(-k * k);
+    }
+
+    /// <summary>Voz sintetizada: suma de armonicos de f0 reforzados alrededor de dos formantes (la vocal).</summary>
+    static float Vocal(float t, float f0, float f1, float f2)
+    {
+        float v = 0f;
+        for (int k = 1; k <= 12; k++)
+        {
+            float f = f0 * k;
+            float a = Gauss(f, f1, 220f) + 0.6f * Gauss(f, f2, 300f) + 0.12f / k;
+            v += a * Seno(f, t);
+        }
+        return v;
+    }
+
+    static float Auxilio_(float t, float d)
+    {
+        // Grito "a-yu-daa" sintetizado: tres silabas con vocales a / u / a y tono que cae al final.
+        if (t < 0.24f) return 0.2f * Vocal(t, 265f, 850f, 1300f) * Envolvente(t, 0.24f, 0.03f, 0.05f);
+        if (t < 0.28f) return 0f;
+        if (t < 0.52f) return 0.22f * Vocal(t, 285f, 360f, 900f) * Envolvente(t - 0.28f, 0.24f, 0.03f, 0.05f);
+        if (t < 0.56f) return 0f;
+        float f0 = t < 0.8f ? 300f : 250f; // caida en dos tramos (sin glide: la fase queda simple)
+        return 0.22f * Vocal(t, f0, 800f, 1250f) * Envolvente(t - 0.56f, d - 0.56f, 0.03f, 0.25f);
+    }
+
+    static readonly float[] InicioGolpes = { 0f, 0.28f, 0.56f };
+
+    static float Golpes_(float t, float d)
+    {
+        // Tres golpes secos contra una puerta de madera.
+        float v = 0f;
+        foreach (float i in InicioGolpes)
+        {
+            if (t < i) continue;
+            float l = t - i;
+            v += (Seno(95f, l) + 0.5f * Seno(190f, l) + 0.3f * Seno(420f, l)) * Mathf.Exp(-l * 26f);
+        }
+        return 0.5f * v * Envolvente(t, d, 0.001f, 0.05f);
+    }
+
+    static float Metal_(float t, float d)
+    {
+        // Barra de acero contra el marco: parciales inarmonicos que suenan a metal.
+        float v = Seno(1230f, t) + 0.7f * Seno(2110f, t) + 0.45f * Seno(3370f, t) + 0.3f * Seno(5180f, t);
+        return 0.28f * v * Mathf.Exp(-t * 11f) * Envolvente(t, d, 0.001f, 0.05f);
+    }
+
+    static float Madera_(float t, float d)
+    {
+        // Madera que cruje y se astilla: chasquidos irregulares sobre un golpe grave.
+        float k = Mathf.Floor(t * 70f), local = t * 70f - k;
+        float chasquido = Hash01(k + 7.3f) > 0.55f ? (Hash01(t * Hz * 1.3f) * 2f - 1f) * Mathf.Exp(-local * 9f) : 0f;
+        float golpe = Seno(110f, t) * Mathf.Exp(-t * 14f);
+        return (0.5f * chasquido * Mathf.Exp(-t * 3f) + 0.45f * golpe) * Envolvente(t, d, 0.001f, 0.08f);
     }
 
     static float Puerta_(float t, float d)

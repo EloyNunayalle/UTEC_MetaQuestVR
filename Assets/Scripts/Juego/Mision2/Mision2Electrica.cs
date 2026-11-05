@@ -14,8 +14,8 @@ using UnityEngine;
 ///   ASEGURADO    -> el jugador reviso el equipo (sin llamas ni chispas): fin de la mision.
 /// Volver a subir el interruptor principal en cualquier momento devuelve a ENERGIZADO (con error).
 ///
-/// En modo Explorar funciona como practica (sin tareas ni puntaje) y se reinicia sola.
-/// Todo vive en el prefab de la casa explorable; las piezas se enganchan por referencia.
+/// Todo vive en el prefab de la casa explorable, dentro de la escena Casa_M2_Interior: se carga por
+/// proximidad solo durante la Mision 2. Al cargarse se presenta a JuegoBomberos, que la inicia.
 /// </summary>
 public class Mision2Electrica : MonoBehaviour
 {
@@ -27,7 +27,7 @@ public class Mision2Electrica : MonoBehaviour
     public ExtintorCO2 extintor;
     public ComprobadorTension comprobador;
     public PuertaCasa puerta;
-    [Tooltip("Punto de referencia frente a la puerta (afuera). Su +Z mira a la casa. El jugador ya no se teletransporta aqui.")]
+    [Tooltip("Punto de referencia frente a la puerta (afuera). Su +Z mira a la casa.")]
     public Transform puntoInicio;
 
     [Header("Zonas (coordenadas locales de este objeto)")]
@@ -41,14 +41,19 @@ public class Mision2Electrica : MonoBehaviour
     [Header("Reglas")]
     [Tooltip("Segundos mirando el equipo de cerca para dar el area por segura.")]
     public float tiempoInspeccion = 2.5f;
-    [Tooltip("En modo Explorar (practica), segundos hasta que el equipo vuelve a fallar.")]
-    public float reinicioPractica = 30f;
 
     public Estado EstadoActual { get; private set; } = Estado.Inactivo;
-    public bool Practica { get; private set; }
     public IReadOnlyList<JuegoBomberos.Tarea> Tareas => _tareas;
-    public Vector3 InicioJugador => puntoInicio != null ? puntoInicio.position : transform.TransformPoint(new Vector3(1f, 0f, 9.2f));
-    public Vector3 InicioAdelante => puntoInicio != null ? puntoInicio.forward : -transform.forward;
+    /// <summary>Ya hay avance que se perderia al descargar la escena: la casa no se descarga hasta terminar.</summary>
+    public bool TieneProgreso
+    {
+        get
+        {
+            if (EstadoActual != Estado.Energizado && EstadoActual != Estado.Inactivo) return true;
+            foreach (var t in _tareas) if (t.hecha) return true;
+            return false;
+        }
+    }
 
     JuegoBomberos _juego;
     Transform _cabeza;
@@ -57,14 +62,18 @@ public class Mision2Electrica : MonoBehaviour
     readonly List<string> _mensajes = new List<string>();
     JuegoBomberos.Tarea _tCorte, _tComprobar, _tExtinguir;
     readonly Dictionary<string, float> _ultimoAviso = new Dictionary<string, float>();
-    float _mirandoEquipo, _inspeccion, _reiniciarEn = -1f;
+    float _mirandoEquipo, _inspeccion;
     bool _riesgoVisto, _tableroVisto, _errorCO2, _finalizado, _avisoExtintor, _avisoComprobador, _preparado;
 
     // ------------------------------------------------------------------
     // Preparacion (una sola vez, al cargar la escena)
     // ------------------------------------------------------------------
 
-    void Start() => Preparar();
+    void Start()
+    {
+        Preparar();
+        if (JuegoBomberos.Instancia != null) JuegoBomberos.Instancia.RegistrarMision2(this);
+    }
 
     void Preparar()
     {
@@ -146,14 +155,13 @@ public class Mision2Electrica : MonoBehaviour
     // Inicio / fin
     // ------------------------------------------------------------------
 
-    /// <summary>Enciende el incidente. practica = modo Explorar (sin tareas ni puntaje).</summary>
-    public void Iniciar(JuegoBomberos juego, bool practica)
+    /// <summary>Enciende el incidente.</summary>
+    public void Iniciar(JuegoBomberos juego)
     {
         Preparar();
         if (!enabled) return;
         _juego = juego;
         _cabeza = juego != null && juego.rig != null ? juego.rig.centerEyeAnchor : null;
-        Practica = practica;
 
         panel.Restablecer();
         maquina.Restablecer();
@@ -169,7 +177,6 @@ public class Mision2Electrica : MonoBehaviour
         _riesgoVisto = _tableroVisto = _errorCO2 = _finalizado = false;
         _avisoExtintor = _avisoComprobador = false;
         _mirandoEquipo = _inspeccion = 0f;
-        _reiniciarEn = -1f;
         CrearTareas();
     }
 
@@ -189,7 +196,6 @@ public class Mision2Electrica : MonoBehaviour
         _tareas.Clear();
         _condiciones.Clear();
         _mensajes.Clear();
-        if (Practica) return;
         var fuego = maquina.Fuego;
 
         Tarea("Identifica el riesgo eléctrico",
@@ -265,22 +271,15 @@ public class Mision2Electrica : MonoBehaviour
                 if (panel.Energizado) Reenergizado();
                 else InspeccionFinal();
                 break;
-            case Estado.Asegurado:
-                if (Practica && _reiniciarEn > 0f && Time.time >= _reiniciarEn)
-                {
-                    Iniciar(_juego, true);
-                    Avisar("practica", "¡El equipo volvió a fallar!\n<size=55%>Práctica: repite el procedimiento</size>", JuegoBomberos.TipoAviso.Error, 3f);
-                }
-                break;
         }
 
         // El CO2 solo puede apagarlo del todo con el corte verificado.
         fuego.extincionPermitida = EstadoActual == Estado.Verificado;
 
         DetectarHallazgos();
-        if (!Practica) AvanzarTareas();
+        AvanzarTareas();
 
-        if (!Practica && !_finalizado && EstadoActual == Estado.Asegurado && TodasHechas())
+        if (!_finalizado && EstadoActual == Estado.Asegurado && TodasHechas())
         {
             _finalizado = true;
             _juego.CompletarMision2();
@@ -304,11 +303,6 @@ public class Mision2Electrica : MonoBehaviour
                 break;
             case Estado.Asegurado:
                 SonidosVR.Reproducir2D(SonidosVR.Exito, 0.9f);
-                if (Practica)
-                {
-                    _reiniciarEn = Time.time + reinicioPractica;
-                    Avisar("estado", "ÁREA ASEGURADA\n<size=55%>Práctica completa: el equipo volverá a fallar en " + Mathf.RoundToInt(reinicioPractica) + " s</size>", JuegoBomberos.TipoAviso.Exito, 4f);
-                }
                 break;
         }
     }
@@ -321,8 +315,7 @@ public class Mision2Electrica : MonoBehaviour
         string msg = reaviva
             ? "¡Volviste a energizar el equipo dañado!\n<size=55%>Las chispas reavivaron el fuego. Baja la palanca roja.</size>"
             : "¡Volviste a conectar la alimentación!\n<size=55%>Hay tensión otra vez: baja la palanca roja</size>";
-        if (Practica) Avisar("reenergizado", msg, JuegoBomberos.TipoAviso.Error, 3.5f);
-        else _juego.RegistrarError(msg);
+        _juego.RegistrarError(msg);
 
         // Las tareas que dependian del corte vuelven a quedar pendientes.
         if (_tCorte != null) _tCorte.hecha = false;
@@ -399,7 +392,7 @@ public class Mision2Electrica : MonoBehaviour
         if (panel.Energizado)
         {
             const string msg = "¡Corta la alimentación eléctrica primero!\n<size=55%>Con tensión el fuego se reaviva y hay riesgo de descarga</size>";
-            if (!Practica && !_errorCO2 && _juego != null)
+            if (!_errorCO2 && _juego != null)
             {
                 _errorCO2 = true; // el error se cuenta una vez; despues solo se recuerda
                 _juego.RegistrarError(msg);

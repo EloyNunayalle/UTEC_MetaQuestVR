@@ -18,7 +18,7 @@ using UnityEngine.SceneManagement;
 public class JuegoBomberos : MonoBehaviour
 {
     public enum TipoAviso { Info, Exito, Error }
-    enum Fase { Intro, Explorar, Mision, Mision2, Completado }
+    enum Fase { Intro, Explorar, Mision, Mision2, Mision3, Completado }
 
     public static JuegoBomberos Instancia { get; private set; }
 
@@ -38,7 +38,7 @@ public class JuegoBomberos : MonoBehaviour
     public string nombrePortonPrincipal = "Porton_Principal";
 
     [Header("Incendio")]
-    [Tooltip("Crea un edificio en llamas cruzando la calle (ultima tarea de la mision; tambien en Explorar).")]
+    [Tooltip("Enciende el edificio en llamas de la Mision 1 (ultima tarea). Solo arde durante esa mision.")]
     public bool incendioEnEdificio = true;
     [Tooltip("Nombre del edificio que se incendia (opcional). Si hay varios con el mismo nombre se usa el mas cercano a 'Posicion Edificio Fuego'.")]
     public string nombreEdificioFuego = "";
@@ -50,11 +50,18 @@ public class JuegoBomberos : MonoBehaviour
     public Vector3 posicionCamionReemplazo = new Vector3(-5.19f, 0.127f, -10.2f);
 
     [Header("Mision 2 (incendio electrico en la casa)")]
+    [Tooltip("Puerta de la casa de la Mision 2 (para la flecha mientras su interior no esta cargado).")]
+    public Vector3 puertaCasaM2 = new Vector3(11f, 1.6f, -13f);
     [Tooltip("Tiempos de referencia de la Mision 2 para la calificacion.")]
     public float tiempoExcelenteM2 = 210f;   // incluye el viaje en moto hasta la casa
     public float tiempoBuenoM2 = 330f;
     [Tooltip("Puntos que se restan por cada error de seguridad en la Mision 2.")]
     public int penalizacionError = 25;
+
+    [Header("Mision 3 (rescate)")]
+    [Tooltip("Tiempos de referencia de la Mision 3 para la calificacion (incluye preparacion y viaje).")]
+    public float tiempoExcelenteM3 = 330f;
+    public float tiempoBuenoM3 = 540f;
 
     [Header("Reglas")]
     public bool exigirPorton = true;
@@ -69,6 +76,20 @@ public class JuegoBomberos : MonoBehaviour
 
     public bool PermiteInteractuar => _fase != Fase.Intro;
     public bool EnMision2 => _fase == Fase.Mision2;
+
+    /// <summary>Mision en curso (1-3), 0 si no hay ninguna. Decide que variantes de edificios se cargan.</summary>
+    public int MisionActiva => _fase == Fase.Mision ? 1 : _fase == Fase.Mision2 ? 2 : _fase == Fase.Mision3 ? 3 : 0;
+
+    /// <summary>
+    /// El interior de una mision puede descargarse al alejarse, salvo la Mision 2 con avance: su estado
+    /// (tablero, extintor, fuego) vive en esa escena. La Mision 3 guarda el progreso fuera de la suya.
+    /// </summary>
+    public bool PermiteDescargarInterior(int mision) => mision != 2 || _m2 == null || !_m2.TieneProgreso;
+
+    public bool PortonPrincipalAbierto => _principal == null || _principal.AbiertoOAbriendo;
+    public bool PortonCocheraAbierto => porton == null || PortonAbierto();
+    public Vector3? PuntoBotonPrincipal => _principal != null ? _principal.PuntoBoton + Vector3.up * 0.3f : (Vector3?)null;
+    public Vector3? PuntoBotonCochera => botonPorton != null ? botonPorton.transform.position + Vector3.up * 0.15f : (Vector3?)null;
 
     /// <summary>
     /// El interior de la estación (decoración, chaleco, extintor, marcas de piso)
@@ -95,11 +116,11 @@ public class JuegoBomberos : MonoBehaviour
     PortonPrincipal _principal;
     EdificioEnLlamas _edificio;
     Tarea _tFuego;
-    float _limiteBusquedaEdificio, _proximaBusquedaEdificio, _reavivarEn = -1f;
+    float _limiteBusquedaEdificio, _proximaBusquedaEdificio;
     float _limiteBusquedaPrincipal, _proximaBusquedaPrincipal;
 
     /// <summary>El porton de la cochera solo se puede abrir despues del porton principal.</summary>
-    public bool CocheraHabilitada => _fase == Fase.Explorar || _fase == Fase.Mision2 || _tPrincipal == null || _tPrincipal.hecha;
+    public bool CocheraHabilitada => _fase == Fase.Explorar || _fase == Fase.Mision2 || _fase == Fase.Mision3 || _tPrincipal == null || _tPrincipal.hecha;
     Transform _cabeza;
     HudBomberos _hud;
     MarcadorObjetivo _marcador;
@@ -117,8 +138,10 @@ public class JuegoBomberos : MonoBehaviour
     bool _motoIntentada;
     // Mision 2
     Mision2Electrica _m2;
+    readonly List<Tarea> _tareasViajeM2 = new List<Tarea>();
+    // Mision 3
+    Mision3Controller _m3;
     int _errores, _misionTerminada = 1;
-    bool _incendioM1Pausado;
     string _calificacion = "";
     bool _avisoAgarreChaleco, _avisoAgarreExtintor;
     bool _equipamientoListo;
@@ -263,8 +286,6 @@ public class JuegoBomberos : MonoBehaviour
                     var z = _edificio != null ? _edificio.ZonaActivaMasCercana(_cabeza.position) : null;
                     return z == null ? (Vector3?)null : z.Centro + Vector3.up * 1.6f;
                 });
-            _limiteBusquedaEdificio = Time.time + 10f;
-            PrepararEdificio();
         }
 
         if (puertaChica != null) _puertaPrev = puertaChica.EstaAbierta;
@@ -398,13 +419,6 @@ public class JuegoBomberos : MonoBehaviour
 
     void AlApagarIncendio()
     {
-        if (_fase == Fase.Explorar)
-        {
-            SonidosVR.Reproducir2D(SonidosVR.Victoria, 0.9f);
-            Aviso("¡INCENDIO APAGADO!\n<size=55%>Se volverá a encender en 30 s para practicar</size>", TipoAviso.Exito, 4f);
-            _reavivarEn = Time.time + 30f;
-            return;
-        }
         if (_fase != Fase.Mision || _tFuego == null) return;
         CompletarTarea(_tFuego, "¡Incendio apagado!");
         if (_tSubir == null || _tSubir.hecha) CompletarMision();
@@ -494,7 +508,8 @@ public class JuegoBomberos : MonoBehaviour
             }
         }
 
-        if (_edificio == null && incendioEnEdificio && Time.time >= _proximaBusquedaEdificio)
+        // El edificio en llamas es exclusivo de la Mision 1 (no arde en Explorar ni en las otras misiones).
+        if (_fase == Fase.Mision && _edificio == null && _tFuego != null && incendioEnEdificio && Time.time >= _proximaBusquedaEdificio)
         {
             _proximaBusquedaEdificio = Time.time + 0.5f;
             PrepararEdificio();
@@ -511,13 +526,6 @@ public class JuegoBomberos : MonoBehaviour
         PedirInstrucciones();
         if (!_motoIntentada && Time.timeSinceLevelLoad > 1.5f) CrearMoto();
 
-        // Durante la Mision 2 el edificio de la Mision 1 no arde (se engancha cuando aparece).
-        if (_fase == Fase.Mision2 && !_incendioM1Pausado && _edificio != null)
-        {
-            _edificio.Pausar(true);
-            _incendioM1Pausado = true;
-        }
-
         switch (_fase)
         {
             case Fase.Intro:
@@ -525,12 +533,6 @@ public class JuegoBomberos : MonoBehaviour
                 break;
 
             case Fase.Explorar:
-                if (_reavivarEn > 0f && Time.time >= _reavivarEn && _edificio != null)
-                {
-                    _reavivarEn = -1f;
-                    _edificio.Reavivar();
-                    Aviso("¡El edificio volvió a encenderse!", TipoAviso.Error, 2.5f);
-                }
                 if (Time.time >= _proximoHud)
                 {
                     _proximoHud = Time.time + 0.25f;
@@ -544,6 +546,10 @@ public class JuegoBomberos : MonoBehaviour
 
             case Fase.Mision2:
                 ActualizarMision2();
+                break;
+
+            case Fase.Mision3:
+                ActualizarMisionExterna("MISIÓN 3: RESCATE", _m3.Tareas, _m3.EstadoTexto);
                 break;
 
             case Fase.Completado:
@@ -578,18 +584,19 @@ public class JuegoBomberos : MonoBehaviour
     int _mascaraCamara;
     bool _mascaraGuardada;
 
-    static readonly string[] OpcionesMenu = { "EXPLORAR", "MISIÓN 1", "MISIÓN 2", "CONFIGURACIÓN" };
+    static readonly string[] OpcionesMenu = { "EXPLORAR", "MISIÓN 1", "MISIÓN 2", "MISIÓN 3", "CONFIGURACIÓN" };
     static readonly string[] DescripcionesMenu =
     {
-        "Recorre todo libremente, sin tareas ni tiempo",
+        "Recorre la ciudad por fuera, sin tareas, tiempo ni incendios",
         "Emergencia en la estación: portones, equipo, camión y edificio en llamas",
         "Incendio eléctrico en una casa: corta la luz, comprueba y apaga con CO<sub>2</sub>",
+        "Rescate: carga la barra en el camión, conduce, fuerza la puerta y saca a la persona",
         "Elige cómo conducir el camión"
     };
     static readonly Color[] ColoresMenu =
     {
         new Color(0.35f, 0.65f, 1f), new Color(1f, 0.4f, 0.32f),
-        new Color(1f, 0.7f, 0.15f), new Color(0.75f, 0.75f, 0.82f)
+        new Color(1f, 0.7f, 0.15f), new Color(0.45f, 0.95f, 0.55f), new Color(0.75f, 0.75f, 0.82f)
     };
 
     static readonly string[] OpcionesConfig = { "JOYSTICK", "VOLANTE", "VOLVER" };
@@ -604,7 +611,7 @@ public class JuegoBomberos : MonoBehaviour
         new Color(0.4f, 0.8f, 1f), new Color(1f, 0.7f, 0.2f), new Color(0.7f, 0.7f, 0.7f)
     };
 
-    const float AltoFila = 0.09f;
+    const float AltoFila = 0.075f;
     string[] OpcionesActuales => _enConfiguracion ? OpcionesConfig : OpcionesMenu;
     string[] DescripcionesActuales => _enConfiguracion ? DescripcionesConfig : DescripcionesMenu;
     Color[] ColoresActuales => _enConfiguracion ? ColoresConfig : ColoresMenu;
@@ -718,7 +725,7 @@ public class JuegoBomberos : MonoBehaviour
         ActualizarMenu(false);
     }
 
-    static float FilaY(int i) => 0.12f - i * 0.09f;
+    static float FilaY(int i) => 0.165f - i * AltoFila;
 
     void ReconstruirPanel(bool configuracion)
     {
@@ -840,6 +847,7 @@ public class JuegoBomberos : MonoBehaviour
         if (_indiceSel == 0) ElegirExplorar();
         else if (_indiceSel == 1) ElegirMision();
         else if (_indiceSel == 2) ElegirMision2();
+        else if (_indiceSel == 3) ElegirMision3();
         else ReconstruirPanel(true);
     }
 
@@ -889,8 +897,6 @@ public class JuegoBomberos : MonoBehaviour
         SonidosVR.Reproducir2D(SonidosVR.Exito, 0.9f);
         Aviso("MODO EXPLORAR\n<size=55%>Presiona el joystick para ver qué puedes probar</size>", TipoAviso.Info, 3f);
         _hud.MostrarPor(8f);
-        // La casa de la Mision 2 queda con su incendio electrico para practicar (sin tareas ni puntaje).
-        if (BuscarMision2()) _m2.Iniciar(this, true);
     }
 
     void ElegirMision()
@@ -920,7 +926,8 @@ public class JuegoBomberos : MonoBehaviour
             return;
         }
         _hud.Mostrar("MODO EXPLORAR",
-            "Recorre la estación libremente: sin tareas, sin orden y sin tiempo.\n\n" +
+            "Recorre la estación y la ciudad libremente: sin tareas, sin tiempo y sin incendios.\n" +
+            "Los edificios solo se ven por fuera: sus interiores son de las misiones.\n\n" +
             "<color=#FFD54A>Puedes probar</color>\n" +
             "- Botón verde del poste: portón principal\n" +
             "- Botón rojo: portón de la cochera\n" +
@@ -928,8 +935,6 @@ public class JuegoBomberos : MonoBehaviour
             "- Chaleco y extintor: agárralos con GRIP\n" +
             "- Camión: párate en el círculo amarillo para manejar\n" +
             "- Moto: párate en su círculo amarillo (B para bajar)\n" +
-            (_edificio != null ? $"- Edificio en llamas (calle del costado): {_edificio.Apagadas}/{_edificio.Total} apagados\n" : "") +
-            (_m2 != null ? "- Casa de ladrillo (calle este): incendio eléctrico de práctica\n  " + _m2.EstadoTexto + "\n" : "") +
             "- Válvula del panel del camión: sube la presión del agua",
             "");
     }
@@ -941,6 +946,7 @@ public class JuegoBomberos : MonoBehaviour
             "- <color=#5AA9FF>EXPLORAR</color>: recorre todo libremente, sin tareas.\n" +
             "- <color=#FF6B5A>MISIÓN 1</color>: ¡emergencia! Portón principal, cochera, chaleco,\n  extintor, sal en el camión y apaga el edificio en llamas.\n" +
             "- <color=#FFB020>MISIÓN 2</color>: incendio eléctrico en una casa: corta la corriente,\n  comprueba que no hay tensión y apaga el fuego con CO<sub>2</sub>.\n" +
+            "- <color=#73F28C>MISIÓN 3</color>: rescate: lleva la barra en el camión, fuerza la puerta\n  y acompaña a la persona hasta la zona segura.\n" +
             "- <color=#C8C8D2>CONFIGURACIÓN</color>: elige joystick o volante para conducir.\n\n" +
             "<color=#FFD54A>Controles</color>\n" +
             "- Moverse: joystick o teletransporte\n" +
@@ -960,6 +966,9 @@ public class JuegoBomberos : MonoBehaviour
         _ultimoProgreso = Time.time;
         _proximaCampana = Time.time + campanaCada;
         _luzAlarma.enabled = true;
+        // Variante de la Mision 1: recien aqui se enciende el edificio en llamas.
+        _limiteBusquedaEdificio = Time.time + 10f;
+        if (incendioEnEdificio) PrepararEdificio();
         SonidosVR.Reproducir2D(SonidosVR.Alarma, 0.7f);
         EntradaVR.VibrarAmbas(0.8f, 0.5f, 0.3f);
         Aviso("¡EMERGENCIA!\n<size=55%>Equípate y sube al camión</size>", TipoAviso.Error, 3f);
@@ -1027,8 +1036,15 @@ public class JuegoBomberos : MonoBehaviour
             if (punto.HasValue) sb.Append("<size=85%><color=#9AD0FF>").Append(Direccion(punto.Value)).Append("</color></size>\n");
         }
         sb.Append('\n');
-        foreach (var t in tareas)
+        // Listas largas (Mision 3): las ya hechas se resumen para que entren en el panel.
+        int resumidas = 0;
+        if (tareas.Count > 7)
+            for (int i = 0; i < tareas.Count && tareas[i].hecha && i < tareas.Count - 5; i++) resumidas++;
+        if (resumidas > 0) sb.Append("<color=#6BFF7A>[OK]  ").Append(resumidas).Append(" tareas hechas</color>\n");
+        for (int i = resumidas; i < tareas.Count; i++)
         {
+            if (i - resumidas >= 6 && tareas.Count > 7) break;
+            var t = tareas[i];
             if (t.hecha) sb.Append("<color=#6BFF7A>[OK]  ").Append(t.titulo).Append("</color>\n");
             else if (t == actual) sb.Append("<color=#FFD54A>[  ]  <b>").Append(t.titulo).Append("</b></color>\n");
             else sb.Append("<color=#BBBBBB>[  ]  ").Append(t.titulo).Append("</color>\n");
@@ -1076,9 +1092,9 @@ public class JuegoBomberos : MonoBehaviour
 
         if (t == _tSubir) return; // el cierre lo maneja Completar()
 
-        if (_fase == Fase.Mision2)
+        if (_fase == Fase.Mision2 || _fase == Fase.Mision3)
         {
-            var sig = _m2 != null ? PrimeraPendiente(_m2.Tareas) : null;
+            var sig = PrimeraPendiente(_fase == Fase.Mision3 ? _m3.Tareas : _m2 != null ? _m2.Tareas : null);
             Aviso(mensaje + (sig != null ? $"\n<size=50%>Ahora: {sig.titulo}</size>" : "") +
                   (suma ? $"\n<size=45%>+{puntosPorTarea} puntos</size>" : ""), TipoAviso.Exito, 2.5f);
             return;
@@ -1094,6 +1110,7 @@ public class JuegoBomberos : MonoBehaviour
     {
         if (_fase == Fase.Intro) return false;
         if (_moto != null && _moto.Montado) return false;
+        if (_fase == Fase.Mision3) return _m3 != null && _m3.PuedeAbordar;
         if (_fase == Fase.Explorar || _fase == Fase.Mision2) return true;
         // Solo cuentan las tareas anteriores a subir al camion (el incendio se apaga despues).
         foreach (var t in _tareas)
@@ -1108,6 +1125,7 @@ public class JuegoBomberos : MonoBehaviour
     {
         if (_fase == Fase.Intro) return "Primero elige un modo";
         if (_moto != null && _moto.Montado) return "Bájate de la moto primero (B)";
+        if (_fase == Fase.Mision3 && _m3 != null) return _m3.MotivoNoAbordar;
         var pendientes = new List<string>();
         foreach (var t in _tareas)
         {
@@ -1119,7 +1137,7 @@ public class JuegoBomberos : MonoBehaviour
 
     void AlSubirCamion()
     {
-        if (_fase == Fase.Explorar || _fase == Fase.Mision2)
+        if (_fase == Fase.Explorar || _fase == Fase.Mision2 || _fase == Fase.Mision3)
         {
             _hud.alturaRelativa = -0.55f;
             _proximoHud = 0f;
@@ -1169,15 +1187,16 @@ public class JuegoBomberos : MonoBehaviour
     void MostrarResultado()
     {
         bool sentado = _camion.JugadorSentado;
-        _hud.Mostrar(_misionTerminada == 2 ? "¡MISIÓN 2 CUMPLIDA! ÁREA ASEGURADA" : "¡MISIÓN CUMPLIDA!",
+        _hud.Mostrar(_misionTerminada == 3 ? "¡MISIÓN 3 CUMPLIDA! PERSONA RESCATADA" :
+                     _misionTerminada == 2 ? "¡MISIÓN 2 CUMPLIDA! ÁREA ASEGURADA" : "¡MISIÓN CUMPLIDA!",
             $"Tiempo: <b>{FormatoTiempo(_tiempoFinal)}</b>\n" +
             $"Puntaje: <b>{_puntaje}</b>  <size=80%>(bono por rapidez +{_bono})</size>\n" +
-            (_misionTerminada == 2 ? $"Errores de seguridad: <b>{_errores}</b>  <size=80%>(-{penalizacionError} c/u)</size>\n" : "") +
+            (_misionTerminada >= 2 ? $"Errores de seguridad: <b>{_errores}</b>  <size=80%>(-{penalizacionError} c/u)</size>\n" : "") +
             $"Calificación: <color=#FFD54A><b>{_calificacion}</b></color>\n\n" +
             (sentado ? "<b>¡A manejar!</b>\n" +
                        TextoControlGiro() + "\n" +
                        "A: sirena   -   X: luces"
-                     : "- A / pellizco: jugar de nuevo\n- Puedes volver a subir al camión para manejar\n- Clic del joystick: mostrar / ocultar este panel"),
+                     : "- A / pellizco: volver a la estación y jugar de nuevo\n- Puedes volver a subir al camión para manejar\n- Clic del joystick: mostrar / ocultar este panel"),
             sentado ? $"Velocidad {Mathf.RoundToInt(_camion.VelocidadKmh)} km/h     " +
                       $"Sirena {(_camion.SirenaEncendida ? "ON" : "OFF")}     Luces {(_camion.LucesEncendidas ? "ON" : "OFF")}"
                     : "Jugar de nuevo: A");
@@ -1187,20 +1206,9 @@ public class JuegoBomberos : MonoBehaviour
     // Mision 2: incendio electrico en la casa (Mision2Electrica en el prefab de la casa)
     // ------------------------------------------------------------------
 
-    bool BuscarMision2()
-    {
-        if (_m2 == null) _m2 = FindObjectOfType<Mision2Electrica>();
-        return _m2 != null;
-    }
-
     void ElegirMision2()
     {
         if (_fase != Fase.Intro) return;
-        if (!BuscarMision2())
-        {
-            Aviso("No se encontró la casa de la Misión 2\n<size=55%>Revisa que la escena de la ciudad esté cargada</size>", TipoAviso.Error, 3f);
-            return;
-        }
         CerrarSelector();
         IniciarMision2();
     }
@@ -1213,18 +1221,58 @@ public class JuegoBomberos : MonoBehaviour
         _puntaje = 0;
         _errores = 0;
         _proximoHud = 0f;
-        if (_edificio != null) { _edificio.Pausar(true); _incendioM1Pausado = true; }
-        _m2.Iniciar(this, false); // el jugador se queda donde esta: va hasta la casa (en moto si quiere)
+        // Hasta que el jugador se acerque y cargue el interior, la mision es "ir a la casa".
+        _tareasViajeM2.Clear();
+        _tareasViajeM2.Add(new Tarea
+        {
+            titulo = "Ve a la casa de ladrillo de la calle este",
+            pista = "Sal por el portón principal. La moto está junto a ti.",
+            punto = () => GuiaSalida(_cabeza.position, puertaCasaM2) ?? puertaCasaM2
+        });
         SonidosVR.Reproducir2D(SonidosVR.Alarma, 0.7f);
         EntradaVR.VibrarAmbas(0.8f, 0.5f, 0.3f);
         Aviso("¡EMERGENCIA ELÉCTRICA!\n<size=55%>Incendio en la casa de ladrillo de la calle este. Sube a la moto y sigue la flecha.</size>", TipoAviso.Error, 4.5f);
         _hud.MostrarPor(8f);
     }
 
+    /// <summary>La escena del interior se cargo por proximidad y se presenta: empieza el incidente.</summary>
+    public void RegistrarMision2(Mision2Electrica m)
+    {
+        _m2 = m;
+        if (_fase == Fase.Mision2) m.Iniciar(this);
+    }
+
     void ActualizarMision2()
     {
+        if (_m2 != null) ActualizarMisionExterna("MISIÓN 2: INCENDIO ELÉCTRICO", _m2.Tareas, _m2.EstadoTexto);
+        else ActualizarMisionExterna("MISIÓN 2: INCENDIO ELÉCTRICO", _tareasViajeM2, "");
+    }
+
+    void ElegirMision3()
+    {
+        if (_fase != Fase.Intro) return;
+        CerrarSelector();
+        _fase = Fase.Mision3;
+        _inicioMision = Time.time;
+        _ultimoProgreso = Time.time;
+        _puntaje = 0;
+        _errores = 0;
+        _proximoHud = 0f;
+        // El traslado se hace en el camion: la moto no esta disponible en esta mision.
+        _motoIntentada = true;
+        if (_moto != null) _moto.gameObject.SetActive(false);
+        _m3 = gameObject.AddComponent<Mision3Controller>();
+        _m3.Iniciar(this, rig, _camion);
+        SonidosVR.Reproducir2D(SonidosVR.Alarma, 0.7f);
+        EntradaVR.VibrarAmbas(0.8f, 0.5f, 0.3f);
+        Aviso("¡PERSONA ATRAPADA!\n<size=55%>Prepara la barra de rescate y cárgala en la maletera del camión</size>", TipoAviso.Error, 4.5f);
+        _hud.MostrarPor(8f);
+    }
+
+    /// <summary>HUD, flecha y recordatorios de las misiones cuyas tareas viven en su propio controlador.</summary>
+    void ActualizarMisionExterna(string titulo, IReadOnlyList<Tarea> tareas, string estado)
+    {
         float t = Time.time - _inicioMision;
-        var tareas = _m2.Tareas;
         var actual = PrimeraPendiente(tareas);
         Vector3? punto = actual?.punto();
         if (punto.HasValue) _marcador.Senalar(punto.Value);
@@ -1241,8 +1289,8 @@ public class JuegoBomberos : MonoBehaviour
         if (Time.time >= _proximoHud)
         {
             _proximoHud = Time.time + 0.2f;
-            _hud.Mostrar("MISIÓN 2: INCENDIO ELÉCTRICO",
-                CuerpoMision(actual, punto, tareas) + "\n<size=85%>" + _m2.EstadoTexto + "</size>",
+            _hud.Mostrar(titulo,
+                CuerpoMision(actual, punto, tareas) + (string.IsNullOrEmpty(estado) ? "" : "\n<size=85%>" + estado + "</size>"),
                 $"Tiempo {FormatoTiempo(t)}     Puntaje {_puntaje}     Errores {_errores}");
         }
     }
@@ -1257,7 +1305,7 @@ public class JuegoBomberos : MonoBehaviour
     /// <summary>Error de seguridad (Mision 2): resta puntos al final, con sonido, vibracion y aviso rojo.</summary>
     public void RegistrarError(string mensaje)
     {
-        if (_fase != Fase.Mision2) { Aviso(mensaje, TipoAviso.Error, 3f); return; }
+        if (_fase != Fase.Mision2 && _fase != Fase.Mision3) { Aviso(mensaje, TipoAviso.Error, 3f); return; }
         _errores++;
         _proximoHud = 0f;
         SonidosVR.Reproducir2D(SonidosVR.Error, 0.9f);
@@ -1265,21 +1313,34 @@ public class JuegoBomberos : MonoBehaviour
         Aviso(mensaje + $"\n<size=45%>Error de seguridad (-{penalizacionError})</size>", TipoAviso.Error, 3.5f);
     }
 
-    /// <summary>Fin de la Mision 2 (area asegurada): tiempo, puntaje con bono y errores, calificacion.</summary>
+    /// <summary>Fin de la Mision 2 (area asegurada).</summary>
     public void CompletarMision2()
     {
         if (_fase != Fase.Mision2) return;
+        CerrarMision(2, tiempoExcelenteM2, tiempoBuenoM2, "¡ÁREA ASEGURADA!\n<size=55%>Misión 2 cumplida - ");
+    }
+
+    /// <summary>Fin de la Mision 3 (persona en la zona segura).</summary>
+    public void CompletarMision3()
+    {
+        if (_fase != Fase.Mision3) return;
+        CerrarMision(3, tiempoExcelenteM3, tiempoBuenoM3, "¡PERSONA RESCATADA!\n<size=55%>Misión 3 cumplida - ");
+    }
+
+    /// <summary>Tiempo, puntaje con bono y errores, calificacion y panel de resultados.</summary>
+    void CerrarMision(int numero, float excelente, float bueno, string aviso)
+    {
         _tiempoFinal = Time.time - _inicioMision;
-        _bono = Mathf.Max(0, Mathf.RoundToInt(tiempoBuenoM2 - _tiempoFinal)) * 2;
+        _bono = Mathf.Max(0, Mathf.RoundToInt(bueno - _tiempoFinal)) * 2;
         _puntaje = Mathf.Max(0, _puntaje + _bono - _errores * penalizacionError);
-        _calificacion = _tiempoFinal <= tiempoExcelenteM2 && _errores == 0 ? "EXCELENTE" :
-                        _tiempoFinal <= tiempoBuenoM2 && _errores <= 1 ? "MUY BIEN" : "COMPLETADO";
-        _misionTerminada = 2;
+        _calificacion = _tiempoFinal <= excelente && _errores == 0 ? "EXCELENTE" :
+                        _tiempoFinal <= bueno && _errores <= 1 ? "MUY BIEN" : "COMPLETADO";
+        _misionTerminada = numero;
         _fase = Fase.Completado;
         _bloqueoReinicio = Time.time + 3f; // que el A/X de la mision no reinicie sin querer
         _marcador.Ocultar();
         SonidosVR.Reproducir2D(SonidosVR.Victoria, 0.9f);
-        Aviso("¡ÁREA ASEGURADA!\n<size=55%>Misión 2 cumplida - " + _calificacion + "</size>", TipoAviso.Exito, 4f);
+        Aviso(aviso + _calificacion + "</size>", TipoAviso.Exito, 4f);
         MostrarResultado();
         _hud.MostrarPor(20f);
     }
