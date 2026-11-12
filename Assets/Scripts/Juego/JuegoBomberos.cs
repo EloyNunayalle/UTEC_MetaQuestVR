@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Gestor del juego "Emergencia en la estacion": el jugador debe abrir el porton,
-/// ponerse el chaleco, cargar el extintor al camion y subir al camion de bomberos
+/// ponerse el chaleco y subir al camion de bomberos
 /// lo mas rapido posible. Da feedback con HUD, avisos, flecha guia, sonidos,
 /// vibracion, luz de alarma y puntaje/calificacion final.
 ///
@@ -26,7 +26,6 @@ public class JuegoBomberos : MonoBehaviour
     public OVRCameraRig rig;
     public Transform camion;
     public Transform chaleco;
-    public Transform extintor;
     public PortonElevadizo porton;
     public BotonPorton botonPorton;
     public PuertaAutomatica puertaChica;
@@ -34,7 +33,6 @@ public class JuegoBomberos : MonoBehaviour
     [Header("Busqueda automatica por nombre")]
     public string nombreCamion = "Camion_Bomberos";
     public string nombreChaleco = "Chaleco";
-    public string nombreExtintor = "Extintor";
     public string nombrePortonPrincipal = "Porton_Principal";
 
     [Header("Incendio")]
@@ -92,13 +90,12 @@ public class JuegoBomberos : MonoBehaviour
     public Vector3? PuntoBotonCochera => botonPorton != null ? botonPorton.transform.position + Vector3.up * 0.15f : (Vector3?)null;
 
     /// <summary>
-    /// El interior de la estación (decoración, chaleco, extintor, marcas de piso)
-    /// puede descargarse cuando la misión no está en curso o cuando el equipamiento
-    /// (chaleco y extintor) ya se completó: el manager deja de evaluar esas tareas.
+    /// El interior de la estación (decoración, chaleco, marcas de piso) puede descargarse
+    /// cuando la misión no está en curso o cuando el chaleco ya se puso: el manager deja
+    /// de evaluar esa tarea.
     /// </summary>
     public bool PermiteDescargarEstacionInterior =>
-        _fase != Fase.Mision ||
-        ((_tChaleco == null || _tChaleco.hecha) && (_tExtintor == null || _tExtintor.hecha));
+        _fase != Fase.Mision || _tChaleco == null || _tChaleco.hecha;
 
     /// <summary>Tarea de una mision (la Mision 2 tambien las usa para el HUD y la flecha).</summary>
     public class Tarea
@@ -112,7 +109,7 @@ public class JuegoBomberos : MonoBehaviour
 
     Fase _fase = Fase.Intro;
     readonly List<Tarea> _tareas = new List<Tarea>();
-    Tarea _tPrincipal, _tPorton, _tChaleco, _tExtintor, _tSubir;
+    Tarea _tPrincipal, _tPorton, _tChaleco, _tSubir;
     PortonPrincipal _principal;
     EdificioEnLlamas _edificio;
     Tarea _tFuego;
@@ -125,7 +122,7 @@ public class JuegoBomberos : MonoBehaviour
     HudBomberos _hud;
     MarcadorObjetivo _marcador;
     CamionBomberos _camion;
-    ObjetoAgarrable _agChaleco, _agExtintor;
+    ObjetoAgarrable _agChaleco;
     Light _luzAlarma;
     AudioSource _motorPorton;
     PortonElevadizo.Estado _estadoPortonPrev;
@@ -143,7 +140,7 @@ public class JuegoBomberos : MonoBehaviour
     Mision3Controller _m3;
     int _errores, _misionTerminada = 1;
     string _calificacion = "";
-    bool _avisoAgarreChaleco, _avisoAgarreExtintor;
+    bool _avisoAgarreChaleco;
     bool _equipamientoListo;
     float _proximoBusquedaEquipamiento;
 
@@ -192,6 +189,7 @@ public class JuegoBomberos : MonoBehaviour
 
     void Start()
     {
+        ConfiguracionConfort.Aplicar(); // viñeta de confort de Meta segun la preferencia guardada
         if (rig == null) rig = FindObjectOfType<OVRCameraRig>();
         if (rig == null)
         {
@@ -205,7 +203,6 @@ public class JuegoBomberos : MonoBehaviour
         if (botonPorton == null) botonPorton = FindObjectOfType<BotonPorton>();
         if (puertaChica == null) puertaChica = FindObjectOfType<PuertaAutomatica>();
         if (chaleco == null) chaleco = Buscar(nombreChaleco);
-        if (extintor == null) extintor = Buscar(nombreExtintor);
         if (camion == null) camion = Buscar(nombreCamion);
         if (camion == null)
         {
@@ -264,11 +261,6 @@ public class JuegoBomberos : MonoBehaviour
         _tChaleco = NuevaTarea("Ponte el chaleco",
             "Acerca la mano, agárralo con GRIP (o pellizca) y llévalo a tu pecho.",
             () => _agChaleco == null || _agChaleco.Completado ? (Vector3?)null : ArribaDe(chaleco));
-
-        _tExtintor = NuevaTarea("Carga el extintor al camión",
-            "Agárralo, llévalo junto al camión y suéltalo.",
-            () => _agExtintor == null ? (Vector3?)null
-                                      : (_agExtintor.Agarrado ? TechoCamion() : ArribaDe(extintor)));
 
         PrepararEquipamiento();
 
@@ -349,12 +341,6 @@ public class JuegoBomberos : MonoBehaviour
         return t.position + Vector3.up * 0.5f;
     }
 
-    Vector3 TechoCamion()
-    {
-        var b = _camion.Limites;
-        return new Vector3(b.center.x, b.max.y + 0.3f, b.center.z);
-    }
-
     bool EnElPecho(Vector3 p)
     {
         Vector3 d = p - _cabeza.position;
@@ -362,21 +348,14 @@ public class JuegoBomberos : MonoBehaviour
         return horizontal < 0.45f && d.y > -0.9f && d.y < 0.25f;
     }
 
-    bool CercaDelCamion(Vector3 p)
-    {
-        var b = _camion.Limites;
-        b.Expand(new Vector3(2.2f, 3f, 2.2f));
-        return b.Contains(p);
-    }
-
     // ------------------------------------------------------------------
     // Flujo del juego
     // ------------------------------------------------------------------
 
     /// <summary>
-    /// Busca el chaleco y el extintor (viven en Estacion_Interior, que se carga por
-    /// proximidad) y les añade la interacción en cuanto están disponibles. Se vuelve
-    /// a llamar desde Update hasta encontrar ambos (por eso las guardas).
+    /// Busca el chaleco (vive en Estacion_Interior, que se carga por
+    /// proximidad) y le añade la interacción en cuanto está disponible. Se vuelve
+    /// a llamar desde Update hasta encontrarlo (por eso las guardas).
     /// </summary>
     void PrepararEdificio()
     {
@@ -437,7 +416,6 @@ public class JuegoBomberos : MonoBehaviour
     void PrepararEquipamiento()
     {
         if (chaleco == null) chaleco = Buscar(nombreChaleco);
-        if (extintor == null) extintor = Buscar(nombreExtintor);
 
         if (chaleco != null && _agChaleco == null)
         {
@@ -453,35 +431,18 @@ public class JuegoBomberos : MonoBehaviour
             _agChaleco.alSoltarEnDestino = () => CompletarTarea(_tChaleco, "¡Chaleco puesto!");
         }
 
-        if (extintor != null && _agExtintor == null)
-        {
-            _agExtintor = extintor.gameObject.AddComponent<ObjetoAgarrable>();
-            _agExtintor.radioAgarre = 0.18f;
-            _agExtintor.esDestinoValido = CercaDelCamion;
-            _agExtintor.alAgarrar = () =>
-            {
-                if (_avisoAgarreExtintor) return;
-                _avisoAgarreExtintor = true;
-                Aviso("Llévalo hasta el camión y suéltalo", TipoAviso.Info, 2f);
-            };
-            _agExtintor.alEntrarDestino = () => Aviso("¡Suéltalo para cargarlo!", TipoAviso.Info, 1.2f);
-            _agExtintor.alSoltarEnDestino = () => CompletarTarea(_tExtintor, "¡Extintor cargado en el camión!");
-        }
-
-        _equipamientoListo = chaleco != null && extintor != null;
+        _equipamientoListo = chaleco != null;
     }
 
     /// <summary>
     /// Llamado por GestorEscenas cuando Estacion_Interior termina de recargarse:
-    /// vuelve a enganchar chaleco/extintor si sus tareas siguen pendientes
+    /// vuelve a enganchar el chaleco si su tarea sigue pendiente
     /// (las referencias antiguas quedaron destruidas al descargar la escena).
     /// </summary>
     public void RevisarEquipamiento()
     {
         chaleco = null;
-        extintor = null;
         _agChaleco = null;
-        _agExtintor = null;
         _equipamientoListo = false;
         PrepararEquipamiento();
     }
@@ -591,7 +552,7 @@ public class JuegoBomberos : MonoBehaviour
         "Emergencia en la estación: portones, equipo, camión y edificio en llamas",
         "Incendio eléctrico en una casa: corta la luz, comprueba y apaga con CO<sub>2</sub>",
         "Rescate: carga la barra en el camión, conduce, fuerza la puerta y saca a la persona",
-        "Elige cómo conducir el camión"
+        "Conducción del camión y viñeta de confort"
     };
     static readonly Color[] ColoresMenu =
     {
@@ -599,16 +560,18 @@ public class JuegoBomberos : MonoBehaviour
         new Color(1f, 0.7f, 0.15f), new Color(0.45f, 0.95f, 0.55f), new Color(0.75f, 0.75f, 0.82f)
     };
 
-    static readonly string[] OpcionesConfig = { "JOYSTICK", "VOLANTE", "VOLVER" };
+    const int OpcionVineta = 2;
+    static readonly string[] OpcionesConfig = { "JOYSTICK", "VOLANTE", "VIÑETA DE CONFORT", "VOLVER" };
     static readonly string[] DescripcionesConfig =
     {
-        "Joystick: avanzar/retroceder y girar. El volante solo se mueve visualmente.",
-        "Joystick: solo avanzar/retroceder. Agarra el volante con GRIP para girar.",
+        "Joystick: avanzar/retroceder y girar. El volante sigue al stick y vuelve al centro al soltarlo.",
+        "Joystick: solo avanzar/retroceder. Agarra el volante con GRIP para girar; al soltarlo vuelve solo al centro mientras avanzas.",
+        "Oscurece los bordes de la vista al caminar o girar con el joystick (opción de Meta para reducir el mareo).",
         "Volver a elegir Explorar / Misión"
     };
     static readonly Color[] ColoresConfig =
     {
-        new Color(0.4f, 0.8f, 1f), new Color(1f, 0.7f, 0.2f), new Color(0.7f, 0.7f, 0.7f)
+        new Color(0.4f, 0.8f, 1f), new Color(1f, 0.7f, 0.2f), new Color(0.55f, 0.9f, 0.75f), new Color(0.7f, 0.7f, 0.7f)
     };
 
     const float AltoFila = 0.075f;
@@ -752,12 +715,14 @@ public class JuegoBomberos : MonoBehaviour
             _opcionesSel[i].color = sel ? colores[i] : new Color(0.6f, 0.6f, 0.6f);
             _opcionesSel[i].fontSize = (sel ? 0.05f : 0.042f) * 10f;
         }
+        if (_enConfiguracion && _opcionesSel.Count > OpcionVineta)
+            _opcionesSel[OpcionVineta].text = OpcionesConfig[OpcionVineta] + ": " + ConfiguracionConfort.Nombre.ToUpperInvariant();
         _barraSel.localPosition = new Vector3(0f, FilaY(_indiceSel), 0.01f);
         _flechaSel.transform.localPosition = new Vector3(-0.32f, FilaY(_indiceSel), 0f);
 
         string texto = DescripcionesActuales[_indiceSel];
         if (_enConfiguracion)
-            texto += "\n<size=80%>Modo actual: <b>" + ConfiguracionConduccion.Nombre + "</b></size>";
+            texto += "\n<size=80%>Conducción: <b>" + ConfiguracionConduccion.Nombre + "</b>     Viñeta: <b>" + ConfiguracionConfort.Nombre + "</b></size>";
         _descripcionSel.text = texto;
 
         if (conSonido)
@@ -835,6 +800,11 @@ public class JuegoBomberos : MonoBehaviour
             else if (_indiceSel == 1)
             {
                 ConfiguracionConduccion.Modo = ModoConduccion.Volante;
+                ConfirmarConfiguracion();
+            }
+            else if (_indiceSel == OpcionVineta)
+            {
+                ConfiguracionConfort.Vineta = !ConfiguracionConfort.Vineta;
                 ConfirmarConfiguracion();
             }
             else
@@ -932,7 +902,7 @@ public class JuegoBomberos : MonoBehaviour
             "- Botón verde del poste: portón principal\n" +
             "- Botón rojo: portón de la cochera\n" +
             "- Manguera: en el panel del camión (GRIP y gatillo)\n" +
-            "- Chaleco y extintor: agárralos con GRIP\n" +
+            "- Chaleco: agárralo con GRIP\n" +
             "- Camión: párate en el círculo amarillo para manejar\n" +
             "- Moto: párate en su círculo amarillo (B para bajar)\n" +
             "- Válvula del panel del camión: sube la presión del agua",
@@ -944,7 +914,7 @@ public class JuegoBomberos : MonoBehaviour
         _hud.Mostrar("ESTACIÓN DE BOMBEROS VR",
             "<b>Elige un modo con el joystick y acepta con A o el gatillo:</b>\n" +
             "- <color=#5AA9FF>EXPLORAR</color>: recorre todo libremente, sin tareas.\n" +
-            "- <color=#FF6B5A>MISIÓN 1</color>: ¡emergencia! Portón principal, cochera, chaleco,\n  extintor, sal en el camión y apaga el edificio en llamas.\n" +
+            "- <color=#FF6B5A>MISIÓN 1</color>: ¡emergencia! Portón principal, cochera, chaleco,\n  sal en el camión y apaga el edificio en llamas.\n" +
             "- <color=#FFB020>MISIÓN 2</color>: incendio eléctrico en una casa: corta la corriente,\n  comprueba que no hay tensión y apaga el fuego con CO<sub>2</sub>.\n" +
             "- <color=#73F28C>MISIÓN 3</color>: rescate: lleva la barra en el camión, fuerza la puerta\n  y acompaña a la persona hasta la zona segura.\n" +
             "- <color=#C8C8D2>CONFIGURACIÓN</color>: elige joystick o volante para conducir.\n\n" +

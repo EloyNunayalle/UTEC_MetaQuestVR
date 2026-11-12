@@ -155,7 +155,7 @@ public class GestorEscenas : MonoBehaviour
     }
 
     /// <summary>
-    /// El interior contiene el chaleco y el extintor: no se descarga con la misión
+    /// El interior contiene el chaleco: no se descarga con la misión
     /// en curso y el equipamiento pendiente (el manager aún evalúa esas tareas).
     /// </summary>
     static bool PuedeDescargarInterior()

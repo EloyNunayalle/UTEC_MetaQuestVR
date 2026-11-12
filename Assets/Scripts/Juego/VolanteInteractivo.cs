@@ -3,11 +3,16 @@ using UnityEngine;
 /// <summary>
 /// Volante del camion. En modo Volante se agarra con la mano (GRIP o pellizco cerca
 /// del aro) y entrega el eje a CamionBomberos.ejeGiroManual. En modo Joystick es solo
-/// visual: sigue al stick y vuelve al centro, pero no se puede agarrar.
+/// visual: refleja la posicion del stick (vuelve al centro al soltar el stick, igual que
+/// el giro del camion), pero no se puede agarrar.
 /// - Gira sobre el CENTRO visual del volante (no sobre el pivote del nodo).
 /// - Todo se calcula en LOCAL / con el marco base actual: sigue al camion cuando se mueve
 ///   (nada se queda atras y el agarre funciona siempre).
-/// - El angulo de la mano se mide en un marco FIJO (sin realimentacion, no parpadea).
+/// - El angulo de la mano se mide en un marco FIJO (sin realimentacion, no parpadea) y se
+///   acumula cuadro a cuadro: no hay saltos al pasar los 180 grados, al llegar al tope ni
+///   cuando la mano cruza el centro del aro.
+/// - Al soltarlo en modo Volante, vuelve SUAVE al centro solo si el camion avanza (como el
+///   autocentrado de un vehiculo real); detenido se queda donde lo dejaste.
 /// - anguloInicial endereza el modelo; las piezas en giranConElVolante giran con el.
 /// </summary>
 public class VolanteInteractivo : MonoBehaviour
@@ -24,12 +29,23 @@ public class VolanteInteractivo : MonoBehaviour
     public float anguloInicial = -11f;
     [Tooltip("Piezas que giran junto con el volante (p. ej. las que dependen de el).")]
     public Transform[] giranConElVolante;
+    [Header("Modo Volante: autocentrado al soltar")]
+    [Tooltip("Al soltar el volante, vuelve solo al centro mientras el camion avanza.")]
+    public bool autocentrarAlSoltar = true;
+    [Tooltip("Grados por segundo de retorno a la velocidad de referencia (o mas).")]
+    public float velocidadAutocentrado = 90f;
+    [Tooltip("Velocidad del camion (km/h) a la que el retorno alcanza su maximo. Detenido no retorna.")]
+    public float kmhAutocentradoMax = 15f;
+    [Tooltip("Distancia minima (m) de la mano al eje para medir su angulo (cerca del centro el angulo no es confiable).")]
+    public float radioMinimoMano = 0.06f;
+    [Tooltip("Cambio maximo de angulo de la mano por cuadro (grados); mas que esto es un salto de medicion y se ignora.")]
+    public float saltoMaximoPorCuadro = 45f;
 
     float _angulo;
     Quaternion _rotBase;
     bool _init;
     int _mano = -1;
-    float _manoIni;
+    float _manoPrev;
     float _volanteIni;
     float _vibraProx;
     bool _enganchado;
@@ -67,11 +83,15 @@ public class VolanteInteractivo : MonoBehaviour
     }
 
     // Angulo de la mano medido en el marco FIJO del volante (marco base, no el que gira).
-    float AnguloMano(Transform m)
+    float AnguloMano(Transform m) => AnguloMano(m, out _);
+
+    float AnguloMano(Transform m, out float radioEnPlano)
     {
         Vector3 rel = m.position - CentroMundo();
         Quaternion b = BaseMundoRot();
-        return Mathf.Atan2(Vector3.Dot(rel, b * Vector3.up), Vector3.Dot(rel, b * Vector3.right)) * Mathf.Rad2Deg;
+        float x = Vector3.Dot(rel, b * Vector3.right), y = Vector3.Dot(rel, b * Vector3.up);
+        radioEnPlano = Mathf.Sqrt(x * x + y * y);
+        return Mathf.Atan2(y, x) * Mathf.Rad2Deg;
     }
 
     void Update()
@@ -138,8 +158,15 @@ public class VolanteInteractivo : MonoBehaviour
             }
             else
             {
-                float ang = AnguloMano(m);
-                _angulo = Mathf.Clamp(_volanteIni + Mathf.DeltaAngle(_manoIni, ang), -gradosMaximos, gradosMaximos);
+                // Incremental: se suma solo el giro de la mano desde el cuadro anterior. Asi el volante
+                // no salta al pasar los 180 grados (DeltaAngle desde el agarre se "daba vuelta"), al
+                // llegar al tope (lo que sobra se descarta y al volver responde de inmediato) ni cuando
+                // la mano pasa cerca del eje, donde el angulo medido no es confiable.
+                float ang = AnguloMano(m, out float r);
+                float d = Mathf.DeltaAngle(_manoPrev, ang);
+                _manoPrev = ang;
+                if (r >= radioMinimoMano * _escalaMundo && Mathf.Abs(d) <= saltoMaximoPorCuadro)
+                    _angulo = Mathf.Clamp(_angulo + d, -gradosMaximos, gradosMaximos);
             }
         }
         else
@@ -160,6 +187,13 @@ public class VolanteInteractivo : MonoBehaviour
             }
             else
             {
+                // Suelto: autocentrado suave proporcional a la velocidad (detenido no se mueve).
+                if (autocentrarAlSoltar && camion != null && Mathf.Abs(_angulo) > 0.01f)
+                {
+                    float f = Mathf.Clamp01(camion.VelocidadKmh / Mathf.Max(0.1f, kmhAutocentradoMax));
+                    _angulo = Mathf.MoveTowards(_angulo, 0f, velocidadAutocentrado * f * dt);
+                }
+
                 // Agarre por proximidad al aro, solo en modo Volante.
                 for (int i = 0; i < 2; i++)
                 {
@@ -171,7 +205,7 @@ public class VolanteInteractivo : MonoBehaviour
                     if (EntradaVR.AgarreDown(i == 0))
                     {
                         _mano = i;
-                        _manoIni = AnguloMano(m);
+                        _manoPrev = AnguloMano(m);
                         _volanteIni = _angulo;
                         EntradaVR.Vibrar(i == 0, 0.4f, 0.08f, 0.6f);
                         SonidosVR.ReproducirEn(SonidosVR.Agarrar, transform.position, 0.6f);
