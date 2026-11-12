@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Cielo_Atardecer
+  m_Shader: {fileID: 4800000, guid: fef4351819ebed445b8491834497e7c9, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _AltoHorizonte: 0.13
+    - _Exponente: 0.85
+    - _IntensidadResplandor: 0.75
+    - _TamSol: 0.028
+    m_Colors:
+    - _BajoHorizonte: {r: 0.62, g: 0.65999997, b: 0.65999997, a: 1}
+    - _Cenit: {r: 0.16, g: 0.4, b: 0.8, a: 1}
+    - _ColorSol: {r: 1, g: 0.93, b: 0.78, a: 1}
+    - _DirSolRespaldo: {r: -0.79, g: 0.41, b: 0.46, a: 0}
+    - _Horizonte: {r: 0.93, g: 0.8, b: 0.65999997, a: 1}
+    - _Medio: {r: 0.6, g: 0.78, b: 0.95, a: 1}
+    - _Resplandor: {r: 1, g: 0.66, b: 0.38, a: 1}
+  m_BuildTextureStacks: []

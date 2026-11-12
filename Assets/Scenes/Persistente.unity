@@ -14,19 +14,19 @@ OcclusionCullingSettings:
 RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 9
-  m_Fog: 0
-  m_FogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
-  m_FogMode: 3
+  m_Fog: 1
+  m_FogColor: {r: 0.93, g: 0.8, b: 0.66, a: 1}
+  m_FogMode: 1
   m_FogDensity: 0.01
-  m_LinearFogStart: 0
-  m_LinearFogEnd: 300
-  m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
-  m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
-  m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
+  m_LinearFogStart: 70
+  m_LinearFogEnd: 420
+  m_AmbientSkyColor: {r: 0.66, g: 0.74, b: 0.88, a: 1}
+  m_AmbientEquatorColor: {r: 0.78, g: 0.72, b: 0.66, a: 1}
+  m_AmbientGroundColor: {r: 0.4, g: 0.37, b: 0.34, a: 1}
   m_AmbientIntensity: 1
-  m_AmbientMode: 0
+  m_AmbientMode: 1
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
+  m_SkyboxMaterial: {fileID: 2100000, guid: 3863df4436f12a84aa3be381fb4c3e24, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -4391,6 +4391,64 @@ Transform:
   - {fileID: 1855997569}
   m_Father: {fileID: 249943717}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &754052309
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 754052311}
+  - component: {fileID: 754052312}
+  m_Layer: 0
+  m_Name: CieloCiudad
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &754052311
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 754052309}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &754052312
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 754052309}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6391aa71135d2ca4da49bf25d1f9550d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cielo: {fileID: 2100000, guid: 3863df4436f12a84aa3be381fb4c3e24, type: 2}
+  elevacionSol: 30
+  azimutSol: 300
+  colorSol: {r: 1, g: 0.86, b: 0.7, a: 1}
+  intensidadSol: 1.2
+  sombras: 2
+  fuerzaSombra: 0.7
+  ambienteCielo: {r: 0.66, g: 0.74, b: 0.88, a: 1}
+  ambienteHorizonte: {r: 0.78, g: 0.72, b: 0.66, a: 1}
+  ambienteSuelo: {r: 0.4, g: 0.37, b: 0.34, a: 1}
+  niebla: 1
+  colorNiebla: {r: 0.93, g: 0.8, b: 0.66, a: 1}
+  nieblaInicio: 70
+  nieblaFin: 420
 --- !u!1 &754785081
 GameObject:
   m_ObjectHideFlags: 0
@@ -12301,3 +12359,4 @@ SceneRoots:
   - {fileID: 26653005}
   - {fileID: 770780984}
   - {fileID: 902780258}
+  - {fileID: 754052311}
