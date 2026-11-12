@@ -166,7 +166,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 979efa96d19c43f2b03945768b0d9792, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  posicionExterior: {x: -39.11, y: 0, z: 27.96}
+  posicionExterior: {x: -85, y: 0, z: 30.96}
   radio: 1.5
 --- !u!1001 &488462770
 PrefabInstance:
@@ -190,7 +190,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5567141625684177198, guid: a20cf7a1fd7e429ca3e8e5bae76b0065, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -39.11
+      value: -85
       objectReference: {fileID: 0}
     - target: {fileID: 5567141625684177198, guid: a20cf7a1fd7e429ca3e8e5bae76b0065, type: 3}
       propertyPath: m_LocalPosition.y
@@ -198,7 +198,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5567141625684177198, guid: a20cf7a1fd7e429ca3e8e5bae76b0065, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 27.96
+      value: 30.96
       objectReference: {fileID: 0}
     - target: {fileID: 5567141625684177198, guid: a20cf7a1fd7e429ca3e8e5bae76b0065, type: 3}
       propertyPath: m_LocalRotation.w

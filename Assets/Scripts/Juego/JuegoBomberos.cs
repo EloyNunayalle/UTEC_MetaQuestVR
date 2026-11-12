@@ -43,15 +43,15 @@ public class JuegoBomberos : MonoBehaviour
     [Tooltip("Nombre del edificio que se incendia (opcional). Si hay varios con el mismo nombre se usa el mas cercano a 'Posicion Edificio Fuego'.")]
     public string nombreEdificioFuego = "";
     [Tooltip("Se incendia el edificio (raiz de escena) mas cercano a este punto: el edificio gris alto de la calle este.")]
-    public Vector3 posicionEdificioFuego = new Vector3(13.96f, 0f, -27.31f);
+    public Vector3 posicionEdificioFuego = new Vector3(16.96f, 0f, -55f);
     [Tooltip("Punto de la calle desde donde se ve la fachada en llamas (los fuegos van en la cara que mira hacia aca).")]
-    public Vector3 calleFrenteEdificio = new Vector3(5.65f, 0f, -27.31f);
+    public Vector3 calleFrenteEdificio = new Vector3(7.15f, 0f, -55f);
     [Tooltip("Donde crear un camion de reemplazo si el objeto del camion no existe en la escena.")]
     public Vector3 posicionCamionReemplazo = new Vector3(-5.19f, 0.127f, -10.2f);
 
     [Header("Mision 2 (incendio electrico en la casa)")]
     [Tooltip("Puerta de la casa de la Mision 2 (para la flecha mientras su interior no esta cargado).")]
-    public Vector3 puertaCasaM2 = new Vector3(11f, 1.6f, -13f);
+    public Vector3 puertaCasaM2 = new Vector3(61f, 1.6f, -13f);
     [Tooltip("Tiempos de referencia de la Mision 2 para la calificacion.")]
     public float tiempoExcelenteM2 = 210f;   // incluye el viaje en moto hasta la casa
     public float tiempoBuenoM2 = 330f;

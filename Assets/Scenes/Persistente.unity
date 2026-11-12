@@ -11077,8 +11077,8 @@ MonoBehaviour:
   nombrePortonPrincipal: Porton_Principal
   incendioEnEdificio: 1
   nombreEdificioFuego: 
-  posicionEdificioFuego: {x: 13.96, y: 0, z: -27.31}
-  calleFrenteEdificio: {x: 5.65, y: 0, z: -27.31}
+  posicionEdificioFuego: {x: 16.96, y: 0, z: -55}
+  calleFrenteEdificio: {x: 7.15, y: 0, z: -55}
   posicionCamionReemplazo: {x: -5.19, y: 0.127, z: -10.2}
   tiempoExcelenteM2: 210
   tiempoBuenoM2: 330

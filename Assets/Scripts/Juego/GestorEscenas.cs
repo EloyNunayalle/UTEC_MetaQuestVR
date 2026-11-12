@@ -36,8 +36,8 @@ public class GestorEscenas : MonoBehaviour
 
     static readonly InteriorMision[] InterioresMision =
     {
-        new InteriorMision { escena = EscenaInteriorM2, centro = new Vector3(17.65f, 0f, -14f), mision = 2 },
-        new InteriorMision { escena = EscenaInteriorM3, centro = new Vector3(-40.11f, 0f, 33.96f), mision = 3 }
+        new InteriorMision { escena = EscenaInteriorM2, centro = new Vector3(67.65f, 0f, -14f), mision = 2 },
+        new InteriorMision { escena = EscenaInteriorM3, centro = new Vector3(-86f, 0f, 36.96f), mision = 3 }
     };
 
     [Header("Estación interior (carga por proximidad)")]

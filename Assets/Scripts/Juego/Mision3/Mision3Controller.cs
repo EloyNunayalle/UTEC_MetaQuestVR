@@ -25,15 +25,15 @@ public class Mision3Controller : MonoBehaviour
 
     [Header("Escenario (coordenadas del mundo)")]
     [Tooltip("Donde estacionar el camion: la calle frente a la casa.")]
-    public Vector3 puntoEstacionar = new Vector3(-39.11f, 0f, 19.65f);
+    public Vector3 puntoEstacionar = new Vector3(-85f, 0f, 23.4f);
     public float radioLlegada = 13f;
     [Tooltip("Frente a la puerta de entrada de la casa, para la flecha.")]
-    public Vector3 puertaCasa = new Vector3(-39.11f, 1.6f, 25.3f);
+    public Vector3 puertaCasa = new Vector3(-85f, 1.6f, 28.3f);
     [Tooltip("Centro de la zona segura, en la vereda frente a la casa.")]
-    public Vector3 zonaSegura = new Vector3(-34.2f, 0f, 21.9f);
+    public Vector3 zonaSegura = new Vector3(-76.4f, 0f, 31f);
     public float radioZonaSegura = 2.6f;
     [Tooltip("Base de la columna de humo, sobre el techo de la casa.")]
-    public Vector3 columnaHumo = new Vector3(-40.11f, 17f, 33.96f);
+    public Vector3 columnaHumo = new Vector3(-86f, 17f, 36.96f);
 
     public Estado EstadoActual { get; private set; } = Estado.HerramientaPendiente;
     public HerramientaRescate Herramienta => _herramienta;
