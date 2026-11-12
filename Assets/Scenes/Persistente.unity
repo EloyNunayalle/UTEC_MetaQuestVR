@@ -4957,6 +4957,59 @@ Transform:
   m_Children: []
   m_Father: {fileID: 911707148}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &902780256
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 902780258}
+  - component: {fileID: 902780257}
+  m_Layer: 0
+  m_Name: LimiteCiudad
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &902780257
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 902780256}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4d3dff54c871c59478d29ab8e7a35dfb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  xMin: -108.4
+  xMax: 95.7
+  zMin: -85.9
+  zMax: 51.6
+  margenJugador: 0.35
+  alturaMinima: -6
+  puntoRescate: {x: -11.6, y: 0.1, z: 8}
+  mensaje: "La ciudad est\xE1 cerrada por emergencia"
+  enfriamientoAviso: 4
+--- !u!4 &902780258
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 902780256}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &907676357
 GameObject:
   m_ObjectHideFlags: 0
@@ -11080,9 +11133,12 @@ MonoBehaviour:
   posicionEdificioFuego: {x: 16.96, y: 0, z: -55}
   calleFrenteEdificio: {x: 7.15, y: 0, z: -55}
   posicionCamionReemplazo: {x: -5.19, y: 0.127, z: -10.2}
+  puertaCasaM2: {x: 61, y: 1.6, z: -13}
   tiempoExcelenteM2: 210
   tiempoBuenoM2: 330
   penalizacionError: 25
+  tiempoExcelenteM3: 420
+  tiempoBuenoM3: 660
   exigirPorton: 1
   usarManguera: 1
   puntosPorTarea: 100
@@ -12244,3 +12300,4 @@ SceneRoots:
   - {fileID: 1900000002}
   - {fileID: 26653005}
   - {fileID: 770780984}
+  - {fileID: 902780258}
