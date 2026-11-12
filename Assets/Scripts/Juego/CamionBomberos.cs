@@ -6,7 +6,8 @@ using UnityEngine;
 /// <summary>
 /// Camion de bomberos interactivo y manejable.
 /// - Subir: parate en el circulo amarillo junto a la puerta del conductor (se llena) o presiona A / pellizca.
-/// - Manejar (controles): stick izquierdo arriba/abajo = avanzar/retroceder, a los lados = girar
+/// - Manejar (controles), modo Joystick: stick izquierdo arriba/abajo = avanzar/retroceder, a los lados = girar.
+///   Modo Volante: gatillo derecho mantenido = acelerar (segun la palanca D/R); al soltarlo frena; el volante gira
 ///   (tambien sirve el stick derecho para girar). Teclado: flechas o WASD.
 /// - A: prender/apagar la sirena. X: prender/apagar las balizas (independientes).
 /// - Bajar: B (o Y), o mantener el pellizco 2 segundos.
@@ -39,6 +40,8 @@ public class CamionBomberos : MonoBehaviour
     public float velocidadMaxima = 8f;
     public float velocidadMaximaReversa = 3f;
     public float aceleracion = 3.5f;
+    [Tooltip("Modo Volante: zona muerta del gatillo derecho (acelerador).")]
+    public float zonaMuertaAcelerador = 0.08f;
     public float frenado = 7f;
     [Tooltip("Grados por segundo de giro a buena velocidad.")]
     public float giroMaximo = 40f;
@@ -322,6 +325,7 @@ public class CamionBomberos : MonoBehaviour
     {
         if (!_listo) return;
         ActualizarLuces();
+        EntradaVR.GatilloDerechoEsAcelerador = JugadorSentado && ConfiguracionConduccion.Modo == ModoConduccion.Volante;
         if (JugadorSentado)
         {
             if (manejable) Manejar();
@@ -431,8 +435,21 @@ public class CamionBomberos : MonoBehaviour
 
         if (ConfiguracionConduccion.Modo == ModoConduccion.Volante)
         {
-            // Joystick solo acelera/frena; el volante es la unica entrada de giro.
+            // Modo Volante, como un auto real: el GATILLO DERECHO es el acelerador. Mientras lo
+            // mantienes presionado el camion avanza (analogico: mas apretado = mas rapido) en el
+            // sentido de la palanca (D/L adelante, R atras, P/N nada); al soltarlo deja de acelerar
+            // y frena solo. El stick ya no mueve el camion. El volante es la unica entrada de giro.
             giro = ejeGiroManual != null ? Mathf.Clamp(ejeGiroManual(), -1f, 1f) : 0f;
+            float pedal = OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OVRInput.Controller.RTouch);
+            if (Input.GetKey(KeyCode.W)) pedal = 1f; // prueba en el editor
+            pedal = pedal < zonaMuertaAcelerador ? 0f : Mathf.InverseLerp(zonaMuertaAcelerador, 1f, pedal);
+            int sentido = 1;
+            if (marchaManual != null)
+            {
+                int mm = marchaManual();
+                sentido = mm == 1 ? -1 : (mm == 3 || mm == 4) ? 1 : 0;
+            }
+            acel = pedal * sentido;
         }
         // En modo Joystick se ignora ejeGiroManual: el volante es solo visual.
         bool marchaBaja = false;
@@ -754,6 +771,7 @@ public class CamionBomberos : MonoBehaviour
 
     void OnDisable()
     {
+        EntradaVR.GatilloDerechoEsAcelerador = false;
         if (JugadorSentado) EncenderLocomocion();
     }
 

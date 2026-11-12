@@ -565,7 +565,7 @@ public class JuegoBomberos : MonoBehaviour
     static readonly string[] DescripcionesConfig =
     {
         "Joystick: avanzar/retroceder y girar. El volante sigue al stick y vuelve al centro al soltarlo.",
-        "Joystick: solo avanzar/retroceder. Agarra el volante con GRIP para girar; al soltarlo vuelve solo al centro mientras avanzas.",
+        "Mantén el gatillo derecho para acelerar (al soltarlo frena); la palanca elige D o R. Agarra el volante con GRIP para girar.",
         "Oscurece los bordes de la vista al caminar o girar con el joystick (opción de Meta para reducir el mareo).",
         "Volver a elegir Explorar / Misión"
     };
@@ -880,7 +880,7 @@ public class JuegoBomberos : MonoBehaviour
     {
         return ConfiguracionConduccion.Modo == ModoConduccion.Joystick
             ? "Stick: avanzar/retroceder y girar   -   B: bajar"
-            : "Stick: avanzar/retroceder   -   Volante: girar (GRIP)   -   B: bajar";
+            : "Gatillo derecho: acelerar (mantenlo; al soltarlo frena)   -   Palanca: D adelante / R atrás   -   Volante: girar (GRIP)   -   B: bajar";
     }
 
     void MostrarExplorar()
