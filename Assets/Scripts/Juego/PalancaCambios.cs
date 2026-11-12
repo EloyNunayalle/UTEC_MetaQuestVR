@@ -27,6 +27,26 @@ public class PalancaCambios : MonoBehaviour
     public float radioPomo = 0.24f;
     [Tooltip("Margen extra mas alla de las ranuras extremas (unidades locales).")]
     public float margenExtra = 0.12f;
+    [Tooltip("Distancia maxima (m) de la mano al pomo para agarrarla.")]
+    public float radioAgarre = 0.12f;
+
+    static readonly System.Collections.Generic.List<PalancaCambios> _todas = new System.Collections.Generic.List<PalancaCambios>();
+
+    /// <summary>Pomo en el mundo (sigue la pose actual del camion).</summary>
+    public Vector3 PuntoPomo => _init ? transform.TransformPoint(_localKnob) : transform.position;
+
+    /// <summary>
+    /// La mano esta sobre el pomo de alguna palanca: el volante (que queda al lado) no debe agarrar.
+    /// </summary>
+    public static bool ManoSobrePomo(Vector3 mano)
+    {
+        foreach (var p in _todas)
+            if (p != null && p.isActiveAndEnabled && (p._mano >= 0 || Vector3.Distance(mano, p.PuntoPomo) <= p.radioAgarre))
+                return true;
+        return false;
+    }
+
+    void OnEnable() { if (!_todas.Contains(this)) _todas.Add(this); }
 
     float _desplazamiento;
     Vector3 _baseLocalPos;
@@ -179,7 +199,7 @@ public class PalancaCambios : MonoBehaviour
                 var m = Mano(i);
                 if (m == null || !m.gameObject.activeInHierarchy) continue;
                 Vector3 pomo = transform.TransformPoint(_localKnob);
-                if (Vector3.Distance(m.position, pomo) > 0.16f) continue;
+                if (Vector3.Distance(m.position, pomo) > radioAgarre) continue;
                 if (EntradaVR.AgarreDown(i == 0))
                 {
                     _mano = i;
@@ -245,6 +265,7 @@ public class PalancaCambios : MonoBehaviour
 
     void OnDisable()
     {
+        _todas.Remove(this);
         if (camion != null) camion.marchaManual = null;
         _enganchado = false;
     }

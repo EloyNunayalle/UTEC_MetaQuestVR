@@ -202,6 +202,7 @@ public class VolanteInteractivo : MonoBehaviour
                     Vector3 rel = (m.position - CentroMundo()) / _escalaMundo;
                     float distAro = Mathf.Abs(rel.magnitude - radio);
                     if (distAro > 0.13f || Mathf.Abs(Vector3.Dot(rel, BaseMundoRot() * Vector3.forward)) > 0.13f) continue;
+                    if (PalancaCambios.ManoSobrePomo(m.position)) continue; // la palanca esta al lado: tiene prioridad
                     if (EntradaVR.AgarreDown(i == 0))
                     {
                         _mano = i;
