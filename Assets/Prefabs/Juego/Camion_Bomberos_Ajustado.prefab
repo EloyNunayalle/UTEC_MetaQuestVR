@@ -977,8 +977,8 @@ Transform:
   m_GameObject: {fileID: 4822015914418647118}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.258, y: 1.325, z: 3.885}
-  m_LocalScale: {x: 0.13, y: 0.45, z: 0.22}
+  m_LocalPosition: {x: -0.3, y: 1.35, z: 3.76}
+  m_LocalScale: {x: 0.13, y: 0.5, z: 0.2}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 3243580327710883278}
@@ -2388,31 +2388,31 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2774220344278030320, guid: 9c0ab0d4e0d4f1246956ea7fa814f708, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.258
+      value: -0.3
       objectReference: {fileID: 0}
     - target: {fileID: 2774220344278030320, guid: 9c0ab0d4e0d4f1246956ea7fa814f708, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.571
+      value: 1.621
       objectReference: {fileID: 0}
     - target: {fileID: 2774220344278030320, guid: 9c0ab0d4e0d4f1246956ea7fa814f708, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 3.885
+      value: 3.76
       objectReference: {fileID: 0}
     - target: {fileID: 2774220344278030320, guid: 9c0ab0d4e0d4f1246956ea7fa814f708, type: 3}
       propertyPath: m_LocalRotation.w
-      value: -0.49942636
+      value: 0.5495252
       objectReference: {fileID: 0}
     - target: {fileID: 2774220344278030320, guid: 9c0ab0d4e0d4f1246956ea7fa814f708, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0.49942636
+      value: -0.4449967
       objectReference: {fileID: 0}
     - target: {fileID: 2774220344278030320, guid: 9c0ab0d4e0d4f1246956ea7fa814f708, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.5005731
+      value: -0.4449967
       objectReference: {fileID: 0}
     - target: {fileID: 2774220344278030320, guid: 9c0ab0d4e0d4f1246956ea7fa814f708, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.500573
+      value: -0.5495252
       objectReference: {fileID: 0}
     - target: {fileID: 2774220344278030320, guid: 9c0ab0d4e0d4f1246956ea7fa814f708, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -2484,6 +2484,7 @@ MonoBehaviour:
   marcha: 3
   radioPomo: 0.24
   margenExtra: 0.12
+  radioAgarre: 0.12
 --- !u!23 &5979333952903750646 stripped
 MeshRenderer:
   m_CorrespondingSourceObject: {fileID: 5449345248655999089, guid: 9c0ab0d4e0d4f1246956ea7fa814f708, type: 3}
