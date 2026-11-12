@@ -14,10 +14,15 @@ public class ZonaCargaHerramienta : MonoBehaviour
     public HerramientaRescate herramienta;
     public ExtintorCO2 extintor;
 
-    // Puntos dentro del compartimento (el eje Z de esta zona va a lo ancho del camion).
-    static readonly Vector3 PuntoBarra = new Vector3(0.16f, 0f, 0f);
-    static readonly Vector3 PuntoExtintor = new Vector3(-0.13f, -0.03f, 0f);
-    static readonly Quaternion RotExtintor = Quaternion.Euler(90f, 0f, 0f); // acostado a lo ancho
+    // Puntos dentro del compartimento. Ejes de esta zona: +X hacia la abertura trasera, +Z a lo ancho
+    // del camion, +Y arriba. Origen: 15 cm sobre el piso, en el centro del compartimento (55 cm de fondo).
+    // - Extintor: abajo y adelante (borde a ~3.5 cm de la abertura), acostado a lo ancho con el asa y la
+    //   boquilla hacia afuera: se ve y se agarra desde atras con una mano.
+    // - Barra: arriba, sobre dos soportes, 8 cm por encima del extintor y ~3 cm detras del plano de las
+    //   puertas (no la golpean al cerrar).
+    static readonly Vector3 PuntoBarra = new Vector3(0.21f, 0.22f, 0f);
+    static readonly Vector3 PuntoExtintor = new Vector3(0.11f, -0.05f, 0f);
+    static readonly Quaternion RotExtintor = Quaternion.Euler(90f, 0f, 0f); // acostado a lo ancho, asa hacia la abertura
 
     public bool Cargada => herramienta != null && herramienta.EnMaletera;
     public bool ExtintorCargado => extintor != null && extintor.EnMaletera;
@@ -60,7 +65,20 @@ public class ZonaCargaHerramienta : MonoBehaviour
         z._matExtintor = VisualesVR.MaterialSinLuz(new Color(1f, 0.85f, 0.1f, 0.45f));
         z._siluetaBarra = z.CrearSilueta("Silueta_Barra", PuntoBarra, new Vector3(0.05f, 0.38f, 0.05f), z._matBarra);
         z._siluetaExtintor = z.CrearSilueta("Silueta_Extintor", PuntoExtintor, new Vector3(0.15f, 0.38f, 0.15f), z._matExtintor);
+        z.CrearSoportesBarra();
         return z;
+    }
+
+    /// <summary>Dos soportes (visuales) donde descansa la barra, cerca de sus extremos.</summary>
+    void CrearSoportesBarra()
+    {
+        var mat = VisualesVR.MaterialOpaco(new Color(0.18f, 0.18f, 0.2f));
+        foreach (float lado in new[] { -0.33f, 0.33f })
+        {
+            var s = VisualesVR.Primitiva(PrimitiveType.Cube, "Soporte_Barra", transform, mat);
+            s.transform.localPosition = PuntoBarra + new Vector3(0f, -0.135f, lado);
+            s.transform.localScale = new Vector3(0.10f, 0.03f, 0.04f);
+        }
     }
 
     Transform CrearSilueta(string nombre, Vector3 pos, Vector3 escala, Material mat)

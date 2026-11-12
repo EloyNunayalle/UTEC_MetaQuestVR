@@ -397,7 +397,7 @@ public static class ConstructorCiudadUnica
             new Rect(-39f, -26f, -15f, -3f),    // lateral oeste de la estacion
             new Rect(-15f, -1f, -70f, -26f),    // parque al sur de la estacion
             new Rect(75f, 80f, -70f, 8f),       // fondo de la calle residencial
-            new Rect(14f, 44f, -45f, -40f),     // franja verde de la zona industrial
+            new Rect(18f, 44f, -45f, -40f),     // franja verde de la zona industrial (fuera de la vereda)
         };
         var franjaArboles = new[]
         {
