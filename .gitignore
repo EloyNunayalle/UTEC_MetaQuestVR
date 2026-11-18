@@ -197,3 +197,7 @@ InitTestScene*.unity*
 
 # Copia de referencia del Meta Avatars SDK (1.1 GB): no se versiona
 /MetaAvatars_UTEC_MetaQuestVR/
+
+# Capturas locales (no subir, cuota LFS)
+/Assets/Screenshots/CiudadUnica/
+/Assets/Screenshots/CiudadUnica.meta
