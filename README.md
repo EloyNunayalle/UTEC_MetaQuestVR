@@ -67,7 +67,7 @@ Al darle Play aparece un panel de bienvenida con los controles. Presiona **A** (
 
 El camión frena solo al soltar el stick y se detiene contra paredes u objetos (con sonido, vibración y aviso).
 
-Al subir se muestra el **tiempo, el puntaje** (100 por tarea + bono por rapidez) y la **calificación** (EXCELENTE / MUY BIEN / COMPLETADO). Después de bajar, **A** reinicia el juego.
+Al subir se muestra el **tiempo, el puntaje** (100 por tarea + bono por rapidez) y la **calificación** (EXCELENTE / MUY BIEN / COMPLETADO). Después de bajar, **A** repite la misma misión y **B** vuelve al selector para cambiar de misión o de modo.
 
 **Feedback al jugador**
 - **Visual**: un panel que sigue tu mirada sin pegarse a ella (objetivo actual, lista de tareas, tiempo y puntaje), avisos grandes en verde, amarillo o rojo, una flecha flotante con la distancia sobre el objetivo, una pista de dirección ("detrás de ti, a 12 m"), objetos que brillan al acercar la mano y se ponen verdes cuando están en su destino, una luz roja de alarma intermitente, las balizas del camión y un círculo de abordaje que se va llenando.
@@ -75,7 +75,7 @@ Al subir se muestra el **tiempo, el puntaje** (100 por tarea + bono por rapidez)
 - **Háptico**: vibración de los controles al pasar la mano por un objeto, al agarrarlo, al llegar a su destino, al completar tareas, al presionar el botón, durante el abordaje y en los errores.
 - **Recordatorios**: si pasan 35 s sin avanzar, se vuelve a mostrar la pista de la tarea actual.
 
-**Teclado (editor/simulador)**: `Espacio`/`E`/`Enter` = A, `Q`/`Backspace` = B, `R` = reiniciar al final.
+**Teclado (editor/simulador)**: `Espacio`/`E`/`Enter` = A, `Q`/`Backspace` = B, `R` = repetir la misión al final.
 
 **Implementación** (`Assets/Scripts/Juego/`): basta con el objeto `JuegoBomberos` de la escena. Al iniciar busca solo el rig, el portón, la puerta, el chaleco, el extintor y el camión (por tipo o por nombre) y arma el resto en tiempo de ejecución.
 - `JuegoBomberos.cs`: flujo, tareas, puntaje y feedback.

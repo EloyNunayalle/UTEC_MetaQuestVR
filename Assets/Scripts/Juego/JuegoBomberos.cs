@@ -167,6 +167,7 @@ public class JuegoBomberos : MonoBehaviour
     // Mision 3
     Mision3Controller _m3;
     int _errores, _misionTerminada = 1;
+    static int _misionParaRepetir;
     string _calificacion = "";
     bool _avisoAgarreChaleco;
     bool _equipamientoListo;
@@ -336,6 +337,33 @@ public class JuegoBomberos : MonoBehaviour
         _inicioIntro = Time.time;
         MostrarIntro();
         CrearSelector();
+
+        if (_misionParaRepetir > 0)
+            StartCoroutine(RepetirMisionAlCargar(_misionParaRepetir));
+    }
+
+    /// <summary>
+    /// Vuelve a cargar la escena y, cuando la ciudad ya esta lista, arranca
+    /// directamente la misma mision sin pasar por el selector.
+    /// </summary>
+    System.Collections.IEnumerator RepetirMisionAlCargar(int mision)
+    {
+        _misionParaRepetir = 0;
+        while (!SceneManager.GetSceneByName(GestorEscenas.EscenaMundo).isLoaded)
+            yield return null;
+        yield return null; // deja que la ciudad termine su Start
+
+        AsegurarPortonCochera();
+
+        if (mision == 1) ElegirMision();
+        else if (mision == 2) ElegirMision2();
+        else if (mision == 3) ElegirMision3();
+    }
+
+    void RepetirMision()
+    {
+        _misionParaRepetir = _misionTerminada;
+        Reiniciar();
     }
 
     Tarea NuevaTarea(string titulo, string pista, Func<Vector3?> punto)
@@ -455,6 +483,36 @@ public class JuegoBomberos : MonoBehaviour
         _principal.Inicializar(_camion.Limites.center);
     }
 
+    /// <summary>
+    /// La ciudad se carga de forma aditiva y puede tardar un frame en aparecer.
+    /// Si el porton de la cochera no existia en el Start, se engancha despues y se
+    /// inserta su tarea en el orden correcto (antes del chaleco).
+    /// </summary>
+    void AsegurarPortonCochera()
+    {
+        if (porton == null) porton = FindObjectOfType<PortonElevadizo>();
+        if (botonPorton == null) botonPorton = FindObjectOfType<BotonPorton>();
+        if (porton == null || _tPorton != null) return;
+
+        _tPorton = new Tarea
+        {
+            titulo = "Abre el portón de la cochera",
+            pista = "Toca el botón rojo junto al portón con el dedo o la punta del control.",
+            punto = () => botonPorton != null
+                ? botonPorton.transform.position + Vector3.up * 0.15f
+                : (Vector3?)porton.pivote.position
+        };
+
+        int indice = _tChaleco != null ? _tareas.IndexOf(_tChaleco) : -1;
+        if (indice >= 0) _tareas.Insert(indice, _tPorton);
+        else _tareas.Add(_tPorton);
+
+        _estadoPortonPrev = porton.estado;
+        var pivote = porton.pivote != null ? porton.pivote : porton.transform;
+        _motorPorton = SonidosVR.CrearBucle(pivote, SonidosVR.Motor, 0.5f, 30f);
+        _motorPorton.pitch = 1.7f;
+    }
+
     void PrepararEquipamiento()
     {
         if (chaleco == null) chaleco = Buscar(nombreChaleco);
@@ -511,6 +569,8 @@ public class JuegoBomberos : MonoBehaviour
             }
         }
 
+        AsegurarPortonCochera();
+
         // El edificio en llamas es exclusivo de la Mision 1 (no arde en Explorar ni en las otras misiones).
         if (_fase == Fase.Mision && _edificio == null && _tFuego != null && incendioEnEdificio && Time.time >= _proximaBusquedaEdificio)
         {
@@ -562,9 +622,13 @@ public class JuegoBomberos : MonoBehaviour
                     _proximoHud = Time.time + 0.2f;
                     MostrarResultado();
                 }
-                if (!_camion.JugadorSentado && Time.time > _bloqueoReinicio &&
-                    (EntradaVR.ConfirmarDown() || Input.GetKeyDown(KeyCode.R)))
-                    Reiniciar();
+                if (!_camion.JugadorSentado && Time.time > _bloqueoReinicio)
+                {
+                    if (EntradaVR.ConfirmarDown() || Input.GetKeyDown(KeyCode.R))
+                        RepetirMision();
+                    else if (EntradaVR.CancelarDown())
+                        Reiniciar();
+                }
                 break;
         }
     }
@@ -1207,11 +1271,12 @@ public class JuegoBomberos : MonoBehaviour
             $"Calificación: <color=#FFD54A><b>{_calificacion}</b></color>\n\n" +
             (sentado ? "<b>¡A manejar!</b>\n" +
                        TextoControlGiro() + "\n" +
-                       "A: sirena   -   X: luces"
-                     : "- A / pellizco: volver a la estación y jugar de nuevo\n- Puedes volver a subir al camión para manejar\n- Clic del joystick: mostrar / ocultar este panel"),
+                       "A: sirena   -   X: luces\n" +
+                       "<size=80%>B: bajar del camión para repetir o cambiar de modo</size>"
+                     : "- A / pellizco: repetir esta misión\n- B: volver al selector (cambiar misión o modo)\n- Puedes volver a subir al camión para manejar\n- Clic del joystick: mostrar / ocultar este panel"),
             sentado ? $"Velocidad {Mathf.RoundToInt(_camion.VelocidadKmh)} km/h     " +
                       $"Sirena {(_camion.SirenaEncendida ? "ON" : "OFF")}     Luces {(_camion.LucesEncendidas ? "ON" : "OFF")}"
-                    : "Jugar de nuevo: A");
+                    : "A: repetir misión     -     B: cambiar modo");
     }
 
     // ------------------------------------------------------------------
