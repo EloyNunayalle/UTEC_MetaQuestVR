@@ -92,6 +92,16 @@ Moto roja de bomberos con baliza azul para moverte rápido por la ciudad, en tod
 - **Manejar**: stick izquierdo adelante/atrás = acelerar, frenar y reversa; cualquier stick a los lados = girar. Teclado: W/S/A/D.
 - **Bajar**: **B / Y** (quedas parado al costado). La moto frena contra paredes y objetos y sube los cordones de las veredas.
 
+## GPS del camión y de la moto (`MapaGPS.cs`, `PantallaGPS.cs`, `GPSVehiculos.cs`)
+
+- **Camión**: el mapa se dibuja sobre el vidrio del monitor `Pantalla_GPS` del tablero, del lado del conductor.
+- **Moto**: lleva una pantalla nueva en un soporte sobre el manubrio, inclinada hacia el piloto.
+- **Mapa**: es una foto cenital real del tile actual, tomada una sola vez al empezar (cámara ortográfica a una textura con mipmaps). No incluye al jugador ni a los vehículos. Se orienta según la marcha (el vehículo siempre apunta hacia arriba) y aleja el zoom con la velocidad.
+- **Misiones 1, 2 y 3**: traza la ruta por las calles hasta el destino (M1: frente al edificio, M2: puerta de la casa, M3: estacionamiento frente a la casa gris). Muestra la siguiente indicación ("En 40 m, gira a la derecha"), la distancia, el tiempo estimado y "Has llegado a tu destino". La ruta se recalcula cada segundo.
+- **Explorar** (y menú o fin de misión): no hay ruta; muestra la ubicación, el rumbo y la velocidad.
+- **Calles para la ruta**: se toman de los tramos `Asfalto`, el patio y el paso del portón principal. Lo que tenga un collider a la altura de un vehículo (postes, autos, barreras, muros) bloquea esa celda. Si cambia el layout del tile, el GPS lo sigue sin tocar código.
+- **Rendimiento**: la foto se toma una sola vez y la pantalla solo se actualiza con el jugador a menos de 12 m.
+
 ## Misión 2: incendio eléctrico en la casa (`Assets/Scripts/Juego/Mision2/`)
 
 Se juega en la **casa de ladrillo de la calle este** (la Rowhouse, a la izquierda del edificio de la Misión 1). Al elegir **MISIÓN 2** te quedas donde estás, sin teletransporte, y su interior se carga al acercarte. La flecha te guía: primero al botón verde del portón principal (si está cerrado), luego a la **moto** y después a la casa. Entras caminando: la puerta se abre al acercarte o al tocarla.

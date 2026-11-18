@@ -77,6 +77,34 @@ public class JuegoBomberos : MonoBehaviour
 
     /// <summary>Mision en curso (1-3), 0 si no hay ninguna. Decide que variantes de edificios se cargan.</summary>
     public int MisionActiva => _fase == Fase.Mision ? 1 : _fase == Fase.Mision2 ? 2 : _fase == Fase.Mision3 ? 3 : 0;
+    public bool ModoExplorar => _fase == Fase.Explorar;
+
+    /// <summary>Destino del GPS de los vehiculos segun la mision activa. False = sin ruta (Explorar, menu, fin).</summary>
+    public bool DestinoGPS(out Vector3 destino, out string nombre)
+    {
+        switch (_fase)
+        {
+            case Fase.Mision:
+                destino = calleFrenteEdificio;
+                nombre = "Incendio en edificio";
+                return true;
+            case Fase.Mision2:
+                destino = puertaCasaM2;
+                nombre = "Emergencia eléctrica";
+                return true;
+            case Fase.Mision3:
+                if (Mision3Controller.Instancia != null)
+                {
+                    destino = Mision3Controller.Instancia.puntoEstacionar;
+                    nombre = "Rescate: casa gris";
+                    return true;
+                }
+                break;
+        }
+        destino = default;
+        nombre = null;
+        return false;
+    }
 
     /// <summary>
     /// El interior de una mision puede descargarse al alejarse, salvo la Mision 2 con avance: su estado
