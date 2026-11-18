@@ -1213,6 +1213,7 @@ public class JuegoBomberos : MonoBehaviour
 
     void AlSubirCamion()
     {
+        TutorialConduccion.Mostrar(_cabeza, _camion);
         if (_fase == Fase.Explorar || _fase == Fase.Mision2 || _fase == Fase.Mision3)
         {
             _hud.alturaRelativa = -0.55f;
@@ -1254,6 +1255,7 @@ public class JuegoBomberos : MonoBehaviour
 
     void AlBajarCamion()
     {
+        TutorialConduccion.Cerrar(false);
         _bloqueoReinicio = Time.time + 1f;
         _hud.alturaRelativa = -0.32f;
         _proximoHud = 0f;
@@ -1600,6 +1602,20 @@ public class JuegoBomberos : MonoBehaviour
     {
         if (_hud == null) return;
         _hud.Aviso(texto, tipo == TipoAviso.Exito ? ColExito : tipo == TipoAviso.Error ? ColError : ColInfo, duracion);
+    }
+
+    /// <summary>El tutorial de conduccion oculta el HUD de mision para no superponerse.</summary>
+    public void OcultarHudTutorial()
+    {
+        if (_hud != null) _hud.Ocultar();
+    }
+
+    /// <summary>Vuelve a mostrar el panel de indicaciones al cerrar el tutorial.</summary>
+    public void MostrarHudTrasTutorial()
+    {
+        if (_hud == null) return;
+        _proximoHud = 0f;
+        _hud.MostrarPor(_fase == Fase.Completado ? 20f : 6f);
     }
 
     static string FormatoTiempo(float s)

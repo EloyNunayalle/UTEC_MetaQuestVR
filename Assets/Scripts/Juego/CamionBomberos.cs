@@ -65,6 +65,7 @@ public class CamionBomberos : MonoBehaviour
     [Range(0.5f, 3f)] public float frecuenciaBalizas = 1.5f;
 
     public bool JugadorSentado { get; private set; }
+    [System.NonSerialized] public bool tutorialActivo;
     public bool SirenaEncendida => _sirena != null && _sirena.isPlaying;
     public bool LucesEncendidas => _lucesOn;
     public float Velocidad => _velocidad;
@@ -334,7 +335,7 @@ public class CamionBomberos : MonoBehaviour
         EntradaVR.GatillosSonPedales = JugadorSentado && ConfiguracionConduccion.Modo == ModoConduccion.Volante;
         if (JugadorSentado)
         {
-            if (manejable) Manejar();
+            if (manejable && !tutorialActivo) Manejar();
 
             // Mantiene al jugador sentado en la cabina (sigue al camion cuando se mueve).
             // En Update (temprano, orden -900) para que el SDK de avatares muestree el rig

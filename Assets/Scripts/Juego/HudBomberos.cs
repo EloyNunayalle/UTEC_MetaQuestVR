@@ -75,7 +75,7 @@ public class HudBomberos : MonoBehaviour
     /// <summary>Muestra el panel durante unos segundos frente a la vista (luego se oculta solo).</summary>
     public void MostrarPor(float segundos)
     {
-        if (_panel == null) return;
+        if (_panel == null || TutorialConduccion.Activo) return;
         if (!Visible) ColocarPanel(1f); // aparece justo frente a la mirada
         _visibleHasta = Mathf.Max(_visibleHasta, Time.time + segundos);
     }
@@ -99,7 +99,7 @@ public class HudBomberos : MonoBehaviour
     /// <summary>Aviso grande frente a la vista durante unos segundos.</summary>
     public void Aviso(string texto, Color color, float duracion = 2.5f)
     {
-        if (_aviso == null) return;
+        if (_aviso == null || TutorialConduccion.Activo) return;
         _aviso.text = texto;
         _avisoColor = color;
         _avisoInicio = Time.time;

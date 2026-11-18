@@ -69,6 +69,8 @@ El camión frena solo al soltar el stick y se detiene contra paredes u objetos (
 
 Al subir se muestra el **tiempo, el puntaje** (100 por tarea + bono por rapidez) y la **calificación** (EXCELENTE / MUY BIEN / COMPLETADO). Después de bajar, **A** repite la misma misión y **B** vuelve al selector para cambiar de misión o de modo.
 
+La primera vez que subas al camión en cada modo de conducción aparece un **tutorial de 5 páginas** con los controles de avance, freno, volante y palanca. Se avanza con el **clic del joystick** (o `Enter`/`T` en el editor) y queda guardado para no repetirlo.
+
 **Feedback al jugador**
 - **Visual**: un panel que sigue tu mirada sin pegarse a ella (objetivo actual, lista de tareas, tiempo y puntaje), avisos grandes en verde, amarillo o rojo, una flecha flotante con la distancia sobre el objetivo, una pista de dirección ("detrás de ti, a 12 m"), objetos que brillan al acercar la mano y se ponen verdes cuando están en su destino, una luz roja de alarma intermitente, las balizas del camión y un círculo de abordaje que se va llenando.
 - **Sonoro** (generado por código, sin archivos de audio): alarma, campana periódica, clic al tocar, sonido al agarrar, arpegio de éxito, zumbido de error, motor del portón, puerta neumática, sirena, motor del camión y fanfarria final.
