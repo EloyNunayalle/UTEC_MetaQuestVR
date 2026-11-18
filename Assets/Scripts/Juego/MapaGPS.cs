@@ -18,6 +18,7 @@ public static class MapaGPS
 
     public static bool Listo { get; private set; }
     public static RenderTexture Textura { get; private set; }
+    static GameObject _camaraMapa;
     /// <summary>Zona del mapa en el mundo: x = X minima, y = Z minima.</summary>
     public static Rect Area { get; private set; }
     public static bool HayCalles => _tipo != null;
@@ -111,6 +112,9 @@ public static class MapaGPS
         Textura.Create();
 
         var go = new GameObject("Camara_MapaGPS");
+        if (_camaraMapa != null) Object.Destroy(_camaraMapa);
+        _camaraMapa = go;
+        go.hideFlags = HideFlags.HideInHierarchy;
         var cam = go.AddComponent<Camera>();
         cam.enabled = false;
         cam.stereoTargetEye = StereoTargetEyeMask.None;
@@ -155,7 +159,8 @@ public static class MapaGPS
             QualitySettings.shadowDistance = sombras;
             RenderSettings.fog = niebla;
             foreach (var r in ocultos) if (r != null) r.enabled = true;
-            Object.Destroy(go);
+            // La camara se queda desactivada: destruirla justo despues de Render() deja
+            // la RenderTexture en negro en algunos backends graficos.
         }
     }
 
