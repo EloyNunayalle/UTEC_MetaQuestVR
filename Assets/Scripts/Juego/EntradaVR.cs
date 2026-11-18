@@ -29,10 +29,11 @@ public static class EntradaVR
     public static bool Agarrando(bool izquierda) => R.agarre[izquierda ? 0 : 1];
 
     /// <summary>
-    /// Conduciendo en modo Volante el gatillo derecho es el ACELERADOR: mientras sea true no cuenta
-    /// como agarre (el volante y la palanca se agarran solo con GRIP o pellizco). Lo maneja CamionBomberos.
+    /// Conduciendo en modo Volante los gatillos son PEDALES (derecho = acelerador, izquierdo = freno):
+    /// mientras sea true no cuentan como agarre (el volante y la palanca se agarran solo con GRIP o
+    /// pellizco), asi acelerar o frenar nunca suelta ni agarra nada por error. Lo maneja CamionBomberos.
     /// </summary>
-    public static bool GatilloDerechoEsAcelerador;
+    public static bool GatillosSonPedales;
     public static bool AgarreDown(bool izquierda) => R.agarreDown[izquierda ? 0 : 1];
 
     // ---------- Confirmar (A / X / pellizco / Espacio) ----------
@@ -106,7 +107,7 @@ public static class EntradaVR
             for (int i = 0; i < 2; i++)
             {
                 var c = Ctrl[i];
-                bool gatilloAgarra = !(i == 1 && GatilloDerechoEsAcelerador);
+                bool gatilloAgarra = !GatillosSonPedales;
                 bool control = OVRInput.Get(OVRInput.Button.PrimaryHandTrigger, c) ||
                                (gatilloAgarra && OVRInput.Get(OVRInput.Button.PrimaryIndexTrigger, c));
 

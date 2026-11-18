@@ -1,8 +1,9 @@
 using UnityEngine;
 
 /// <summary>
-/// Volante del camion. En modo Volante se agarra con la mano (GRIP o pellizco cerca
-/// del aro) y entrega el eje a CamionBomberos.ejeGiroManual. En modo Joystick es solo
+/// Volante del camion. En modo Volante se agarra con una o dos manos (GRIP o pellizco cerca
+/// del aro; se puede pasar mano sobre mano sin soltarlo) y entrega el eje a
+/// CamionBomberos.ejeGiroManual. Solo se mueve agarrandolo (el stick no lo gira). En modo Joystick es solo
 /// visual: refleja la posicion del stick (vuelve al centro al soltar el stick, igual que
 /// el giro del camion), pero no se puede agarrar.
 /// - Gira sobre el CENTRO visual del volante (no sobre el pivote del nodo).
@@ -40,12 +41,15 @@ public class VolanteInteractivo : MonoBehaviour
     public float radioMinimoMano = 0.06f;
     [Tooltip("Cambio maximo de angulo de la mano por cuadro (grados); mas que esto es un salto de medicion y se ignora.")]
     public float saltoMaximoPorCuadro = 45f;
+    [Tooltip("Tolerancia (unidades del volante) para agarrar: distancia de la mano al aro y al plano del aro.")]
+    public float margenAgarre = 0.17f;
 
     float _angulo;
     Quaternion _rotBase;
     bool _init;
-    int _mano = -1;
-    float _manoPrev;
+    readonly bool[] _agarrada = new bool[2];
+    readonly float[] _manoPrev = new float[2];
+    bool Agarrado => _agarrada[0] || _agarrada[1];
     float _volanteIni;
     float _vibraProx;
     bool _enganchado;
@@ -147,29 +151,47 @@ public class VolanteInteractivo : MonoBehaviour
         }
 
         // En modo Joystick el volante es solo visual: no se puede agarrar.
-        if (_mano >= 0 && !modoVolante) Soltar();
+        if (!modoVolante) { Soltar(0); Soltar(1); }
 
-        if (_mano >= 0)
+        // Con una o con las DOS manos: cada mano agarrada suma su giro desde el cuadro anterior y,
+        // con dos, se promedia. Soltar una no suelta el volante si la otra sigue (mano sobre mano).
+        float suma = 0f;
+        int validas = 0;
+        for (int i = 0; i < 2; i++)
         {
-            var m = Mano(_mano);
-            if (m == null || !EntradaVR.Agarrando(_mano == 0))
+            if (!_agarrada[i]) continue;
+            var m = Mano(i);
+            if (m == null || !EntradaVR.Agarrando(i == 0)) { Soltar(i); continue; }
+            // Incremental: no salta al pasar los 180 grados, al llegar al tope (lo que sobra se descarta
+            // y al volver responde de inmediato) ni cuando la mano pasa cerca del eje.
+            float ang = AnguloMano(m, out float r);
+            float d = Mathf.DeltaAngle(_manoPrev[i], ang);
+            _manoPrev[i] = ang;
+            if (r >= radioMinimoMano * _escalaMundo && Mathf.Abs(d) <= saltoMaximoPorCuadro) { suma += d; validas++; }
+        }
+        if (validas > 0) _angulo = Mathf.Clamp(_angulo + suma / validas, -gradosMaximos, gradosMaximos);
+
+        // Agarre por proximidad al aro (modo Volante), para cada mano libre.
+        if (modoVolante)
+        {
+            for (int i = 0; i < 2; i++)
             {
-                Soltar();
-            }
-            else
-            {
-                // Incremental: se suma solo el giro de la mano desde el cuadro anterior. Asi el volante
-                // no salta al pasar los 180 grados (DeltaAngle desde el agarre se "daba vuelta"), al
-                // llegar al tope (lo que sobra se descarta y al volver responde de inmediato) ni cuando
-                // la mano pasa cerca del eje, donde el angulo medido no es confiable.
-                float ang = AnguloMano(m, out float r);
-                float d = Mathf.DeltaAngle(_manoPrev, ang);
-                _manoPrev = ang;
-                if (r >= radioMinimoMano * _escalaMundo && Mathf.Abs(d) <= saltoMaximoPorCuadro)
-                    _angulo = Mathf.Clamp(_angulo + d, -gradosMaximos, gradosMaximos);
+                if (_agarrada[i] || !EntradaVR.AgarreDown(i == 0)) continue;
+                var m = Mano(i);
+                if (m == null || !m.gameObject.activeInHierarchy) continue;
+                Vector3 rel = (m.position - CentroMundo()) / _escalaMundo;
+                float distAro = Mathf.Abs(rel.magnitude - radio);
+                if (distAro > margenAgarre || Mathf.Abs(Vector3.Dot(rel, BaseMundoRot() * Vector3.forward)) > margenAgarre) continue;
+                if (PalancaCambios.ManoSobrePomo(m.position)) continue; // la palanca esta al lado: tiene prioridad
+                if (!Agarrado) _volanteIni = _angulo;
+                _agarrada[i] = true;
+                _manoPrev[i] = AnguloMano(m);
+                EntradaVR.Vibrar(i == 0, 0.4f, 0.08f, 0.6f);
+                SonidosVR.ReproducirEn(SonidosVR.Agarrar, transform.position, 0.6f);
             }
         }
-        else
+
+        if (!Agarrado)
         {
             // Modo Joystick: el volante sigue al stick (solo visual; el camion gira
             // directamente con ese mismo stick). En modo Volante esta entrada se ignora.
@@ -187,31 +209,12 @@ public class VolanteInteractivo : MonoBehaviour
             }
             else
             {
+                // Modo Volante: el volante SOLO se mueve agarrandolo (el stick no lo gira).
                 // Suelto: autocentrado suave proporcional a la velocidad (detenido no se mueve).
                 if (autocentrarAlSoltar && camion != null && Mathf.Abs(_angulo) > 0.01f)
                 {
                     float f = Mathf.Clamp01(camion.VelocidadKmh / Mathf.Max(0.1f, kmhAutocentradoMax));
                     _angulo = Mathf.MoveTowards(_angulo, 0f, velocidadAutocentrado * f * dt);
-                }
-
-                // Agarre por proximidad al aro, solo en modo Volante.
-                for (int i = 0; i < 2; i++)
-                {
-                    var m = Mano(i);
-                    if (m == null || !m.gameObject.activeInHierarchy) continue;
-                    Vector3 rel = (m.position - CentroMundo()) / _escalaMundo;
-                    float distAro = Mathf.Abs(rel.magnitude - radio);
-                    if (distAro > 0.13f || Mathf.Abs(Vector3.Dot(rel, BaseMundoRot() * Vector3.forward)) > 0.13f) continue;
-                    if (PalancaCambios.ManoSobrePomo(m.position)) continue; // la palanca esta al lado: tiene prioridad
-                    if (EntradaVR.AgarreDown(i == 0))
-                    {
-                        _mano = i;
-                        _manoPrev = AnguloMano(m);
-                        _volanteIni = _angulo;
-                        EntradaVR.Vibrar(i == 0, 0.4f, 0.08f, 0.6f);
-                        SonidosVR.ReproducirEn(SonidosVR.Agarrar, transform.position, 0.6f);
-                        break;
-                    }
                 }
             }
         }
@@ -238,17 +241,19 @@ public class VolanteInteractivo : MonoBehaviour
             }
         }
 
-        if (_mano >= 0 && Mathf.Abs(_angulo - _volanteIni) > 4f && Time.time >= _vibraProx)
+        if (Agarrado && Mathf.Abs(_angulo - _volanteIni) > 4f && Time.time >= _vibraProx)
         {
             _vibraProx = Time.time + 0.25f;
-            EntradaVR.Vibrar(_mano == 0, 0.15f, 0.05f, 0.3f);
+            _volanteIni = _angulo;
+            for (int i = 0; i < 2; i++)
+                if (_agarrada[i]) EntradaVR.Vibrar(i == 0, 0.15f, 0.05f, 0.3f);
         }
     }
 
-    void Soltar()
+    void Soltar(int i)
     {
-        if (_mano < 0) return;
-        _mano = -1;
+        if (!_agarrada[i]) return;
+        _agarrada[i] = false;
         SonidosVR.ReproducirEn(SonidosVR.Clic, transform.position, 0.5f);
     }
 

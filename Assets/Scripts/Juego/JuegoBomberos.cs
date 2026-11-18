@@ -187,6 +187,19 @@ public class JuegoBomberos : MonoBehaviour
         if (Instancia == this) Instancia = null;
     }
 
+    /// <summary>
+    /// El jugador solo ve las manos de su personaje (avatar): se apagan los modelos 3D de los
+    /// controles Touch (OVRControllerHelper de los Building Blocks). El seguimiento sigue igual.
+    /// </summary>
+    static void OcultarModelosDeControles()
+    {
+        foreach (var h in FindObjectsOfType<OVRControllerHelper>(true))
+        {
+            h.enabled = false; // si no, vuelve a activar el modelo cada cuadro
+            foreach (Transform hijo in h.transform) hijo.gameObject.SetActive(false);
+        }
+    }
+
     void Start()
     {
         ConfiguracionConfort.Aplicar(); // viñeta de confort de Meta segun la preferencia guardada
@@ -198,6 +211,7 @@ public class JuegoBomberos : MonoBehaviour
             return;
         }
         _cabeza = rig.centerEyeAnchor;
+        OcultarModelosDeControles();
 
         if (porton == null) porton = FindObjectOfType<PortonElevadizo>();
         if (botonPorton == null) botonPorton = FindObjectOfType<BotonPorton>();
@@ -565,7 +579,7 @@ public class JuegoBomberos : MonoBehaviour
     static readonly string[] DescripcionesConfig =
     {
         "Joystick: avanzar/retroceder y girar. El volante sigue al stick y vuelve al centro al soltarlo.",
-        "Mantén el gatillo derecho para acelerar (al soltarlo frena); la palanca elige D o R. Agarra el volante con GRIP para girar.",
+        "Gatillo derecho: acelerar. Gatillo izquierdo: frenar. Volante con GRIP (una o dos manos). Stick derecho arriba/abajo: D / R.",
         "Oscurece los bordes de la vista al caminar o girar con el joystick (opción de Meta para reducir el mareo).",
         "Volver a elegir Explorar / Misión"
     };
@@ -879,8 +893,8 @@ public class JuegoBomberos : MonoBehaviour
     static string TextoControlGiro()
     {
         return ConfiguracionConduccion.Modo == ModoConduccion.Joystick
-            ? "Stick: avanzar/retroceder y girar   -   B: bajar"
-            : "Gatillo derecho: acelerar (mantenlo; al soltarlo frena)   -   Palanca: D adelante / R atrás   -   Volante: girar (GRIP)   -   B: bajar";
+            ? "Stick: avanzar/retroceder y girar   -   Mantén B: bajar"
+            : "Gatillo der.: acelerar   -   Gatillo izq.: frenar   -   Volante: agárralo con GRIP   -   Stick der. arriba/abajo: D / R   -   Mantén B: bajar";
     }
 
     void MostrarExplorar()

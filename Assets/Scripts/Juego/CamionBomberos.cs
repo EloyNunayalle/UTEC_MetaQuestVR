@@ -7,10 +7,11 @@ using UnityEngine;
 /// Camion de bomberos interactivo y manejable.
 /// - Subir: parate en el circulo amarillo junto a la puerta del conductor (se llena) o presiona A / pellizca.
 /// - Manejar (controles), modo Joystick: stick izquierdo arriba/abajo = avanzar/retroceder, a los lados = girar.
-///   Modo Volante: gatillo derecho mantenido = acelerar (segun la palanca D/R); al soltarlo frena; el volante gira
-///   (tambien sirve el stick derecho para girar). Teclado: flechas o WASD.
+///   Modo Volante: gatillo derecho mantenido = acelerar (segun la palanca D/R); al soltarlo frena; gatillo
+///   izquierdo = freno; el volante gira SOLO agarrandolo (una o dos manos, GRIP);
+///   stick derecho arriba/abajo = D / R. Teclado: W acelera, S frena, flechas giran.
 /// - A: prender/apagar la sirena. X: prender/apagar las balizas (independientes).
-/// - Bajar: B (o Y), o mantener el pellizco 2 segundos.
+/// - Bajar: mantener B (o Y) un momento, o mantener el pellizco 2 segundos.
 /// Si el modelo del camion no esta en el proyecto (asset de pago no incluido en git),
 /// se genera un camion simple de reemplazo para que el juego funcione igual.
 /// </summary>
@@ -33,6 +34,8 @@ public class CamionBomberos : MonoBehaviour
     public float radioZona = 0.7f;
     public float segundosParaSubir = 1.5f;
     public float segundosPellizcoParaBajar = 2f;
+    [Tooltip("Segundos que hay que mantener B / Y para bajar (evita bajarse por un toque accidental).")]
+    public float segundosBotonParaBajar = 0.8f;
 
     [Header("Manejo")]
     public bool manejable = true;
@@ -43,6 +46,8 @@ public class CamionBomberos : MonoBehaviour
     [Tooltip("Modo Volante: zona muerta del gatillo derecho (acelerador).")]
     public float zonaMuertaAcelerador = 0.08f;
     public float frenado = 7f;
+    [Tooltip("Modo Volante: frenada (m/s^2) con el gatillo izquierdo a fondo.")]
+    public float frenoMaximo = 14f;
     [Tooltip("Grados por segundo de giro a buena velocidad.")]
     public float giroMaximo = 40f;
     [Tooltip("Altura maxima (m) de la caja de choque al manejar. Mas baja = no se engancha con techos, ramas ni marcos de portones.")]
@@ -97,6 +102,7 @@ public class CamionBomberos : MonoBehaviour
     readonly List<GameObject> _locomocionApagada = new List<GameObject>();
     bool _listo;
     bool _pellizcoLiberado;
+    float _botonBajar, _proximoAvisoMarcha;
 
     static readonly Color Amarillo = new Color(1f, 0.85f, 0.1f, 0.85f);
     static readonly Color Verde = new Color(0.2f, 1f, 0.35f, 0.9f);
@@ -325,7 +331,7 @@ public class CamionBomberos : MonoBehaviour
     {
         if (!_listo) return;
         ActualizarLuces();
-        EntradaVR.GatilloDerechoEsAcelerador = JugadorSentado && ConfiguracionConduccion.Modo == ModoConduccion.Volante;
+        EntradaVR.GatillosSonPedales = JugadorSentado && ConfiguracionConduccion.Modo == ModoConduccion.Volante;
         if (JugadorSentado)
         {
             if (manejable) Manejar();
@@ -343,7 +349,27 @@ public class CamionBomberos : MonoBehaviour
                 if (pellizco && _pellizcoLiberado) _pellizcoBajar += Time.deltaTime;
                 else _pellizcoBajar = 0f;
 
-                if (EntradaVR.CancelarDown() || _pellizcoBajar >= segundosPellizcoParaBajar) Bajar();
+                // B / Y se MANTIENEN para bajar (un toque sin querer mientras manejas ya no te saca).
+                bool botonBajar = OVRInput.Get(OVRInput.Button.Two) || OVRInput.Get(OVRInput.Button.Four);
+                if (botonBajar)
+                {
+                    if (_botonBajar <= 0f && JuegoBomberos.Instancia != null)
+                        JuegoBomberos.Instancia.Aviso("Bajando del camión...\n<size=55%>Mantén B / Y para bajar</size>", JuegoBomberos.TipoAviso.Info, segundosBotonParaBajar);
+                    _botonBajar += Time.deltaTime;
+                    if (Time.time >= _proximoTic)
+                    {
+                        _proximoTic = Time.time + 0.2f;
+                        EntradaVR.VibrarAmbas(0.1f + 0.4f * _botonBajar / segundosBotonParaBajar, 0.05f);
+                    }
+                }
+                else _botonBajar = 0f;
+
+                bool teclaBajar = Input.GetKeyDown(KeyCode.Q) || Input.GetKeyDown(KeyCode.Backspace);
+                if (teclaBajar || _botonBajar >= segundosBotonParaBajar || _pellizcoBajar >= segundosPellizcoParaBajar)
+                {
+                    _botonBajar = 0f;
+                    Bajar();
+                }
             }
             return;
         }
@@ -433,23 +459,36 @@ public class CamionBomberos : MonoBehaviour
         acel = Mathf.Abs(acel) < zonaMuerta ? 0f : acel;
         giro = Mathf.Abs(giro) < zonaMuerta ? 0f : giro;
 
+        float freno = 0f;
         if (ConfiguracionConduccion.Modo == ModoConduccion.Volante)
         {
-            // Modo Volante, como un auto real: el GATILLO DERECHO es el acelerador. Mientras lo
-            // mantienes presionado el camion avanza (analogico: mas apretado = mas rapido) en el
-            // sentido de la palanca (D/L adelante, R atras, P/N nada); al soltarlo deja de acelerar
-            // y frena solo. El stick ya no mueve el camion. El volante es la unica entrada de giro.
+            // Modo Volante, como un auto real: GATILLO DERECHO = acelerador (analogico, mas apretado =
+            // mas rapido) en el sentido de la palanca (D/L adelante, R atras, P/N nada); al soltarlo
+            // frena solo. GATILLO IZQUIERDO = freno. El volante gira solo agarrandolo; el stick
+            // derecho arriba/abajo cambia D / R (lo maneja la palanca).
             giro = ejeGiroManual != null ? Mathf.Clamp(ejeGiroManual(), -1f, 1f) : 0f;
             float pedal = OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OVRInput.Controller.RTouch);
             if (Input.GetKey(KeyCode.W)) pedal = 1f; // prueba en el editor
             pedal = pedal < zonaMuertaAcelerador ? 0f : Mathf.InverseLerp(zonaMuertaAcelerador, 1f, pedal);
+            freno = OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OVRInput.Controller.LTouch);
+            if (Input.GetKey(KeyCode.S)) freno = 1f; // prueba en el editor
+            freno = freno < zonaMuertaAcelerador ? 0f : Mathf.InverseLerp(zonaMuertaAcelerador, 1f, freno);
             int sentido = 1;
             if (marchaManual != null)
             {
                 int mm = marchaManual();
                 sentido = mm == 1 ? -1 : (mm == 3 || mm == 4) ? 1 : 0;
+                // Acelera en P/N: se le dice como poner la marcha (antes no pasaba nada y no se sabia por que).
+                if (sentido == 0 && pedal > 0.3f && Time.time >= _proximoAvisoMarcha && JuegoBomberos.Instancia != null)
+                {
+                    _proximoAvisoMarcha = Time.time + 4f;
+                    JuegoBomberos.Instancia.Aviso("Estás en " + (mm == 0 ? "P" : "N") +
+                        "\n<size=55%>Stick derecho ARRIBA = D (avanzar)   -   ABAJO = R (retroceder)</size>",
+                        JuegoBomberos.TipoAviso.Info, 3f);
+                }
             }
-            acel = pedal * sentido;
+            // Frenando, el acelerador no cuenta (los dos a la vez = freno).
+            acel = freno > 0f ? 0f : pedal * sentido;
         }
         // En modo Joystick se ignora ejeGiroManual: el volante es solo visual.
         bool marchaBaja = false;
@@ -469,6 +508,7 @@ public class CamionBomberos : MonoBehaviour
         bool frenando = acel == 0f || Mathf.Sign(objetivo) != Mathf.Sign(_velocidad) && Mathf.Abs(_velocidad) > 0.1f;
         float frenadoActual = marchaBaja ? frenado * 1.6f : frenado;
         _velocidad = Mathf.MoveTowards(_velocidad, objetivo, (frenando ? frenadoActual : aceleracion) * dt);
+        if (freno > 0f) _velocidad = Mathf.MoveTowards(_velocidad, 0f, frenoMaximo * freno * dt);
 
         // Giro: solo cuando el camion se mueve (en reversa se invierte, como un auto real).
         float factor = Mathf.Clamp(_velocidad / 3f, -1f, 1f);
@@ -771,7 +811,7 @@ public class CamionBomberos : MonoBehaviour
 
     void OnDisable()
     {
-        EntradaVR.GatilloDerechoEsAcelerador = false;
+        EntradaVR.GatillosSonPedales = false;
         if (JugadorSentado) EncenderLocomocion();
     }
 

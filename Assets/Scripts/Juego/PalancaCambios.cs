@@ -63,6 +63,7 @@ public class PalancaCambios : MonoBehaviour
     float _proxBusca;
     Color[] _colBase;
     int _ranuraVisible = -1;
+    bool _stickListo = true;
 
     public string NombreMarcha
     {
@@ -162,6 +163,21 @@ public class PalancaCambios : MonoBehaviour
             }
         }
 
+        // Atajo sin soltar el volante (modo Volante, sentado): stick derecho ARRIBA = D, ABAJO = R.
+        // La palanca se mueve sola a esa ranura, igual que si la hubieras llevado con la mano.
+        if (_mano < 0 && camion != null && camion.JugadorSentado && ConfiguracionConduccion.Modo == ModoConduccion.Volante)
+        {
+            float y = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, OVRInput.Controller.RTouch).y;
+            if (Input.GetKeyDown(KeyCode.PageUp)) y = 1f;      // prueba en el editor
+            if (Input.GetKeyDown(KeyCode.PageDown)) y = -1f;
+            if (_stickListo && Mathf.Abs(y) > 0.7f)
+            {
+                _stickListo = false;
+                PonerMarcha(y > 0f ? 3 : 1);
+            }
+            else if (Mathf.Abs(y) < 0.3f) _stickListo = true;
+        }
+
         if (_mano >= 0)
         {
             var m = Mano(_mano);
@@ -249,6 +265,27 @@ public class PalancaCambios : MonoBehaviour
                     mat.SetColor("_EmissionColor", Color.black);
                 }
             }
+        }
+    }
+
+    /// <summary>Lleva la palanca a la ranura de esa marcha (0=P, 1=R, 2=N, 3=D, 4=L), con clic.</summary>
+    public void PonerMarcha(int nueva)
+    {
+        if (posicionesRanuras == null) return;
+        for (int i = 0; i < posicionesRanuras.Length; i++)
+        {
+            if (MarchaDeRanura(i) != nueva) continue;
+            if (marcha == nueva && _destinoRanura == i) return;
+            _destinoRanura = i;
+            marcha = nueva;
+            _asentando = true;
+            EntradaVR.Vibrar(false, 0.35f, 0.06f, 0.6f);
+            SonidosVR.ReproducirEn(SonidosVR.Clic, transform.position, 0.8f);
+            if (JuegoBomberos.Instancia != null)
+                JuegoBomberos.Instancia.Aviso(nueva == 1 ? "Marcha R\n<size=55%>Gatillo derecho: retroceder</size>"
+                                                         : "Marcha " + NombreMarcha + "\n<size=55%>Gatillo derecho: avanzar</size>",
+                                              JuegoBomberos.TipoAviso.Info, 1.5f);
+            return;
         }
     }
 
