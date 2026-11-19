@@ -73,14 +73,35 @@ public class GestorEscenas : MonoBehaviour
         _instancia.CargaInicial();
     }
 
+    // En un BUILD, LoadScene(Additive) NO termina en el mismo frame: durante unos frames
+    // isLoaded sigue en false. Sin esta guarda, el Update volvia a pedir la misma escena y
+    // la ciudad (con sus portones) quedaba cargada DOS veces: el portón se movia pero la
+    // copia duplicada seguia cerrada. En el editor no se notaba por el distinto timing.
+    const int FramesDeEspera = 10;
+    static readonly System.Collections.Generic.Dictionary<string, int> _pedidas =
+        new System.Collections.Generic.Dictionary<string, int>();
+
+    static bool YaPedida(string escena)
+    {
+        if (!_pedidas.TryGetValue(escena, out int f)) return false;
+        int d = Time.frameCount - f;
+        return d >= 0 && d < FramesDeEspera; // d < 0: dato viejo de otra sesion de Play
+    }
+
+    /// <summary>Carga aditiva (sincrona) evitando pedir de nuevo una escena en camino.</summary>
+    static void CargarAditivoSync(string escena)
+    {
+        if (SceneManager.GetSceneByName(escena).isLoaded || YaPedida(escena)) return;
+        _pedidas[escena] = Time.frameCount;
+        SceneManager.LoadScene(escena, LoadSceneMode.Additive);
+    }
+
     void CargaInicial()
     {
-        if (!SceneManager.GetSceneByName(EscenaPersistente).isLoaded)
-            SceneManager.LoadScene(EscenaPersistente, LoadSceneMode.Additive);
+        CargarAditivoSync(EscenaPersistente);
 
-        if (SceneManager.GetActiveScene().name == EscenaPersistente &&
-            !SceneManager.GetSceneByName(EscenaMundo).isLoaded)
-            SceneManager.LoadScene(EscenaMundo, LoadSceneMode.Additive);
+        if (SceneManager.GetActiveScene().name == EscenaPersistente)
+            CargarAditivoSync(EscenaMundo);
 
         CargarInteriorSiCerca();
     }
@@ -92,15 +113,18 @@ public class GestorEscenas : MonoBehaviour
         // --- Autoreparación: si una recarga Single se llevó la Persistente ---
         if (!SceneManager.GetSceneByName(EscenaPersistente).isLoaded)
         {
-            SceneManager.LoadScene(EscenaPersistente, LoadSceneMode.Additive);
-            CargarInteriorSiCerca(); // síncrono, antes de los Start del próximo frame
+            if (!YaPedida(EscenaPersistente))
+            {
+                CargarAditivoSync(EscenaPersistente);
+                CargarInteriorSiCerca(); // síncrono, antes de los Start del próximo frame
+            }
             return;
         }
 
         if (SceneManager.GetActiveScene().name == EscenaPersistente &&
             !SceneManager.GetSceneByName(EscenaMundo).isLoaded)
         {
-            SceneManager.LoadScene(EscenaMundo, LoadSceneMode.Additive);
+            CargarAditivoSync(EscenaMundo);
             return;
         }
 
@@ -172,12 +196,13 @@ public class GestorEscenas : MonoBehaviour
         if (jugador == null) return;
 
         if (DistanciaHorizontal(jugador.position, centroEstacion) <= radioCarga)
-            SceneManager.LoadScene(EscenaEstacionInterior, LoadSceneMode.Additive);
+            CargarAditivoSync(EscenaEstacionInterior);
     }
 
     IEnumerator CargarAditivo(string nombre)
     {
-        if (SceneManager.GetSceneByName(nombre).isLoaded) yield break;
+        if (SceneManager.GetSceneByName(nombre).isLoaded || YaPedida(nombre)) yield break;
+        _pedidas[nombre] = Time.frameCount;
         _cargando = true;
         yield return SceneManager.LoadSceneAsync(nombre, LoadSceneMode.Additive);
         _cargando = false;
