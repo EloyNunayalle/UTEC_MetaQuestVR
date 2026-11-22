@@ -39,6 +39,33 @@ public static class MapaGPS
     static readonly List<int> _camino = new List<int>();
     static readonly List<int> _simple = new List<int>();
 
+    // Al recargar la escena (repetir mision / volver al selector) la camara del mapa se destruye con la
+    // escena y la textura queda en negro, pero los datos estaticos seguian marcados como listos.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void AlIniciar()
+    {
+        Invalidar();
+        SceneManager.sceneUnloaded -= AlDescargarEscena;
+        SceneManager.sceneUnloaded += AlDescargarEscena;
+    }
+
+    static void AlDescargarEscena(Scene escena)
+    {
+        if (!Listo) return;
+        // Se fue la ciudad (el mapa es una foto de ella) o la camara del mapa: se vuelve a armar.
+        if (escena.name == GestorEscenas.EscenaMundo || _camaraMapa == null) Invalidar();
+    }
+
+    static void Invalidar()
+    {
+        Listo = false;
+        _cargaCiudad = -1f;
+        if (Textura != null) Textura.Release();
+        Textura = null;
+        if (_camaraMapa != null) Object.Destroy(_camaraMapa);
+        _camaraMapa = null;
+    }
+
     /// <summary>Arma el mapa cuando la ciudad ya esta cargada. Devuelve true si esta listo.</summary>
     public static bool IntentarConstruir()
     {
