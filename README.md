@@ -227,6 +227,16 @@ Volante rojo en el panel de bomba, junto a la conexión de la manguera, con un *
 
 Todo se crea solo al darle Play (`JuegoBomberos` → `Usar Manguera`). Para ajustar valores antes de Play, agrega el componente `MangueraBomberos` al objeto `Camion_Bomberos`: tus valores se respetan.
 
+## Video demo (`Assets/Scripts/Demo/`)
+
+Graba sin visor un video en primera persona de las tres misiones seguidas y una vuelta por la ciudad en Explorar, como si alguien jugara con la Quest: camina, mira, mueve las manos, agarra con GRIP, conduce el camión con el volante (las dos manos) y la palanca de cambios, y mira el GPS de vez en cuando.
+
+- **Cómo grabar**: abre `Persistente` y usa el menú **Demo → Grabar video completo**. Se graba con Unity Recorder (MP4, 1920×1080, 30 fps, con audio) en `Recordings/Demo_VR_Bomberos.mp4` (carpeta ignorada por git). Dura unos 13 minutos.
+- **Probar sin grabar**: **Demo → Probar (sin grabar)**.
+- Mientras graba, el editor se ve en cámara lenta: es normal. El Recorder avanza el juego exactamente 1/30 s por cuadro, así que el video sale a velocidad normal.
+- **No cambia el juego**: `DemoVR` es una "persona simulada" que escribe la pose de la cabeza y las manos en el `OVRCameraRig` y el estado de los controles en `OVRInput`, lo mismo que haría la Quest. `DemoGuion*` es el guion (menú, Misión 1, 2, 3 y Explorar). Solo se activa desde el menú Demo del editor.
+- Requiere el paquete `com.unity.recorder` (solo editor; no va al build).
+
 ## Créditos y licencias
 
 ### Modelo 3D: "Fire Department Building"
