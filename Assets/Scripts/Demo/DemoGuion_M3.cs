@@ -236,8 +236,13 @@ public partial class DemoGuion
         var persona = esc.persona;
         Mirar(() => persona.transform.position + Vector3.up * 1.0f);
         yield return Esperar(1.5f);
+        // Centro del vano de la puerta: entre la bisagra (pivote) y la cerradura (donde engancho la barra).
+        Vector3 centroVano = Plano((pa.transform.position + pa.PuntoPalanca) * 0.5f);
+        Vector3 vanoPasillo = centroVano - dirPuerta * 0.7f;
+        Vector3 vanoCuarto = centroVano + dirPuerta * 0.8f;
         Vector3 haciaPersona = persona.transform.position;
-        yield return Caminar(0.8f, pa.PuntoPalanca + dirPuerta * 0.6f + Vector3.down * 2f, new Vector3(haciaPersona.x - 1.2f, 0f, haciaPersona.z));
+        Vector3 cercaPersona = haciaPersona - Plano(haciaPersona - vanoCuarto).normalized * 1.2f;
+        yield return Caminar(0.8f, vanoPasillo, vanoCuarto, new Vector3(cercaPersona.x, 0f, cercaPersona.z));
         Mirar(() => persona.transform.position + Vector3.up * 1.2f);
         yield return EsperarHasta(() => persona.EstadoActual == PersonaRescatadaNPC.Estado.Siguiendo, 10f, "persona se levanta");
         yield return Esperar(1f);
@@ -247,7 +252,7 @@ public partial class DemoGuion
         Vector3 zs = m3.zonaSegura;
         var camino = new Vector3[]
         {
-            pa.PuntoPalanca - dirPuerta * 0.9f, new Vector3(focoPasillo.x, 0f, focoPasillo.z - 1f),
+            vanoCuarto, vanoPasillo, new Vector3(focoPasillo.x, 0f, focoPasillo.z - 1f),
             new Vector3(puerta.x, 0f, puerta.z + 1.5f), new Vector3(puerta.x, 0f, puerta.z - 1.2f),
             new Vector3(zs.x - 3.5f, 0f, zs.z - 2.2f), new Vector3(zs.x, 0f, zs.z - 0.5f)
         };

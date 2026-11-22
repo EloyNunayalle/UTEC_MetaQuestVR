@@ -250,6 +250,9 @@ public partial class DemoGuion : MonoBehaviour
     protected IEnumerator Caminar(float velocidad, params Vector3[] puntos)
     {
         var rigT = Rig.transform;
+        // Velocidad como la locomocion del juego con el stick (FirstPersonLocomotor llega a ~3.7 m/s):
+        // los valores del guion son "relativos" (1 = paso normal).
+        velocidad = Mathf.Min(3.6f, velocidad * 2.4f);
         puntos = PlanificarCamino(Cabeza.position, puntos);
         _avisoCruce = false;
         D.caminando = true;
@@ -274,14 +277,14 @@ public partial class DemoGuion : MonoBehaviour
                 D.mirarA = () => mira;
 
                 // Acelera y frena suave; frena al llegar al ultimo punto.
-                float objetivo = ultimo ? Mathf.Min(velocidad, dist * 1.6f + 0.15f) : velocidad;
+                float objetivo = ultimo ? Mathf.Min(velocidad, dist * 2.6f + 0.2f) : velocidad;
                 // No camina "de costado": si hay que girar mucho, va mas lento mientras gira la cabeza.
                 float ang = Vector3.Angle(new Vector3(Cabeza.forward.x, 0f, Cabeza.forward.z), d);
                 objetivo *= Mathf.Lerp(1f, 0.25f, Mathf.InverseLerp(30f, 110f, ang));
-                v = Mathf.MoveTowards(v, objetivo, dt * 2.2f);
+                v = Mathf.MoveTowards(v, objetivo, dt * 7f);
                 Vector3 paso = d.normalized * Mathf.Min(dist, v * dt);
                 rigT.position += paso;
-                D.faseCaminar += dt * v * 3.4f;
+                D.faseCaminar += dt * Mathf.Min(v, 1.6f) * 3.4f;
 
                 // Piso.
                 if (D.AlturaPiso(Cabeza.position, rigT.position.y + 1.0f, out float y))
@@ -290,6 +293,20 @@ public partial class DemoGuion : MonoBehaviour
                     p.y = Mathf.MoveTowards(p.y, y, dt * 2.5f);
                     rigT.position = p;
                 }
+                // Vigia: la cabeza no debe cruzar paredes (rayo entre la posicion anterior y la actual).
+                Vector3 cabAhora = Cabeza.position;
+                if (_cabPrev.HasValue && (cabAhora - _cabPrev.Value).sqrMagnitude > 1e-6f)
+                {
+                    foreach (var h in Physics.RaycastAll(_cabPrev.Value, cabAhora - _cabPrev.Value, (cabAhora - _cabPrev.Value).magnitude, ~0, QueryTriggerInteraction.Ignore))
+                    {
+                        if (h.collider.transform.IsChildOf(Rig.transform)) continue;
+                        if (h.collider.attachedRigidbody != null && !h.collider.attachedRigidbody.isKinematic) continue;
+                        if (h.collider.GetComponentInParent<PuertaAutomatica>() != null || h.collider.GetComponentInParent<PuertaCasa>() != null) continue;
+                        Log("AVISO ATRAVIESA " + h.collider.name + " en " + h.point);
+                        break;
+                    }
+                }
+                _cabPrev = cabAhora;
                 // Vigia: la cabeza nunca debe entrar en el camion.
                 if (DentroDelCamion(Cabeza.position) && !_avisoCruce) { _avisoCruce = true; Log("AVISO ATRAVIESA EL CAMION en " + Cabeza.position); }
                 // Stick izquierdo empujado (lo ve el juego: diagnostico de bloqueo, etc.).
@@ -299,7 +316,10 @@ public partial class DemoGuion : MonoBehaviour
         }
         D.stickL = Vector2.zero;
         D.caminando = false;
+        _cabPrev = null;
     }
+
+    Vector3? _cabPrev;
 
     protected IEnumerator Caminar(params Vector3[] puntos) => Caminar(1.5f, puntos);
 
